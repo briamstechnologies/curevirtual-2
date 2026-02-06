@@ -1,0 +1,701 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =========================================================
+// ENUMS
+// =========================================================
+
+enum UserRole {
+  DOCTOR
+  PATIENT
+  PHARMACY
+}
+
+enum AdminRole {
+  SUPERADMIN
+  ADMIN
+  SUPPORT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum BloodGroup {
+  A_POSITIVE  @map("A+")
+  A_NEGATIVE  @map("A-")
+  B_POSITIVE  @map("B+")
+  B_NEGATIVE  @map("B-")
+  AB_POSITIVE @map("AB+")
+  AB_NEGATIVE @map("AB-")
+  O_POSITIVE  @map("O+")
+  O_NEGATIVE  @map("O-")
+  UNKNOWN     @map("UNKNOWN")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ConsultationStatus {
+  SCHEDULED
+  CHECKED_IN
+  WAITING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum AppointmentStatus {
+  PENDING
+  APPROVED
+  CHECKED_IN
+  WAITING
+  IN_SESSION
+  COMPLETED
+  CANCELLED
+  SCHEDULED
+  NO_SHOW
+}
+
+enum Plan {
+  MONTHLY
+  YEARLY
+}
+
+enum SubStatus {
+  UNSUBSCRIBED
+  PENDING
+  ACTIVE
+  EXPIRED
+  DEACTIVATED
+  FAILED
+}
+
+enum PrescriptionDispatchStatus {
+  NONE
+  SENT
+  ACKNOWLEDGED
+  READY
+  DISPENSED
+  REJECTED
+}
+
+enum EncounterStatus {
+  DRAFT
+  SIGNED
+  AMENDED
+}
+
+enum LabStatus {
+  ORDERED
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum ReferralType {
+  INTERNAL
+  EXTERNAL
+}
+
+enum SlotStatus {
+  AVAILABLE
+  BOOKED
+  LOCKED
+  CANCELLED
+}
+
+// =========================================================
+// MODELS
+// =========================================================
+
+model DoctorAvailability {
+  id           String   @id @default(uuid())
+  doctorId     String
+  date         DateTime @db.Date 
+  startTime    DateTime 
+  endTime      DateTime 
+  slotDuration Int      @default(15) 
+  
+  slots        AppointmentSlot[]
+
+  doctor       DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([doctorId, date])
+  @@map("DoctorAvailability")
+}
+
+model AppointmentSlot {
+  id             String   @id @default(uuid())
+  doctorId       String
+  availabilityId String
+  
+  startTime      DateTime
+  endTime        DateTime
+  status         SlotStatus @default(AVAILABLE)
+  
+  appointmentId  String?  @unique
+  bookedBy       String?  
+  
+  availability   DoctorAvailability @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  doctor         DoctorProfile      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointment    Appointment?       @relation(fields: [appointmentId], references: [id]) 
+  
+  @@index([doctorId, startTime])
+  @@index([status])
+  @@map("AppointmentSlot")
+}
+
+model EmailOTP {
+  id        Int      @id @default(autoincrement())
+  email     String
+  otp       String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+  @@map("EmailOTP")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  firstName   String
+  middleName  String?
+  lastName    String
+  email       String   @unique
+  phone       String?
+  password    String
+  role        UserRole @default(PATIENT)
+  dateOfBirth DateTime
+  gender      Gender
+
+  subscriptionState SubStatus @default(UNSUBSCRIBED)
+
+  subscriptions Subscription[]
+  doctor        DoctorProfile?
+  patient       PatientProfile?
+  pharmacy      PharmacyProfile?
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  sentMessages  Message[] @relation("MessagesSent")
+  recvMessages  Message[] @relation("MessagesRecv")
+
+  supportAgent  SupportAgent?
+  raisedTickets SupportTicket[] @relation("raisedBy")
+  sentReplies   SupportReply[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("User")
+  @@index([organizationId])
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  ownerId   String?
+  
+  users     User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("Organization")
+}
+
+model admin {
+  id          Int       @id @default(autoincrement())
+  name        String
+  email       String    @unique
+  password    String
+  role        AdminRole @default(ADMIN)
+  token       String?   @unique
+  isSuspended Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  replies      SupportReply[]
+  sentMessages Message[]      @relation("AdminMessagesSent")
+  recvMessages Message[]      @relation("AdminMessagesRecv")
+}
+
+model SupportAgent {
+  id        Int      @id @default(autoincrement())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  assignedTickets SupportTicket[]
+
+  @@map("SupportAgent")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  actorId   String
+  actorRole String
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  String?  @db.Text
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@map("ActivityLog")
+}
+
+model DoctorProfile {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialization      String
+  customProfession    String?
+  qualifications      String
+  licenseNumber       String   @unique
+  hospitalAffiliation String?
+  yearsOfExperience   Int?
+  consultationFee     Float
+  availability        String?  @db.Text
+  bio                 String?
+  languages           String?  @db.Text
+  
+  emergencyContact      String?  @db.Text
+  emergencyContactName  String?
+  emergencyContactEmail String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  prescriptions  Prescription[]
+  consultations  VideoConsultation[] @relation("DoctorConsultations")
+  appointments   Appointment[]       @relation("DoctorAppointments")
+  doctorPatients DoctorPatient[]     @relation("DoctorPatient_Doctor")
+  schedules      DoctorSchedule[]    @relation("DoctorSchedules")
+  
+  availabilities DoctorAvailability[]
+  slots          AppointmentSlot[]
+
+  encounters     ClinicalEncounter[]
+  labOrders      LabOrder[]
+  referralsSent  Referral[]          @relation("Referrer")
+  referralsRecv  Referral[]          @relation("Referee")
+
+  @@map("DoctorProfile")
+}
+
+model PharmacyProfile {
+  id            String @id @default(uuid())
+  userId        String @unique
+  user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  displayName   String?
+  licenseNumber String?
+  phone         String?
+  address       String?
+  city          String?
+  state         String?
+  country       String?
+  postalCode    String?
+
+  latitude      Float?
+  longitude     Float?
+
+  openingHours  String? @db.Text
+  services      String? @db.Text
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  prescriptions Prescription[]
+  selectedByPatients SelectedPharmacy[]
+
+  @@map("PharmacyProfile")
+}
+
+model PatientProfile {
+  id             String     @id @default(uuid())
+  userId         String     @unique
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bloodGroup     BloodGroup
+  height         Float?
+  heightUnit     String?    @default("cm")
+  weight         Float?
+  weightUnit     String?    @default("kg")
+  allergies      String?    @db.Text
+  medications    String?    @db.Text
+  medicalHistory String?    @db.Text
+  address        String?
+
+  medicalRecordNumber String? @unique
+  insuranceProvider   String?
+  insuranceMemberId   String?
+
+  emergencyContact      String?  @db.Text
+  emergencyContactName  String?
+  emergencyContactEmail String?
+  
+  riskLevel             String?
+  chronicConditions     String?  @db.Text
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  selectedPharmacies SelectedPharmacy[]
+
+  prescriptions Prescription[]
+  consultations VideoConsultation[] @relation("PatientConsultations")
+  appointments  Appointment[]       @relation("PatientAppointments")
+  doctorLinks   DoctorPatient[]     @relation("DoctorPatient_Patient")
+  encounters    ClinicalEncounter[]
+  labOrders     LabOrder[]
+  referrals     Referral[]
+
+  @@map("PatientProfile")
+}
+
+model Appointment {
+  id              String            @id @default(uuid())
+  doctorId        String
+  patientId       String
+  appointmentDate DateTime
+  reason          String?
+  status          AppointmentStatus @default(PENDING)
+  
+  chiefComplaint  String?           @db.Text
+  intakeNotes     String?           @db.Text
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  doctor  DoctorProfile  @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: Cascade)
+  patient PatientProfile @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  encounter ClinicalEncounter?
+
+  slot    AppointmentSlot?
+
+  @@index([doctorId])
+  @@index([patientId])
+
+  @@map("Appointment")
+}
+
+model DoctorSchedule {
+  id        String   @id @default(uuid())
+  doctorId  String
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  doctor DoctorProfile @relation("DoctorSchedules", fields: [doctorId], references: [id], onDelete: Cascade)
+  
+  @@index([doctorId])
+  @@index([dayOfWeek])
+  @@map("DoctorSchedule")
+}
+
+model SupportTicket {
+  id        Int            @id @default(autoincrement())
+  ticketNo  String         @unique @default(uuid())
+  userId    String
+  user      User           @relation("raisedBy", fields: [userId], references: [id], onDelete: Cascade)
+  agentId   Int?
+  agent     SupportAgent?  @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  subject   String
+  body      String         @db.Text
+  status    TicketStatus   @default(OPEN)
+  priority  Priority       @default(MEDIUM)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  replies   SupportReply[]
+
+  @@map("SupportTicket")
+}
+
+model SupportReply {
+  id       Int           @id @default(autoincrement())
+  ticketId Int
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  adminId Int?
+  admin   admin? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("SupportReply")
+}
+
+model Prescription {
+  id            String   @id @default(cuid())
+  doctorId      String
+  patientId     String
+  medication    String
+  dosage        String
+  frequency     String
+  duration      String
+  notes         String?
+  
+  isControlled  Boolean  @default(false)
+  deaNumber     String?
+  refills       Int      @default(0)
+  drugAlerts    String?  @db.Text
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pharmacyId     String?
+  pharmacy       PharmacyProfile? @relation(fields: [pharmacyId], references: [id], onDelete: SetNull)
+  dispatchStatus PrescriptionDispatchStatus @default(NONE)
+  dispatchedAt   DateTime?
+
+  doctor  DoctorProfile  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  encounterId String?
+  encounter   ClinicalEncounter? @relation(fields: [encounterId], references: [id])
+
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([pharmacyId])
+
+  @@map("Prescription")
+}
+
+model ClinicalEncounter {
+  id          String   @id @default(uuid())
+  appointmentId String @unique
+  doctorId    String
+  patientId   String
+  
+  subjective  String?  @db.Text
+  objective   String?  @db.Text
+  assessment  String?  @db.Text
+  plan        String?  @db.Text
+  
+  systolic    Int?
+  diastolic   Int?
+  pulse       Int?
+  temperature Float?
+  weight      Float?
+  oxygenSat   Int?
+  
+  status      EncounterStatus @default(DRAFT)
+  signedAt    DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  appointment Appointment    @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  doctor      DoctorProfile  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient     PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  prescriptions Prescription[]
+  labOrders     LabOrder[]
+  referrals     Referral[]
+
+  @@map("ClinicalEncounter")
+}
+
+model LabOrder {
+  id          String   @id @default(uuid())
+  doctorId    String
+  patientId   String
+  encounterId String?
+  
+  testName    String
+  status      LabStatus @default(ORDERED)
+  results     String?   @db.Text
+  orderedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  doctor      DoctorProfile  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient     PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  encounter   ClinicalEncounter? @relation(fields: [encounterId], references: [id])
+
+  @@map("LabOrder")
+}
+
+model Referral {
+  id          String   @id @default(uuid())
+  doctorId    String
+  patientId   String
+  encounterId String?
+  
+  targetDoctorId String?
+  specialistName String?
+  type        ReferralType
+  reason      String   @db.Text
+  status      String   @default("PENDING")
+
+  doctor      DoctorProfile  @relation("Referrer", fields: [doctorId], references: [id], onDelete: Cascade)
+  referee     DoctorProfile? @relation("Referee", fields: [targetDoctorId], references: [id])
+  patient     PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  encounter   ClinicalEncounter? @relation(fields: [encounterId], references: [id])
+
+  @@map("Referral")
+}
+
+model Message {
+  id         String    @id @default(cuid())
+  senderId   String?
+  receiverId String?
+  content    String
+  createdAt  DateTime  @default(now())
+  readAt     DateTime?
+
+  adminSenderId   Int?
+  adminReceiverId Int?
+
+  sender   User? @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User? @relation("MessagesRecv", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  adminSender   admin? @relation("AdminMessagesSent", fields: [adminSenderId], references: [id], onDelete: Cascade)
+  adminReceiver admin? @relation("AdminMessagesRecv", fields: [adminReceiverId], references: [id], onDelete: Cascade)
+
+  @@map("Message")
+}
+
+model VideoConsultation {
+  id           String             @id @default(uuid())
+  doctorId     String
+  patientId    String
+  title        String?
+  notes        String?
+  scheduledAt  DateTime
+  durationMins Int?
+  status       ConsultationStatus @default(SCHEDULED)
+  roomName     String?
+  meetingUrl   String?
+  actualStartTime DateTime?
+  actualEndTime   DateTime?
+  recordingUrl    String?
+  failureReason   String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  doctor  DoctorProfile  @relation("DoctorConsultations", fields: [doctorId], references: [id], onDelete: Cascade)
+  patient PatientProfile @relation("PatientConsultations", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([patientId])
+
+  @@map("VideoConsultation")
+}
+
+model SubscriptionSetting {
+  id                 Int      @id @default(1)
+  doctorMonthlyUsd   Float?
+  doctorYearlyUsd    Float?
+  patientMonthlyUsd  Float?
+  patientYearlyUsd   Float?
+  pharmacyMonthlyUsd Float?
+  pharmacyYearlyUsd  Float?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("SubscriptionSetting")
+}
+
+model Subscription {
+  id       String   @id @default(uuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     Plan
+  status   SubStatus @default(PENDING)
+
+  provider  String?
+  reference String?  @unique
+  amount    Int?
+  currency  String?
+
+  startDate DateTime?
+  endDate   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([plan])
+
+  @@map("Subscription")
+}
+
+model DoctorPatient {
+  id        String @id @default(uuid())
+  doctorId  String
+  patientId String
+
+  doctor  DoctorProfile  @relation(name: "DoctorPatient_Doctor", fields: [doctorId], references: [id], onDelete: Cascade)
+  patient PatientProfile @relation(name: "DoctorPatient_Patient", fields: [patientId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([doctorId, patientId])
+  @@index([patientId])
+  @@index([doctorId])
+
+  @@map("DoctorPatient")
+}
+
+model SelectedPharmacy {
+  id           String @id @default(uuid())
+  patientId    String
+  pharmacyId   String
+  preferred    Boolean @default(false)
+
+  patient  PatientProfile  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  pharmacy PharmacyProfile @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+
+  @@unique([patientId, pharmacyId])
+  @@map("SelectedPharmacy")
+}
+
+model SystemSetting {
+  id          Int      @id @default(1)
+  systemName  String?
+  themeColor  String?
+  logoUrl     String?
+  defaultFee  Float?
+  monthlyPlan Float?
+  yearlyPlan  Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("SystemSetting")
+}
