@@ -75,8 +75,10 @@ router.post("/register-success", async (req, res) => {
           error: "Database error saving new user",
           details:
             process.env.NODE_ENV === "development"
-              ? dbError.message
+              ? dbError.message || JSON.stringify(dbError)
               : "Please contact support",
+          prismaError:
+            process.env.NODE_ENV === "development" ? dbError : undefined,
         });
       }
     }
