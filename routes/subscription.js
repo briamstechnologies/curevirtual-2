@@ -521,33 +521,17 @@ router.post("/stripe/checkout", verifyToken, async (req, res) => {
       });
     }
 
-    const FRONTEND_URL =
-      process.env.FRONTEND_URL || "https://cure-virtual-2.vercel.app";
+    const origin =
+      req.headers.origin ||
+      req.headers.referer ||
+      "https://cure-virtual-2.vercel.app";
+    const roleSlug =
+      user.role.toLowerCase() === "pharmacy"
+        ? "pharmacist"
+        : user.role.toLowerCase();
 
-    // Determine return path based on role
-    let returnPath = "/";
-    switch (user.role) {
-      case "PATIENT":
-        returnPath = "/patient/subscription";
-        break;
-      case "DOCTOR":
-        returnPath = "/doctor/subscription";
-        break;
-      case "PHARMACY":
-        returnPath = "/pharmacy/subscription";
-        break;
-      case "ADMIN":
-      case "SUPERADMIN":
-        returnPath = "/admin/subscription";
-        break;
-      default:
-        returnPath = "/";
-    }
-
-    const successUrl = `${process.env.APP_BASE_URL || "https://cure-virtual-2.vercel.app"}${returnPath}?status=success&session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl =
-      process.env.STRIPE_CANCEL_URL ||
-      `${process.env.APP_BASE_URL || "https://cure-virtual-2.vercel.app"}${returnPath}?status=cancel`;
+    const successUrl = `${origin}/${roleSlug}/subscription?status=success&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${origin}/${roleSlug}/subscription?status=cancel`;
 
     // ✅ MOCK CHECKOUT for invalid/placeholder keys
     // If the price ID looks fake (contains * or X), bypass Stripe and create subscription directly.
@@ -572,9 +556,9 @@ router.post("/stripe/checkout", verifyToken, async (req, res) => {
         },
       });
 
-      // Redirect user to success URL immediately
+      // Return success but NO url to trigger a "refresh in place" on frontend
       return res.json({
-        url: successUrl.replace("{CHECKOUT_SESSION_ID}", mockSessionId),
+        mockSuccess: true,
       });
     }
 
