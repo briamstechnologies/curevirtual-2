@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { verifyToken } = require("../middleware/rbac");
-const { generateToken04 } = require("zego-server-assistant");
+const { generateToken04 } = require("../utils/zegoServerAssistant");
 
 /**
  * @route   GET /api/zego/token
