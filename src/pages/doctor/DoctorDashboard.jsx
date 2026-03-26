@@ -51,7 +51,7 @@ export default function DoctorDashboard() {
         if (statsRes?.data) setStats(statsRes.data);
         if (waitingRes?.data) setWaitingPatients(waitingRes.data);
       } catch (err) {
-        console.error("Error fetching clinical desk data:", err);
+        console.error("Error fetching Dashboard data:", err);
       } finally {
         setLoading(false);
       }
@@ -66,7 +66,7 @@ export default function DoctorDashboard() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-[10px] font-black text-[var(--brand-orange)] uppercase tracking-[0.3em] mb-1">
-              Clinical Desk
+              Dashboard
             </h2>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-[var(--text-main)] tracking-tighter leading-none">
               Welcome, Dr. {userName.split(" ")[0]}
@@ -81,7 +81,7 @@ export default function DoctorDashboard() {
               onClick={() => navigate("/doctor/video-consultation")}
               className="btn btn-primary !py-0 !px-6 h-[48px] shadow-green-500/30 flex items-center gap-2"
             >
-              <FaVideo /> Virtual Room
+              <FaVideo /> Video Call
             </button>
           </div>
         </div>
@@ -141,7 +141,7 @@ export default function DoctorDashboard() {
             onClick={() => navigate("/doctor/messages/inbox")}
           />
           <StatCard
-            title="Patient Pool"
+            title="My Patients"
             value={stats.activePatients}
             icon={<FaUserInjured />}
             color="--brand-green"

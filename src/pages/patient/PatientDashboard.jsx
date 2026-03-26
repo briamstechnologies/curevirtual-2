@@ -47,7 +47,7 @@ export default function PatientDashboard() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-[10px] font-black text-[var(--brand-orange)] uppercase tracking-[0.3em] mb-1">
-              Wellness Hub
+              Dashboard
             </h2>
             <h1 className="text-3xl lg:text-4xl font-black text-[var(--text-main)] tracking-tighter leading-none">
               Hello, {userName.split(" ")[0]}

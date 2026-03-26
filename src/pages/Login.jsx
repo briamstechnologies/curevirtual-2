@@ -248,7 +248,7 @@ export default function Login() {
                     title="Recover Password"
                     className="text-[9px] font-black text-[var(--brand-orange)] uppercase tracking-widest hover:underline"
                   >
-                    Recovery?
+                    Forgot password?
                   </Link>
                 </div>
                 <div className="relative group">
@@ -337,7 +337,7 @@ export default function Login() {
 
           <div className="mt-12 text-center pt-8 border-t border-[var(--border)]">
             <p className="text-xs font-bold text-[var(--text-soft)] uppercase tracking-widest">
-              New User?{" "}
+              Don't have an account?{" "}
               <Link
                 to="/register"
                 className="text-[var(--brand-blue)] font-black hover:underline cursor-pointer ml-1"

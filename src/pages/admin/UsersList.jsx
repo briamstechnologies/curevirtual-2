@@ -1,8 +1,8 @@
 // FILE: src/pages/admin/UsersList.jsx
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import DashboardLayout from '../../layouts/DashboardLayout';
-import api from '../../Lib/api';
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import DashboardLayout from "../../layouts/DashboardLayout";
+import api from "../../Lib/api";
 import {
   FaEye,
   FaEdit,
@@ -12,34 +12,31 @@ import {
   FaSearch,
   FaUserShield,
   FaUsers,
-} from 'react-icons/fa';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+} from "react-icons/fa";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function UsersList() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState(''); // "" | "DOCTOR" | "PATIENT" | "PHARMACY"
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState(""); // "" | "DOCTOR" | "PATIENT" | "PHARMACY"
 
   const [viewUser, setViewUser] = useState(null);
 
   const user = {
-    id: localStorage.getItem('userId'),
-    name:
-      localStorage.getItem('userName') ||
-      localStorage.getItem('name') ||
-      'Admin',
+    id: localStorage.getItem("userId"),
+    name: localStorage.getItem("userName") || localStorage.getItem("name") || "Admin",
   };
 
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/admins/users');
+      const res = await api.get("/admins/users");
       setUsers(res.data || []);
     } catch (err) {
-      toast.error('Registry Sync Failure: Could not load user base.');
+      toast.error("Registry Sync Failure: Could not load user base.");
     } finally {
       setLoading(false);
     }
@@ -54,26 +51,18 @@ export default function UsersList() {
     return (users || [])
       .filter((u) => (roleFilter ? u.role === roleFilter : true))
       .filter((u) =>
-        q
-          ? u.name?.toLowerCase()?.includes(q) ||
-            u.email?.toLowerCase()?.includes(q)
-          : true
+        q ? u.name?.toLowerCase()?.includes(q) || u.email?.toLowerCase()?.includes(q) : true
       );
   }, [users, roleFilter, search]);
 
   const handleSuspend = async (id) => {
-    if (
-      !window.confirm(
-        'Authorize Protocol: Revoke platform access for this subject?'
-      )
-    )
-      return;
+    if (!window.confirm("Authorize Protocol: Revoke platform access for this subject?")) return;
     try {
       await api.patch(`/admin/users/${id}/suspend`);
-      toast.warning('Subject Status: RESTRICTED.');
+      toast.warning("Subject Status: RESTRICTED.");
       await loadUsers();
     } catch (err) {
-      toast.error('Protocol Error.');
+      toast.error("Protocol Error.");
     }
   };
 
@@ -122,7 +111,7 @@ export default function UsersList() {
                     Subject Identity
                   </th>
                   <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Communications
+                    Messages
                   </th>
                   <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
                     Tier Clearance
@@ -156,10 +145,7 @@ export default function UsersList() {
                   </tr>
                 ) : (
                   visibleUsers.map((u) => (
-                    <tr
-                      key={u.id}
-                      className="hover:bg-[var(--bg-glass)] transition-colors group"
-                    >
+                    <tr key={u.id} className="hover:bg-[var(--bg-glass)] transition-colors group">
                       <td className="px-8 py-5 text-sm font-black text-[var(--text-main)] uppercase tracking-tight">
                         {u.name}
                       </td>
@@ -175,11 +161,11 @@ export default function UsersList() {
                         <span
                           className={`px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
                             u.isSuspended
-                              ? 'bg-red-500/10 text-red-500 border border-red-500/20'
-                              : 'bg-green-500/10 text-green-500 border border-green-500/20'
+                              ? "bg-red-500/10 text-red-500 border border-red-500/20"
+                              : "bg-green-500/10 text-green-500 border border-green-500/20"
                           }`}
                         >
-                          {u.isSuspended ? 'RESTRICTED' : 'AUTHORIZED'}
+                          {u.isSuspended ? "RESTRICTED" : "AUTHORIZED"}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-center">
@@ -198,7 +184,7 @@ export default function UsersList() {
                           </button>
                           <button
                             onClick={() =>
-                              navigate('/admin/messages/send', {
+                              navigate("/admin/messages/send", {
                                 state: { receiverId: u.id },
                               })
                             }
@@ -226,8 +212,7 @@ export default function UsersList() {
           ></div>
           <div className="relative w-full max-w-lg glass !p-10 animate-in zoom-in-95 duration-300">
             <h3 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-6 flex items-center gap-3">
-              <FaUserShield className="text-[var(--brand-blue)]" /> Identity
-              Vault
+              <FaUserShield className="text-[var(--brand-blue)]" /> Identity Vault
             </h3>
             <div className="space-y-6 mb-10">
               <div className="grid grid-cols-2 gap-6 pb-6 border-b border-[var(--border)] text-[var(--text-main)]">
@@ -235,16 +220,14 @@ export default function UsersList() {
                   <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-1">
                     Clearance Tier
                   </p>
-                  <p className="text-sm font-black text-[var(--brand-blue)]">
-                    {viewUser.role}
-                  </p>
+                  <p className="text-sm font-black text-[var(--brand-blue)]">{viewUser.role}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-1">
                     Protocol Status
                   </p>
                   <p className="text-sm font-black">
-                    {viewUser.isSuspended ? 'RESTRICTED' : 'AUTHORIZED'}
+                    {viewUser.isSuspended ? "RESTRICTED" : "AUTHORIZED"}
                   </p>
                 </div>
               </div>
@@ -258,11 +241,9 @@ export default function UsersList() {
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-1">
-                  Communications Gateway
+                  Messages Gateway
                 </p>
-                <p className="text-sm font-black text-[var(--text-soft)]">
-                  {viewUser.email}
-                </p>
+                <p className="text-sm font-black text-[var(--text-soft)]">{viewUser.email}</p>
               </div>
             </div>
             <button
