@@ -1,13 +1,25 @@
-FROM node:22-alpine
+# Use a Debian-based image instead of Alpine for better OpenSSL compatibility
+FROM node:22-slim
+
+# Install system dependencies
+RUN apt-get update -y && apt-get install -y openssl ca-certificates
 
 WORKDIR /app
 
+# Install dependencies first for better caching
 COPY package*.json ./
-
 RUN npm install
 
+# Copy source code and Prisma schema
 COPY . .
 
-EXPOSE 5173
+# Generate Prisma Client
+RUN npx prisma generate
 
-CMD ["npm", "run", "dev", "--", "--host"]
+ENV NODE_ENV=production
+# Default port if not provided by Railway
+ENV PORT=5001
+EXPOSE 5001
+
+# Start the application
+CMD ["npm", "start"]
