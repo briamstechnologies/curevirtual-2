@@ -95,7 +95,7 @@ export default function PatientSendMessage() {
                 <p>Loading doctors...</p>
               ) : (
                 <select
-                  className="w-full border border-gray-300 text-black rounded-md p-2"
+                  className="w-full border border-gray-300 text-white rounded-md p-2"
                   value={receiverId}
                   onChange={(e) => setReceiverId(e.target.value)}
                   required
@@ -127,7 +127,7 @@ export default function PatientSendMessage() {
             <button
               type="submit"
               disabled={sending}
-              className="bg-[#027906] text-[var(--text-main)] px-5 py-2 rounded-md hover:bg-[#190366] flex items-center gap-2 disabled:opacity-60"
+              className="bg-[#027906] text-[var(--text-main)] px-5 py-2 rounded-md hover:bg-[#35b40e] flex items-center gap-2 disabled:opacity-60"
             >
               <FaPaperPlane />
               {sending ? "Sending..." : "Send Message"}

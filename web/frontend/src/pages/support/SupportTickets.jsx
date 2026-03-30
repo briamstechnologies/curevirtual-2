@@ -276,7 +276,7 @@ export default function SupportTickets() {
                     <span className="text-[var(--brand-orange)]">
                       {detail?.ticketNo}
                     </span>{' '}
-                    • {detail?.user?.name || 'Anonymous Subject'}
+                    • {detail?.user ? `${detail.user.firstName} ${detail.user.lastName}` : (selected?.user?.name || 'Anonymous Subject')}
                   </p>
                 </div>
               </div>
@@ -312,7 +312,7 @@ export default function SupportTickets() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                            {r.user?.name || 'Authorized Person'}
+                            {r.user ? `${r.user.firstName} ${r.user.lastName}` : (r.user?.name || 'Authorized Person')}
                           </span>
                           <span className="text-[8px] font-bold text-[var(--text-soft)]">
                             {new Date(r.createdAt).toLocaleString()}

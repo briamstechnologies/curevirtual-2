@@ -121,13 +121,13 @@ export default function MyPatientList() {
                     {rows.map((p) => (
                       <tr key={p.id} className="border-b border-[var(--border)] hover:bg-[var(--bg-glass)]">
                         <td className="p-3">
-                          <div className="font-semibold">{p.user?.name || "—"}</div>
+                          <div className="font-semibold">{p.user ? `${p.user.firstName} ${p.user.lastName}` : "—"}</div>
                           <div className="text-xs text-[var(--text-soft)]">{p.user?.email}</div>
                           <div className="text-xs text-[var(--text-muted)]">MRN: {p.medicalRecordNumber || "—"}</div>
                         </td>
                         <td className="p-3">{p.gender}</td>
                         <td className="p-3">{p.bloodGroup?.replace("_POSITIVE","+").replace("_NEGATIVE","-") || "—"}</td>
-                        <td className="p-3">{ageFromDob(p.dateOfBirth)}</td>
+                        <td className="p-3">{ageFromDob(p.user?.dateOfBirth)}</td>
                         <td className="p-3">{p.address || "—"}</td>
                         <td className="p-3">
                           <button

@@ -86,7 +86,9 @@ export default function Subscribers() {
                   <tbody>
                     {items.map((s) => (
                       <tr key={s.id} className="border-b border-[var(--border)] hover:bg-[var(--bg-glass)] transition">
-                        <td className="p-3">{s.user?.name} <span className="text-[var(--text-muted)]">({s.user?.email})</span></td>
+                        <td className="p-3">
+                          {s.user ? `${s.user.firstName} ${s.user.lastName}` : "—"} <span className="text-[var(--text-muted)]">({s.user?.email})</span>
+                        </td>
                         <td className="p-3">{s.user?.role || "—"}</td>
                         <td className="p-3">{s.plan}</td>
                         <td className="p-3">{s.amount ? `$${(s.amount / 100).toFixed(2)}` : "—"}</td>

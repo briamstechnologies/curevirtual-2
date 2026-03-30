@@ -95,8 +95,12 @@ export default function AdminAppointments() {
                     key={a.id}
                     className="border-b border-[var(--border)] hover:bg-[var(--bg-glass)] transition"
                   >
-                    <td className="p-3">{a.doctor?.user?.name || "N/A"}</td>
-                    <td className="p-3">{a.patient?.user?.name || "N/A"}</td>
+                    <td className="p-3">
+                      {a.doctor?.user ? `${a.doctor.user.firstName} ${a.doctor.user.lastName}` : "N/A"}
+                    </td>
+                    <td className="p-3">
+                      {a.patient?.user ? `${a.patient.user.firstName} ${a.patient.user.lastName}` : "N/A"}
+                    </td>
                     <td className="p-3">
                       {new Date(a.appointmentDate).toLocaleString()}
                     </td>
