@@ -3,12 +3,7 @@ CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateEnum
 DO $$ BEGIN
-    CREATE TYPE "UserRole" AS ENUM ('DOCTOR', 'PATIENT', 'PHARMACY');
-EXCEPTION WHEN duplicate_object THEN null; END $$;
-
--- CreateEnum
-DO $$ BEGIN
-    CREATE TYPE "AdminRole" AS ENUM ('SUPERADMIN', 'ADMIN', 'SUPPORT');
+    CREATE TYPE "UserRole" AS ENUM ('DOCTOR', 'PATIENT', 'PHARMACY', 'SUPERADMIN', 'ADMIN', 'SUPPORT');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- CreateEnum
@@ -33,12 +28,12 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- CreateEnum
 DO $$ BEGIN
-    CREATE TYPE "ConsultationStatus" AS ENUM ('SCHEDULED', 'ONGOING', 'COMPLETED', 'CANCELLED');
+    CREATE TYPE "ConsultationStatus" AS ENUM ('SCHEDULED', 'CHECKED_IN', 'WAITING', 'ONGOING', 'COMPLETED', 'CANCELLED', 'INITIATED', 'RINGING', 'ACCEPTED', 'REJECTED', 'MISSED');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- CreateEnum
 DO $$ BEGIN
-    CREATE TYPE "AppointmentStatus" AS ENUM ('PENDING', 'APPROVED', 'COMPLETED', 'CANCELLED');
+    CREATE TYPE "AppointmentStatus" AS ENUM ('PENDING', 'APPROVED', 'CHECKED_IN', 'WAITING', 'IN_SESSION', 'COMPLETED', 'CANCELLED', 'SCHEDULED', 'NO_SHOW');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- CreateEnum
@@ -56,17 +51,45 @@ DO $$ BEGIN
     CREATE TYPE "PrescriptionDispatchStatus" AS ENUM ('NONE', 'SENT', 'ACKNOWLEDGED', 'READY', 'DISPENSED', 'REJECTED');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
--- CreateTable
-CREATE TABLE "EmailOTP" (
-    "id" SERIAL NOT NULL,
-    "email" TEXT NOT NULL,
-    "otp" TEXT NOT NULL,
-    "expiresAt" TIMESTAMP(3) NOT NULL,
-    "verified" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+-- CreateEnum
+DO $$ BEGIN
+    CREATE TYPE "EncounterStatus" AS ENUM ('DRAFT', 'SIGNED', 'AMENDED');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
-    CONSTRAINT "EmailOTP_pkey" PRIMARY KEY ("id")
-);
+-- CreateEnum
+DO $$ BEGIN
+    CREATE TYPE "LabStatus" AS ENUM ('ORDERED', 'PENDING', 'COMPLETED', 'CANCELLED');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- CreateEnum
+DO $$ BEGIN
+    CREATE TYPE "ReferralType" AS ENUM ('INTERNAL', 'EXTERNAL');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- CreateEnum
+DO $$ BEGIN
+    CREATE TYPE "SlotStatus" AS ENUM ('AVAILABLE', 'BOOKED', 'LOCKED', 'CANCELLED');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- CreateEnum
+DO $$ BEGIN
+    CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'CONFIRMED', 'PROCESSING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED', 'REJECTED');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- CreateEnum
+DO $$ BEGIN
+    CREATE TYPE "TransactionType" AS ENUM ('SUBSCRIPTION_PAYMENT', 'ORDER_PAYMENT', 'CONSULTATION_PAYMENT', 'REFUND');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- CreateEnum
+DO $$ BEGIN
+    CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'SUCCESS', 'FAILED', 'REFUNDED');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- CreateEnum
+DO $$ BEGIN
+    CREATE TYPE "NotificationType" AS ENUM ('APPOINTMENT', 'PRESCRIPTION', 'ORDER', 'MESSAGE', 'PAYMENT', 'SYSTEM');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -76,7 +99,7 @@ CREATE TABLE "User" (
     "lastName" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "phone" TEXT,
-    "password" TEXT NOT NULL,
+    "password" TEXT,
     "role" "UserRole" NOT NULL DEFAULT 'PATIENT',
     "dateOfBirth" TIMESTAMP(3) NOT NULL,
     "gender" "Gender" NOT NULL,
@@ -100,21 +123,6 @@ CREATE TABLE "Organization" (
 );
 
 -- CreateTable
-CREATE TABLE "admin" (
-    "id" SERIAL NOT NULL,
-    "name" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-    "role" "AdminRole" NOT NULL DEFAULT 'ADMIN',
-    "token" TEXT,
-    "isSuspended" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "admin_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "SupportAgent" (
     "id" SERIAL NOT NULL,
     "userId" TEXT NOT NULL,
@@ -131,6 +139,9 @@ CREATE TABLE "ActivityLog" (
     "actorRole" TEXT NOT NULL,
     "action" TEXT NOT NULL,
     "entity" TEXT,
+    "entityId" TEXT,
+    "metadata" TEXT,
+    "ipAddress" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ActivityLog_pkey" PRIMARY KEY ("id")
@@ -141,6 +152,7 @@ CREATE TABLE "DoctorProfile" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "specialization" TEXT NOT NULL,
+    "customProfession" TEXT,
     "qualifications" TEXT NOT NULL,
     "licenseNumber" TEXT NOT NULL,
     "hospitalAffiliation" TEXT,
@@ -150,6 +162,9 @@ CREATE TABLE "DoctorProfile" (
     "timezone" TEXT NOT NULL DEFAULT 'UTC',
     "bio" TEXT,
     "languages" TEXT,
+    "emergencyContact" TEXT,
+    "emergencyContactName" TEXT,
+    "emergencyContactEmail" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -184,7 +199,9 @@ CREATE TABLE "PatientProfile" (
     "userId" TEXT NOT NULL,
     "bloodGroup" "BloodGroup" NOT NULL,
     "height" DOUBLE PRECISION,
+    "heightUnit" TEXT DEFAULT 'cm',
     "weight" DOUBLE PRECISION,
+    "weightUnit" TEXT DEFAULT 'kg',
     "allergies" TEXT,
     "medications" TEXT,
     "medicalHistory" TEXT,
@@ -193,6 +210,10 @@ CREATE TABLE "PatientProfile" (
     "insuranceProvider" TEXT,
     "insuranceMemberId" TEXT,
     "emergencyContact" TEXT,
+    "emergencyContactName" TEXT,
+    "emergencyContactEmail" TEXT,
+    "riskLevel" TEXT,
+    "chronicConditions" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -205,10 +226,16 @@ CREATE TABLE "Appointment" (
     "doctorId" TEXT NOT NULL,
     "patientId" TEXT NOT NULL,
     "appointmentDate" TIMESTAMP(3) NOT NULL,
+    "startTime" TIMESTAMP(3),
+    "endTime" TIMESTAMP(3),
     "reason" TEXT,
     "status" "AppointmentStatus" NOT NULL DEFAULT 'PENDING',
+    "chiefComplaint" TEXT,
+    "intakeNotes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "roomName" TEXT,
+    "callStatus" TEXT NOT NULL DEFAULT 'idle',
 
     CONSTRAINT "Appointment_pkey" PRIMARY KEY ("id")
 );
@@ -220,6 +247,7 @@ CREATE TABLE "DoctorSchedule" (
     "dayOfWeek" INTEGER NOT NULL,
     "startTime" TEXT NOT NULL,
     "endTime" TEXT NOT NULL,
+    "slotDuration" INTEGER NOT NULL DEFAULT 15,
     "effectiveFrom" TIMESTAMP(3),
     "effectiveTo" TIMESTAMP(3),
     "isActive" BOOLEAN NOT NULL DEFAULT true,
@@ -250,7 +278,6 @@ CREATE TABLE "SupportReply" (
     "id" SERIAL NOT NULL,
     "ticketId" INTEGER NOT NULL,
     "userId" TEXT NOT NULL,
-    "adminId" INTEGER,
     "message" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -267,13 +294,72 @@ CREATE TABLE "Prescription" (
     "frequency" TEXT NOT NULL,
     "duration" TEXT NOT NULL,
     "notes" TEXT,
+    "isControlled" BOOLEAN NOT NULL DEFAULT false,
+    "deaNumber" TEXT,
+    "refills" INTEGER NOT NULL DEFAULT 0,
+    "drugAlerts" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "pharmacyId" TEXT,
     "dispatchStatus" "PrescriptionDispatchStatus" NOT NULL DEFAULT 'NONE',
     "dispatchedAt" TIMESTAMP(3),
+    "encounterId" TEXT,
 
     CONSTRAINT "Prescription_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ClinicalEncounter" (
+    "id" TEXT NOT NULL,
+    "appointmentId" TEXT NOT NULL,
+    "doctorId" TEXT NOT NULL,
+    "patientId" TEXT NOT NULL,
+    "subjective" TEXT,
+    "objective" TEXT,
+    "assessment" TEXT,
+    "plan" TEXT,
+    "systolic" INTEGER,
+    "diastolic" INTEGER,
+    "pulse" INTEGER,
+    "temperature" DOUBLE PRECISION,
+    "weight" DOUBLE PRECISION,
+    "oxygenSat" INTEGER,
+    "status" "EncounterStatus" NOT NULL DEFAULT 'DRAFT',
+    "signedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ClinicalEncounter_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "LabOrder" (
+    "id" TEXT NOT NULL,
+    "doctorId" TEXT NOT NULL,
+    "patientId" TEXT NOT NULL,
+    "encounterId" TEXT,
+    "testName" TEXT NOT NULL,
+    "status" "LabStatus" NOT NULL DEFAULT 'ORDERED',
+    "results" TEXT,
+    "orderedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "completedAt" TIMESTAMP(3),
+
+    CONSTRAINT "LabOrder_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Referral" (
+    "id" TEXT NOT NULL,
+    "doctorId" TEXT NOT NULL,
+    "patientId" TEXT NOT NULL,
+    "encounterId" TEXT,
+    "targetDoctorId" TEXT,
+    "specialistName" TEXT,
+    "type" "ReferralType" NOT NULL,
+    "reason" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+
+    CONSTRAINT "Referral_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -284,8 +370,6 @@ CREATE TABLE "Message" (
     "content" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "readAt" TIMESTAMP(3),
-    "adminSenderId" INTEGER,
-    "adminReceiverId" INTEGER,
 
     CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
 );
@@ -302,6 +386,10 @@ CREATE TABLE "VideoConsultation" (
     "status" "ConsultationStatus" NOT NULL DEFAULT 'SCHEDULED',
     "roomName" TEXT,
     "meetingUrl" TEXT,
+    "actualStartTime" TIMESTAMP(3),
+    "actualEndTime" TIMESTAMP(3),
+    "recordingUrl" TEXT,
+    "failureReason" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -377,23 +465,140 @@ CREATE TABLE "SystemSetting" (
     CONSTRAINT "SystemSetting_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE INDEX "EmailOTP_email_idx" ON "EmailOTP"("email");
+-- CreateTable
+CREATE TABLE "medicine" (
+    "id" TEXT NOT NULL,
+    "pharmacyId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "genericName" TEXT,
+    "category" TEXT NOT NULL,
+    "manufacturer" TEXT,
+    "description" TEXT,
+    "stockQuantity" INTEGER NOT NULL DEFAULT 0,
+    "unitPrice" DOUBLE PRECISION NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'USD',
+    "dosageForm" TEXT,
+    "strength" TEXT,
+    "packSize" INTEGER,
+    "isAvailable" BOOLEAN NOT NULL DEFAULT true,
+    "requiresPrescription" BOOLEAN NOT NULL DEFAULT true,
+    "lowStockThreshold" INTEGER NOT NULL DEFAULT 10,
+    "imageUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
--- CreateIndex
-CREATE INDEX "EmailOTP_expiresAt_idx" ON "EmailOTP"("expiresAt");
+    CONSTRAINT "medicine_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "medicineorder" (
+    "id" TEXT NOT NULL,
+    "orderNumber" TEXT NOT NULL,
+    "patientId" TEXT NOT NULL,
+    "pharmacyId" TEXT NOT NULL,
+    "prescriptionId" TEXT,
+    "status" "OrderStatus" NOT NULL DEFAULT 'PENDING',
+    "subtotal" DOUBLE PRECISION NOT NULL,
+    "deliveryFee" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "tax" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "discount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "totalAmount" DOUBLE PRECISION NOT NULL,
+    "paymentStatus" TEXT NOT NULL DEFAULT 'PENDING',
+    "paymentMethod" TEXT,
+    "paymentReference" TEXT,
+    "deliveryAddress" TEXT,
+    "deliveryType" TEXT NOT NULL DEFAULT 'PICKUP',
+    "estimatedDelivery" TIMESTAMP(3),
+    "notes" TEXT,
+    "rejectionReason" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "completedAt" TIMESTAMP(3),
+
+    CONSTRAINT "medicineorder_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "medicineorderitem" (
+    "id" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
+    "medicineId" TEXT NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "unitPrice" DOUBLE PRECISION NOT NULL,
+    "totalPrice" DOUBLE PRECISION NOT NULL,
+
+    CONSTRAINT "medicineorderitem_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "transaction" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "type" "TransactionType" NOT NULL,
+    "status" "TransactionStatus" NOT NULL DEFAULT 'PENDING',
+    "amount" DOUBLE PRECISION NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'USD',
+    "provider" TEXT NOT NULL,
+    "providerTxId" TEXT,
+    "providerCustomerId" TEXT,
+    "subscriptionId" TEXT,
+    "orderId" TEXT,
+    "description" TEXT,
+    "metadata" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "transaction_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "notification" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "type" "NotificationType" NOT NULL,
+    "title" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "link" TEXT,
+    "actionData" TEXT,
+    "isRead" BOOLEAN NOT NULL DEFAULT false,
+    "readAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "notification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "videosession" (
+    "id" TEXT NOT NULL,
+    "consultationId" TEXT NOT NULL,
+    "channelName" TEXT NOT NULL,
+    "token" TEXT,
+    "uid" TEXT,
+    "startedAt" TIMESTAMP(3),
+    "endedAt" TIMESTAMP(3),
+    "duration" INTEGER,
+    "recordingUrl" TEXT,
+    "recordingId" TEXT,
+
+    CONSTRAINT "videosession_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "systemmetric" (
+    "id" TEXT NOT NULL,
+    "metricType" TEXT NOT NULL,
+    "value" DOUBLE PRECISION NOT NULL,
+    "metadata" TEXT,
+    "recordedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "systemmetric_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE INDEX "User_organizationId_idx" ON "User"("organizationId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "admin_email_key" ON "admin"("email");
-
--- CreateIndex
-CREATE UNIQUE INDEX "admin_token_key" ON "admin"("token");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SupportAgent_userId_key" ON "SupportAgent"("userId");
@@ -420,6 +625,9 @@ CREATE INDEX "Appointment_doctorId_idx" ON "Appointment"("doctorId");
 CREATE INDEX "Appointment_patientId_idx" ON "Appointment"("patientId");
 
 -- CreateIndex
+CREATE INDEX "Appointment_appointmentDate_idx" ON "Appointment"("appointmentDate");
+
+-- CreateIndex
 CREATE INDEX "DoctorSchedule_doctorId_idx" ON "DoctorSchedule"("doctorId");
 
 -- CreateIndex
@@ -436,6 +644,9 @@ CREATE INDEX "Prescription_patientId_idx" ON "Prescription"("patientId");
 
 -- CreateIndex
 CREATE INDEX "Prescription_pharmacyId_idx" ON "Prescription"("pharmacyId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ClinicalEncounter_appointmentId_key" ON "ClinicalEncounter"("appointmentId");
 
 -- CreateIndex
 CREATE INDEX "VideoConsultation_doctorId_idx" ON "VideoConsultation"("doctorId");
@@ -466,6 +677,63 @@ CREATE UNIQUE INDEX "DoctorPatient_doctorId_patientId_key" ON "DoctorPatient"("d
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SelectedPharmacy_patientId_pharmacyId_key" ON "SelectedPharmacy"("patientId", "pharmacyId");
+
+-- CreateIndex
+CREATE INDEX "medicine_pharmacyId_idx" ON "medicine"("pharmacyId");
+
+-- CreateIndex
+CREATE INDEX "medicine_name_idx" ON "medicine"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "medicineorder_orderNumber_key" ON "medicineorder"("orderNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "medicineorder_paymentReference_key" ON "medicineorder"("paymentReference");
+
+-- CreateIndex
+CREATE INDEX "medicineorder_patientId_idx" ON "medicineorder"("patientId");
+
+-- CreateIndex
+CREATE INDEX "medicineorder_pharmacyId_idx" ON "medicineorder"("pharmacyId");
+
+-- CreateIndex
+CREATE INDEX "medicineorder_status_idx" ON "medicineorder"("status");
+
+-- CreateIndex
+CREATE INDEX "medicineorder_orderNumber_idx" ON "medicineorder"("orderNumber");
+
+-- CreateIndex
+CREATE INDEX "medicineorderitem_orderId_idx" ON "medicineorderitem"("orderId");
+
+-- CreateIndex
+CREATE INDEX "medicineorderitem_medicineId_idx" ON "medicineorderitem"("medicineId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "transaction_providerTxId_key" ON "transaction"("providerTxId");
+
+-- CreateIndex
+CREATE INDEX "transaction_userId_idx" ON "transaction"("userId");
+
+-- CreateIndex
+CREATE INDEX "transaction_status_idx" ON "transaction"("status");
+
+-- CreateIndex
+CREATE INDEX "transaction_type_idx" ON "transaction"("type");
+
+-- CreateIndex
+CREATE INDEX "notification_userId_isRead_idx" ON "notification"("userId", "isRead");
+
+-- CreateIndex
+CREATE INDEX "notification_createdAt_idx" ON "notification"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "videosession_consultationId_key" ON "videosession"("consultationId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "videosession_channelName_key" ON "videosession"("channelName");
+
+-- CreateIndex
+CREATE INDEX "systemmetric_metricType_recordedAt_idx" ON "systemmetric"("metricType", "recordedAt");
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -504,9 +772,6 @@ ALTER TABLE "SupportReply" ADD CONSTRAINT "SupportReply_ticketId_fkey" FOREIGN K
 ALTER TABLE "SupportReply" ADD CONSTRAINT "SupportReply_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "SupportReply" ADD CONSTRAINT "SupportReply_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "admin"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Prescription" ADD CONSTRAINT "Prescription_pharmacyId_fkey" FOREIGN KEY ("pharmacyId") REFERENCES "PharmacyProfile"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -516,16 +781,43 @@ ALTER TABLE "Prescription" ADD CONSTRAINT "Prescription_doctorId_fkey" FOREIGN K
 ALTER TABLE "Prescription" ADD CONSTRAINT "Prescription_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "PatientProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Prescription" ADD CONSTRAINT "Prescription_encounterId_fkey" FOREIGN KEY ("encounterId") REFERENCES "ClinicalEncounter"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ClinicalEncounter" ADD CONSTRAINT "ClinicalEncounter_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ClinicalEncounter" ADD CONSTRAINT "ClinicalEncounter_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "DoctorProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ClinicalEncounter" ADD CONSTRAINT "ClinicalEncounter_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "PatientProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LabOrder" ADD CONSTRAINT "LabOrder_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "DoctorProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LabOrder" ADD CONSTRAINT "LabOrder_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "PatientProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LabOrder" ADD CONSTRAINT "LabOrder_encounterId_fkey" FOREIGN KEY ("encounterId") REFERENCES "ClinicalEncounter"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Referral" ADD CONSTRAINT "Referral_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "DoctorProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Referral" ADD CONSTRAINT "Referral_targetDoctorId_fkey" FOREIGN KEY ("targetDoctorId") REFERENCES "DoctorProfile"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Referral" ADD CONSTRAINT "Referral_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "PatientProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Referral" ADD CONSTRAINT "Referral_encounterId_fkey" FOREIGN KEY ("encounterId") REFERENCES "ClinicalEncounter"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Message" ADD CONSTRAINT "Message_adminSenderId_fkey" FOREIGN KEY ("adminSenderId") REFERENCES "admin"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Message" ADD CONSTRAINT "Message_adminReceiverId_fkey" FOREIGN KEY ("adminReceiverId") REFERENCES "admin"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "VideoConsultation" ADD CONSTRAINT "VideoConsultation_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "DoctorProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -547,4 +839,37 @@ ALTER TABLE "SelectedPharmacy" ADD CONSTRAINT "SelectedPharmacy_patientId_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "SelectedPharmacy" ADD CONSTRAINT "SelectedPharmacy_pharmacyId_fkey" FOREIGN KEY ("pharmacyId") REFERENCES "PharmacyProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "medicine" ADD CONSTRAINT "medicine_pharmacyId_fkey" FOREIGN KEY ("pharmacyId") REFERENCES "PharmacyProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "medicineorder" ADD CONSTRAINT "medicineorder_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "PatientProfile"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "medicineorder" ADD CONSTRAINT "medicineorder_pharmacyId_fkey" FOREIGN KEY ("pharmacyId") REFERENCES "PharmacyProfile"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "medicineorder" ADD CONSTRAINT "medicineorder_prescriptionId_fkey" FOREIGN KEY ("prescriptionId") REFERENCES "Prescription"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "medicineorderitem" ADD CONSTRAINT "medicineorderitem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "medicineorder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "medicineorderitem" ADD CONSTRAINT "medicineorderitem_medicineId_fkey" FOREIGN KEY ("medicineId") REFERENCES "medicine"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction" ADD CONSTRAINT "transaction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction" ADD CONSTRAINT "transaction_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "Subscription"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction" ADD CONSTRAINT "transaction_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "medicineorder"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notification" ADD CONSTRAINT "notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "videosession" ADD CONSTRAINT "videosession_consultationId_fkey" FOREIGN KEY ("consultationId") REFERENCES "VideoConsultation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
