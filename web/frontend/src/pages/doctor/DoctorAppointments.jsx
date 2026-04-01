@@ -345,7 +345,7 @@ export default function DoctorAppointments() {
             </h1>
           </div>
           <button onClick={openNewModal} className="btn btn-primary" disabled={!hasPatients}>
-            <FaPlus /> New Protocol
+            <FaPlus /> New Session
           </button>
         </div>
 
@@ -464,7 +464,7 @@ export default function DoctorAppointments() {
           <div onClick={() => setModalOpen(false)}></div>
           <div className="relative w-full max-w-lg glass !p-8 animate-in zoom-in-95 duration-300">
             <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-6">
-              {viewMode ? "Protocol View" : editing ? "Sync Protocol" : "Initialize Protocol"}
+              {viewMode ? "Protocol View" : editing ? "Confirm Session" : "Initialize Protocol"}
             </h2>
             {viewMode ? (
               <div className="space-y-6 text-[var(--text-main)] text-xs font-bold">
@@ -558,7 +558,7 @@ export default function DoctorAppointments() {
                     Cancel
                   </button>
                   <button type="submit" className="btn btn-primary flex-[2]">
-                    {editing ? "Update Protocol" : "Sync Protocol"}
+                    {editing ? "Update Protocol" : "Confirm Session"}
                   </button>
                 </div>
               </form>

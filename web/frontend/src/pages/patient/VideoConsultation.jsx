@@ -256,7 +256,7 @@ export default function VideoConsultation() {
           <div onClick={() => setModalOpen(false)}></div>
           <div className="relative w-full max-w-lg glass !p-8 animate-in zoom-in-95 duration-300">
             <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-6">
-              Initialize Hub Session
+              Consultation
             </h2>
             <form onSubmit={handleSchedule} className="space-y-4">
               <div className="space-y-1.5">
@@ -274,8 +274,8 @@ export default function VideoConsultation() {
                     <option key={d.id} value={d.id}>
                       {[d.user?.firstName, d.user?.lastName]
                         .filter((v) => v && !v.includes("IDENTITY") && !v.includes("REDACTED"))
-                        .join(" ") || "Doctor"} —{" "}
-                      {d.specialization || "General"}
+                        .join(" ") || "Doctor"}{" "}
+                      — {d.specialization || "General"}
                     </option>
                   ))}
                 </select>
