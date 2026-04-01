@@ -20,8 +20,8 @@ module.exports = (io) => {
       });
       console.log(`👤 User online: ${name} (${role}) - Socket: ${socket.id}`);
 
-      // broadcast to all that user is online
-      socket.broadcast.emit("user_status", {
+      // 	Send Message to All to all that user is online
+      socket.	Send Message to All.emit("user_status", {
         userId,
         role,
         name,
@@ -352,7 +352,7 @@ module.exports = (io) => {
             if (roomUsers.get(roomId).size === 0) roomUsers.delete(roomId);
           }
         }
-        socket.broadcast.emit("user_status", {
+        socket.	Send Message to All.emit("user_status", {
           userId: user.userId,
           role: user.role,
           name: user.name,

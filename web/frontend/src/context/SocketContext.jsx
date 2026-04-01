@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
 import { SocketContext } from "./useSocket";
-import { useUser } from "./UserContext";
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
@@ -11,24 +10,19 @@ export const SocketProvider = ({ children }) => {
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
 
-  const { user } = useUser();
-
   // Derive socket URL from API base URL (strip /api suffix)
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://curevirtual-2-production-ee33.up.railway.app/api";
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001/api";
   const backendUrl = apiBaseUrl.replace(/\/api\/?$/, "");
 
   useEffect(() => {
-    // Get user info from localStorage as fallback
-    const userId = user?.id || localStorage.getItem("userId");
-    const role = user?.role || localStorage.getItem("role");
-    const name = user?.name || localStorage.getItem("userName") || localStorage.getItem("name") || "User";
+    // Get user info from localStorage
+    const userId = localStorage.getItem("userId");
+    const role = localStorage.getItem("role");
+    const name = localStorage.getItem("userName") || localStorage.getItem("name") || "User";
     const token = localStorage.getItem("token"); // JWT token for authentication
 
     if (!userId || !role || !token) {
-      console.warn("⚠️ No user credentials or token found. Socket will not connect.");
-      setSocket(null);
-      setIsConnected(false);
-      setConnectionState("disconnected");
+      console.warn("⚠️ No user credentials or token found. Socket connection delayed.");
       return;
     }
 
@@ -65,25 +59,6 @@ export const SocketProvider = ({ children }) => {
     // Connection error
     newSocket.on("connect_error", (error) => {
       console.error("❌ Socket connection error:", error.message);
-      
-      if (
-        error.message === "Invalid token" ||
-        error.message === "Token expired" ||
-        error.message === "Authentication required"
-      ) {
-        console.warn("⚠️ Socket auth failed. Clearing credentials...");
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("role");
-        localStorage.removeItem("name");
-        localStorage.removeItem("userName");
-        localStorage.removeItem("type");
-        localStorage.removeItem("email");
-        newSocket.disconnect();
-        window.location.href = "/login";
-        return;
-      }
-
       setIsConnected(false);
       setConnectionState("reconnecting");
     });
@@ -136,7 +111,7 @@ export const SocketProvider = ({ children }) => {
         newSocket.disconnect();
       }
     };
-  }, [backendUrl, user]);
+  }, [backendUrl]);
 
   const contextValue = {
     socket,

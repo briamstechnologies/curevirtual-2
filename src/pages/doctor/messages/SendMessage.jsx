@@ -17,17 +17,23 @@ export default function DoctorSendMessage() {
   const doctorName =
     localStorage.getItem("userName") || localStorage.getItem("name") || "Doctor";
 
-  // Load my patients for dropdown
+      // Load my patients for dropdown
+    async function loadMyPatients() {
+      const res = await api.get("/doctor/patients", { params: { doctorUserId } });
+      setPatients(res.data?.data || []); // array of PatientProfile with p.user
+    }
+    useEffect(() => { loadMyPatients(); }, []);
+
+  // Load patients for dropdown
   useEffect(() => {
-    async function loadPatients() {
-      if (!doctorUserId) return;
+    (async () => {
       try {
-        setLoading(true);
-        const res = await api.get("/doctor/patients", { params: { doctorUserId } });
-        const list = res.data?.data || res.data || [];
+        const res = await api.get("/doctor/patients");
+        const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+        // Normalize to { id: <Patient User.id>, name: <Patient Name> }
         const normalized = list.map((p) => ({
           id: p?.user?.id ?? p?.userId ?? p?.id,
-          name: p?.user ? `${p.user.firstName} ${p.user.lastName}`.trim() : (p?.name ?? "Patient"),
+          name: p?.user?.name ?? p?.name ?? "Patient",
         })).filter(p => !!p.id);
         setPatients(normalized);
       } catch (err) {
@@ -36,10 +42,8 @@ export default function DoctorSendMessage() {
       } finally {
         setLoading(false);
       }
-    }
-    loadPatients();
-  }, [doctorUserId]);
-
+    })();
+  }, []);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -106,7 +110,7 @@ export default function DoctorSendMessage() {
           <div className="mb-4">
             <label className="block font-semibold mb-2">Message</label>
             <textarea
-              className="w-full border border-gray-300 text-white rounded-md p-3 h-32 focus:outline-none focus:ring-2 focus:ring-[#027906]"
+              className="w-full border border-gray-300 text-black rounded-md p-3 h-32 focus:outline-none focus:ring-2 focus:ring-[#027906]"
               placeholder="Type your message here..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -117,7 +121,7 @@ export default function DoctorSendMessage() {
           <button
             type="submit"
             disabled={sending || !receiverId || !content.trim()}
-            className="bg-[#027906] text-[var(--text-main)] px-5 py-2 rounded-md hover:bg-[#00b303] flex items-center gap-2 disabled:opacity-60"
+            className="bg-[#027906] text-[var(--text-main)] px-5 py-2 rounded-md hover:bg-[#190366] flex items-center gap-2 disabled:opacity-60"
           >
             <FaPaperPlane />
             {sending ? "Sending..." : "Send Message"}

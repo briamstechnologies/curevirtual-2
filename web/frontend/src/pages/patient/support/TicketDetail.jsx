@@ -193,7 +193,7 @@ export default function TicketDetails() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-[var(--text-soft)]">
-                          {isMine ? "You" : (r.user ? `${r.user.firstName} ${r.user.lastName}` : "Support")}
+                          {isMine ? "You" : r.user?.name || "Support"}
                         </div>
                         <div className="text-xs text-[var(--text-muted)]">
                           {new Date(r.createdAt).toLocaleString()}

@@ -72,7 +72,7 @@ export default function PharmacySendMessage() {
               <p>Loading contacts...</p>
             ) : (
               <select
-                className="w-full border border-gray-300 text-white rounded-md p-2"
+                className="w-full border border-gray-300 text-black rounded-md p-2"
                 value={receiverId}
                 onChange={(e) => setReceiverId(e.target.value)}
                 required
@@ -91,7 +91,7 @@ export default function PharmacySendMessage() {
           <div className="mb-4">
             <label className="block font-semibold mb-2">Message</label>
             <textarea
-              className="w-full border border-gray-300 text-white rounded-md p-3 h-32 focus:outline-none focus:ring-2 focus:ring-[#027906]"
+              className="w-full border border-gray-300 text-black rounded-md p-3 h-32 focus:outline-none focus:ring-2 focus:ring-[#027906]"
               placeholder="Type your message here..."
               value={content}
               onChange={(e) => setContent(e.target.value)}

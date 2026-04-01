@@ -1,12 +1,3 @@
-// Polyfill for Headers, Fetch, and Request (required for Supabase SDK on Node < 18)
-if (typeof global.Headers === 'undefined') {
-  const { Headers, Request, Response, fetch } = require('node-fetch-native');
-  global.Headers = Headers;
-  global.Request = Request;
-  global.Response = Response;
-  global.fetch = fetch;
-}
-
 // FILE: backend/server.js
 const express = require("express");
 const cors = require("cors");
@@ -16,19 +7,26 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const app = express();
-app.set("trust proxy", 1); // ✅ Trust Railway's proxy for rate limiting (detects client IP correctly)
 const http = require("http");
 const { Server } = require("socket.io");
 
 // ✅ Global Allowed Origins (Moved up for Socket.io)
 const allowedOrigins = [
-  "https://curevirtual-2.vercel.app", // Keep for local development
-  process.env.FRONTEND_URL,
-  process.env.APP_BASE_URL,
-  process.env.CORS_ORIGIN,
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:5176",
+  "https://cure-virtual-2.vercel.app",
   "https://curevirtual-2.vercel.app",
+  "https://curevirtual.vercel.app",
+  "https://cure-virtual-2-git-main-briamstechnologies.vercel.app",
+  "https://curevirtual-2-production.up.railway.app",
+  "https://curevirtual-2-production-ee33.up.railway.app",
+  "https://curevirtual-2-production-6eaa.up.railway.app",
+  "https://bite-dash-railway-app.up.railway.app", // Added based on context if needed, but sticking to existing pattern
+  process.env.FRONTEND_URL,
+  process.env.RAILWAY_STATIC_URL,
 ].filter(Boolean);
-
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -52,18 +50,15 @@ require("./socket/socketHandler.cjs")(io);
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, Postman)
+      // allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      // Allow any *.vercel.app subdomain (covers preview deployments)
-      if (origin.endsWith(".vercel.app")) return callback(null, true);
-      if (origin.endsWith(".up.railway.app")) return callback(null, true);
       if (
         allowedOrigins.indexOf(origin) !== -1 ||
-        allowedOrigins.some((o) => o && origin.startsWith(o))
+        allowedOrigins.some((o) => origin.startsWith(o))
       ) {
         callback(null, true);
       } else {
-        console.warn(`[CORS] Blocked origin: ${origin}`);
+        console.warn(`CORS blocked for origin: ${origin}`);
         callback(new Error("Not allowed by CORS"));
       }
     },
@@ -82,9 +77,9 @@ app.get("/", (_req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "UP",
-    version: "1.0.6",
+    version: "1.0.5",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "production",
+    environment: process.env.NODE_ENV || "development",
   });
 });
 
@@ -136,7 +131,7 @@ const doctorVideoRoutes = require("./routes/doctorVideo");
 const doctorPatientsRoutes = require("./routes/doctorPatients");
 const clinicalEncounterRoutes = require("./routes/clinicalEncounter");
 
-app.use("/api/doctor", doctorPatientsRoutes);
+app.use("/api", doctorPatientsRoutes);
 app.use("/api/doctor", doctorRoutes);
 app.use("/api/doctor/video", doctorVideoRoutes);
 app.use("/api/clinical-encounter", clinicalEncounterRoutes);
@@ -155,7 +150,7 @@ const patientRoutes = require("./routes/patientRoutes");
 const patientDoctorsRoutes = require("./routes/patientDoctors");
 
 // 👇 mount under /api
-app.use("/api/patient", patientDoctorsRoutes);
+app.use("/api", patientDoctorsRoutes);
 app.use("/api/patient", patientRoutes);
 
 const notificationsRoutes = require("./routes/notifications");
@@ -209,24 +204,6 @@ app.get("/api/test", (req, res) => {
 
 app.get("/api/doctor/test", (req, res) => {
   res.json({ message: "Doctor routes are working!" });
-});
-
-// ✅ Env Debug Endpoint — helps diagnose production issues without reading Railway logs
-// Safe: only shows SET/MISSING, never actual values
-app.get("/api/debug/env", (_req, res) => {
-  res.json({
-    NODE_ENV: process.env.NODE_ENV || "not set",
-    DATABASE_URL: process.env.DATABASE_URL ? "✅ SET" : "❌ MISSING",
-    DIRECT_URL: process.env.DIRECT_URL ? "✅ SET" : "⚠️ NOT SET",
-    JWT_SECRET: process.env.JWT_SECRET ? "✅ SET" : "❌ MISSING",
-    EMAIL_USER: process.env.EMAIL_USER ? `✅ ${process.env.EMAIL_USER}` : "❌ MISSING",
-    GMAIL_USER: process.env.GMAIL_USER ? `✅ ${process.env.GMAIL_USER}` : "not set",
-    EMAIL_PASS: process.env.EMAIL_PASS ? "✅ SET" : "❌ MISSING",
-    GMAIL_PASS: process.env.GMAIL_PASS ? "✅ SET" : "not set",
-    EMAIL_PROVIDER: process.env.EMAIL_PROVIDER || "gmail (default)",
-    FRONTEND_URL: process.env.FRONTEND_URL || "not set",
-    PORT: process.env.PORT || "5001",
-  });
 });
 
 // ✅ Global Error Handler (Must be last)

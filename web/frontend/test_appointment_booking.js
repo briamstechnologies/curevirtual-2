@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const BASE_URL = 'https://curevirtual-2-production-ee33.up.railway.app/api';
+const BASE_URL = 'http://localhost:5001/api';
 
 /**
  * Test Script for Appointment Booking Flow

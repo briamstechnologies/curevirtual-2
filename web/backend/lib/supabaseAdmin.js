@@ -1,13 +1,3 @@
-// Polyfill for Headers (required for Supabase SDK on Node < 18)
-if (typeof global.Headers === 'undefined') {
-  try {
-    const { Headers } = require('node-fetch-native');
-    global.Headers = Headers;
-  } catch (e) {
-    global.Headers = class {}; 
-  }
-}
-
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;

@@ -276,7 +276,6 @@ router.get("/stats", async (req, res) => {
           totalPrescriptions: 0,
           totalConsultations: 0,
           totalDoctors: 0,
-          totalPharmacies: 0,
         },
       });
     }
@@ -297,9 +296,6 @@ router.get("/stats", async (req, res) => {
       where: { patientId: pid },
     });
     const totalConsultations = await prisma.videoConsultation.count({
-      where: { patientId: pid },
-    });
-    const totalPharmacies = await prisma.selectedPharmacy.count({
       where: { patientId: pid },
     });
 
@@ -336,7 +332,6 @@ router.get("/stats", async (req, res) => {
         totalPrescriptions,
         totalConsultations,
         totalDoctors: doctorSet.size,
-        totalPharmacies,
       },
     });
   } catch (err) {
@@ -453,16 +448,7 @@ router.post("/appointments", async (req, res) => {
     if (!doctorId || !appointmentDate)
       return res.status(400).json({ error: "Missing required fields" });
 
-    let pid = await getPatientProfileIdByUserId(userId);
-    if (!pid) {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      if (user && user.role === "PATIENT") {
-        const { ensureDefaultProfile } = require("../lib/provisionProfile");
-        const newProfile = await ensureDefaultProfile(user);
-        pid = newProfile.id;
-        console.log(`[DEBUG] Provisioned missing patient profile for user: ${userId}`);
-      }
-    }
+    const pid = await getPatientProfileIdByUserId(userId);
     if (!pid) return res.status(404).json({ error: "Patient profile not found" });
 
     const doctor = await prisma.doctorProfile.findUnique({
@@ -648,7 +634,6 @@ router.get("/prescriptions", async (req, res) => {
     const prescriptions = await prisma.prescription.findMany({
       where: { patientId: pid },
       include: {
-        pharmacy: true,
         doctor: {
           include: {
             user: {
@@ -768,7 +753,7 @@ router.post("/subscription/checkout/paystack", async (req, res) => {
     if (!PAYSTACK_SECRET_KEY)
       return res.status(500).json({ error: "PAYSTACK_SECRET_KEY not configured" });
 
-    const origin = req.headers.origin || req.headers.referer || "https://curevirtual-2.vercel.app";
+    const origin = req.headers.origin || req.headers.referer || "https://cure-virtual-2.vercel.app";
     const reference = `cv_sub_${user.id}_${Date.now()}`;
     const callback_url = process.env.PAYSTACK_CALLBACK_URL || `${origin}/subscription`;
 
@@ -890,10 +875,10 @@ router.post("/subscription/checkout/stripe", async (req, res) => {
       customer_email: user.email,
       success_url:
         process.env.STRIPE_SUCCESS_URL ||
-        `${process.env.APP_BASE_URL || "https://curevirtual-2.vercel.app"}/subscription?status=success&session_id={CHECKOUT_SESSION_ID}`,
+        `${process.env.APP_BASE_URL || "https://cure-virtual-2.vercel.app"}/subscription?status=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:
         process.env.STRIPE_CANCEL_URL ||
-        `${process.env.APP_BASE_URL || "https://curevirtual-2.vercel.app"}/subscription?status=cancel`,
+        `${process.env.APP_BASE_URL || "https://cure-virtual-2.vercel.app"}/subscription?status=cancel`,
       metadata: { userId: user.id },
     });
 

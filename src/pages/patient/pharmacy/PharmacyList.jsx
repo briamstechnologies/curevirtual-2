@@ -1,27 +1,35 @@
 // FILE: src/pages/patient/pharmacy/PharmacyList.jsx
-import { useEffect, useState, useMemo } from "react";
-import DashboardLayout from "../../../layouts/DashboardLayout";
-import api from "../../../Lib/api";
-import { ToastContainer, toast } from "react-toastify";
-import { FaEye, FaPlus, FaMapMarkerAlt } from "react-icons/fa";
-import "react-toastify/dist/ReactToastify.css";
+import { useEffect, useState, useMemo } from 'react';
+import DashboardLayout from '../../../layouts/DashboardLayout';
+import api from '../../../Lib/api';
+import { ToastContainer, toast } from 'react-toastify';
+import { FaEye, FaPlus, FaMapMarkerAlt } from 'react-icons/fa';
+import 'react-toastify/dist/ReactToastify.css';
 
 function haversineKm(lat1, lon1, lat2, lon2) {
-  if ([lat1, lon1, lat2, lon2].some((v) => v == null || Number.isNaN(Number(v)))) return null;
+  if (
+    [lat1, lon1, lat2, lon2].some((v) => v == null || Number.isNaN(Number(v)))
+  )
+    return null;
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(R * c * 10) / 10;
 }
 
 export default function PharmacyList() {
-  const role = "PATIENT";
-  const patientId = localStorage.getItem("userId") || "";
-  const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "Patient";
+  const role = 'PATIENT';
+  const patientId = localStorage.getItem('userId') || '';
+  const userName =
+    localStorage.getItem('userName') ||
+    localStorage.getItem('name') ||
+    'Patient';
 
   const [items, setItems] = useState([]);
   const [myLat, setMyLat] = useState(null);
@@ -51,25 +59,17 @@ export default function PharmacyList() {
         params.lat = myLat;
         params.lng = myLng;
       }
-      const res = await api.get("/pharmacy/list", { params });
+      const res = await api.get('/pharmacy/list', { params });
       setItems(res.data?.data?.items || []);
     } catch (err) {
-      toast.error("Failed to load clinical terminals.");
+      toast.error('Failed to load clinical terminals.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Initial load on mount (works even if geolocation is denied)
   useEffect(() => {
     load();
-  }, []);
-
-  // Re-load with coordinates once geolocation resolves
-  useEffect(() => {
-    if (myLat != null && myLng != null) {
-      load();
-    }
   }, [myLat, myLng]);
 
   const withDistance = useMemo(() => {
@@ -89,16 +89,16 @@ export default function PharmacyList() {
       setActive(res.data?.data || null);
       setModalOpen(true);
     } catch (err) {
-      toast.error("Failed to decrypt pharmacy identity.");
+      toast.error('Failed to decrypt pharmacy identity.');
     }
   };
 
   const addToMyPharmacies = async (pharmacyId) => {
     try {
-      await api.post("/pharmacy/patient/select", { patientId, pharmacyId });
-      toast.success("Pharmacy linked to your profile.");
+      await api.post('/pharmacy/patient/select', { patientId, pharmacyId });
+      toast.success('Pharmacy linked to your profile.');
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to add pharmacy.");
+      toast.error(err?.response?.data?.error || 'Failed to add pharmacy.');
     }
   };
 
@@ -110,7 +110,7 @@ export default function PharmacyList() {
             Fulfillment Network
           </h2>
           <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tighter uppercase">
-            Pharmacies
+            Clinic Terminals
           </h1>
         </div>
 
@@ -154,17 +154,20 @@ export default function PharmacyList() {
                   </tr>
                 ) : (
                   withDistance.map((p) => (
-                    <tr key={p.id} className="hover:bg-[var(--bg-main)]/30 transition-colors">
+                    <tr
+                      key={p.id}
+                      className="hover:bg-[var(--bg-main)]/30 transition-colors"
+                    >
                       <td className="px-6 py-4 text-sm font-black text-[var(--text-main)]">
                         {p.name}
                       </td>
                       <td className="px-6 py-4 text-xs font-bold text-[var(--text-soft)]">
-                        {p.address || "Zone Unlisted"}
+                        {p.address || 'Zone Unlisted'}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-xs font-mono font-bold text-[var(--brand-blue)]">
                           <FaMapMarkerAlt className="text-[var(--brand-orange)]" />
-                          {p.distanceKm != null ? `${p.distanceKm} KM` : "—"}
+                          {p.distanceKm != null ? `${p.distanceKm} KM` : '—'}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -214,7 +217,9 @@ export default function PharmacyList() {
                   <p className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest">
                     Protocol Phone
                   </p>
-                  <p className="text-[var(--text-main)]">{active.pharmacyProfile?.phone || "—"}</p>
+                  <p className="text-[var(--text-main)]">
+                    {active.pharmacyProfile?.phone || '—'}
+                  </p>
                 </div>
               </div>
               <div className="space-y-4">
@@ -223,7 +228,7 @@ export default function PharmacyList() {
                     Fulfillment Zone
                   </p>
                   <p className="text-[var(--text-main)]">
-                    {active.pharmacyProfile?.address || "—"}
+                    {active.pharmacyProfile?.address || '—'}
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -233,11 +238,13 @@ export default function PharmacyList() {
                   <p
                     className={
                       active.pharmacyProfile?.deliveryAvailable
-                        ? "text-[var(--brand-green)]"
-                        : "text-[var(--brand-orange)]"
+                        ? 'text-[var(--brand-green)]'
+                        : 'text-[var(--brand-orange)]'
                     }
                   >
-                    {active.pharmacyProfile?.deliveryAvailable ? "SYSTEM ACTIVE" : "OFFLINE"}
+                    {active.pharmacyProfile?.deliveryAvailable
+                      ? 'SYSTEM ACTIVE'
+                      : 'OFFLINE'}
                   </p>
                 </div>
               </div>

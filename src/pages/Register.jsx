@@ -2,11 +2,11 @@
 import { useState } from "react";
 import { FiEye, FiEyeOff, FiMail, FiLock, FiArrowLeft, FiShield } from "react-icons/fi";
 import { FaArrowRight, FaStethoscope } from "react-icons/fa";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useTheme } from "../context/ThemeContext";
-
+import { supabase } from "../Lib/supabase";
 import api from "../Lib/api";
 
 export default function Register() {
@@ -26,7 +26,6 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { theme } = useTheme();
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -46,13 +45,33 @@ export default function Register() {
       return;
     }
 
-
     setSubmitting(true);
     try {
-      // Use backend API to register to bypass Supabase's email limit quota "Error sending confirmation email"
-      const res = await api.post("/auth/register", {
+      // Register with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
         email: form.email.trim().toLowerCase(),
         password: form.password,
+        options: {
+          data: {
+            firstName: form.firstName,
+            lastName: form.lastName,
+            role: form.role,
+            dateOfBirth: form.dateOfBirth,
+            gender: form.gender,
+            specialization:
+              form.specialization === "Other" ? form.customProfession : form.specialization,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      console.log("✅ Registration successful:", data);
+
+      // Sync with backend immediately
+      await api.post("/auth/register-success", {
+        supabaseId: data.user.id,
+        email: form.email.trim().toLowerCase(),
         firstName: form.firstName,
         lastName: form.lastName,
         role: form.role,
@@ -62,23 +81,14 @@ export default function Register() {
           form.specialization === "Other" ? form.customProfession : form.specialization,
       });
 
-      console.log("✅ Registration successful:", res.data);
+      toast.success("Registration successful! Please check your email for the verification link.");
 
-      toast.success("OTP sent to your email!");
-      
-      // Redirect to Verify OTP page
       setTimeout(() => {
-        navigate("/verify-otp", { state: { email: form.email.trim().toLowerCase() } });
-      }, 1500);
+        window.location.href = "/login";
+      }, 3000);
     } catch (err) {
-      console.error("❌ Registration error details:", {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
-
-      const errorMessage = err.response?.data?.error || err.message || "Registration failed. Please try again.";
-      toast.error(errorMessage);
+      console.error("Registration error:", err);
+      toast.error(err.message || "Registration failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -202,7 +212,6 @@ export default function Register() {
                 />
               </div>
             </div>
-
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">

@@ -111,7 +111,6 @@ const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const Home = lazy(() => import("./pages/Home"));
-const VerifyOTP = lazy(() => import("./pages/VerifyOTP"));
 import Chatbot from "./components/Chatbot";
 
 /* ================================
@@ -155,7 +154,6 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/verify-otp" element={<VerifyOTP />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
 
             {/* Video shared */}

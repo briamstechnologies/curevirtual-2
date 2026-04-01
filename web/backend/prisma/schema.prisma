@@ -6,8 +6,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // ⚠️  DIRECT_URL is required in Railway env vars. Set it to the same value as DATABASE_URL
-  //     if not using a connection pooler (e.g. PgBouncer). Remove this line only if Prisma complains.
   directUrl = env("DIRECT_URL")
 }
 
@@ -957,16 +955,3 @@ model SystemMetric {
 
 // VideoConsultation model - Add:
 //   videoSession    VideoSession?
-
-model EmailOTP {
-  id        Int      @id @default(autoincrement())
-  email     String
-  otp       String
-  expiresAt DateTime
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  @@index([email])
-  @@index([expiresAt])
-  @@map("EmailOTP")
-}

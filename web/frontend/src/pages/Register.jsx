@@ -1,14 +1,13 @@
 // FILE: src/pages/Register.jsx
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { FiEye, FiEyeOff, FiMail, FiLock, FiArrowLeft, FiShield } from "react-icons/fi";
 import { FaArrowRight, FaStethoscope } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useTheme } from "../context/ThemeContext";
-
+import { supabase } from "../Lib/supabase";
 import api from "../Lib/api";
-import OTPVerification from "../components/OTPVerification";
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -26,9 +25,6 @@ export default function Register() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [showOTP, setShowOTP] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const isSubmittingRef = useRef(false);
   const { theme } = useTheme();
 
   const handleChange = (e) => {
@@ -37,10 +33,7 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (submitting || isSubmittingRef.current) {
-      console.warn("Registration already in progress. Ignoring duplicate click.");
-      return;
-    }
+    if (submitting) return;
 
     if (form.password !== form.confirmPassword) {
       toast.error("Passwords do not match.");
@@ -53,12 +46,32 @@ export default function Register() {
     }
 
     setSubmitting(true);
-    isSubmittingRef.current = true;
-    console.log("[DEBUG] 📤 Sending SINGLE registration request to backend...");
     try {
-      const payload = {
+      // Register with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
         email: form.email.trim().toLowerCase(),
         password: form.password,
+        options: {
+          data: {
+            firstName: form.firstName,
+            lastName: form.lastName,
+            role: form.role,
+            dateOfBirth: form.dateOfBirth,
+            gender: form.gender,
+            specialization:
+              form.specialization === "Other" ? form.customProfession : form.specialization,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      console.log("✅ Registration successful:", data);
+
+      // Sync with backend immediately
+      await api.post("/auth/register-success", {
+        supabaseId: data.user.id,
+        email: form.email.trim().toLowerCase(),
         firstName: form.firstName,
         lastName: form.lastName,
         role: form.role,
@@ -66,58 +79,20 @@ export default function Register() {
         gender: form.gender,
         specialization:
           form.specialization === "Other" ? form.customProfession : form.specialization,
-      };
+      });
 
-      console.log("[DEBUG] Sending payload to backend:", payload);
+      toast.success("Registration successful! Please check your email for the verification link.");
 
-      const { data } = await api.post("/auth/register", payload);
-
-      console.log("[DEBUG] ✅ Registration API responded successfully:", data.message);
-
-      if (data.requiresVerification) {
-        setUserEmail(data.email || form.email.trim().toLowerCase());
-        setShowOTP(true);
-        toast.success(data.message);
-      } else {
-        toast.success("Registration successful! Redirecting to login...");
-        setTimeout(() => {
-          window.location.href = "/login";
-        }, 2000);
-      }
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 3000);
     } catch (err) {
-      console.error("[DEBUG] ❌ Registration error:", err);
-      const errorMsg =
-        err?.response?.data?.error || err.message || "Registration failed. Please try again.";
-      toast.error(errorMsg);
+      console.error("Registration error:", err);
+      toast.error(err.message || "Registration failed. Please try again.");
     } finally {
       setSubmitting(false);
-      isSubmittingRef.current = false;
-      console.log("[DEBUG] 🔓 Submit lock released");
     }
   };
-
-  if (showOTP) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-transparent)]">
-        {/* Triple Color Atmospheric Glow */}
-        <div className="absolute inset-0 overflow-hidden -z-10">
-          <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-[var(--brand-orange)] opacity-[0.05] blur-[150px] rounded-full"></div>
-          <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-[var(--brand-green)] opacity-[0.05] blur-[150px] rounded-full"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/3 h-1/3 bg-[var(--brand-blue)] opacity-[0.03] blur-[150px] rounded-full"></div>
-        </div>
-        <OTPVerification
-          email={userEmail}
-          onVerified={() => {
-            toast.success("Email verified! Redirecting to login...");
-            setTimeout(() => {
-              window.location.href = "/login";
-            }, 2000);
-          }}
-          onBack={() => setShowOTP(false)}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 bg-[var(--bg-transparent)]`}>
