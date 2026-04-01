@@ -4,9 +4,10 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import "./OTPVerification.css";
 
-const API_BASE_URL = import.meta.env.DEV
-  ? "https://curevirtual-2-production-ee33.up.railway.app/api"
-  : import.meta.env.VITE_API_BASE_URL || "https://curevirtual-2-production-ee33.up.railway.app/api";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://curevirtual-2-production-ee33.up.railway.app/api";
+
 
 const OTPVerification = ({ email, onVerified, onBack }) => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
