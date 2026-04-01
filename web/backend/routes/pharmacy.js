@@ -571,11 +571,15 @@ router.post("/prescriptions", verifyToken, requireRole(["PHARMACY", "ADMIN", "SU
 router.get("/doctors-list", async (_req, res) => {
   try {
     const list = await prisma.doctorProfile.findMany({
+      where: {
+        user: {
+          role: 'DOCTOR'
+        }
+      },
       include: { user: { select: { firstName: true, lastName: true, email: true } } },
       take: 100 
     });
     const data = list.map(d => ({
-      id: d.id, // DoctorProfile ID
       id: d.id, // DoctorProfile ID
       name: d.user ? `${d.user.firstName} ${d.user.lastName}`.trim() : "Unknown Doctor",
       email: d.user?.email
@@ -589,11 +593,15 @@ router.get("/doctors-list", async (_req, res) => {
 router.get("/patients-list", async (_req, res) => {
   try {
     const list = await prisma.patientProfile.findMany({
+      where: {
+        user: {
+          role: 'PATIENT'
+        }
+      },
       include: { user: { select: { firstName: true, lastName: true, email: true } } },
       take: 100
     });
     const data = list.map(p => ({
-      id: p.id, // PatientProfile ID
       id: p.id, // PatientProfile ID
       name: p.user ? `${p.user.firstName} ${p.user.lastName}`.trim() : "Unknown Patient",
       email: p.user?.email
