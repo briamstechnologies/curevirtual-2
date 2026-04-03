@@ -9,6 +9,102 @@ const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // -------------------------
+// Register (Admin Bypass API)
+// -------------------------
+router.post("/register", async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      role,
+      dateOfBirth,
+      gender,
+      specialization,
+    } = req.body || {};
+
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ error: "Email and password are required" });
+    }
+
+    const normedEmail = String(email).trim().toLowerCase();
+
+    if (!supabaseAdmin) {
+      return res.status(501).json({ error: "Supabase Admin client not configured" });
+    }
+
+    // 1. Create user in Supabase via Admin API (bypasses email confirmation)
+    const { data: sbData, error: sbError } = await supabaseAdmin.auth.admin.createUser({
+      email: normedEmail,
+      password: password,
+      email_confirm: true,
+      user_metadata: {
+        firstName,
+        lastName,
+        role,
+        dateOfBirth,
+        gender,
+        specialization,
+      },
+    });
+
+    if (sbError) {
+      console.error("❌ Supabase Admin Create Error:", sbError);
+      return res.status(sbError.status || 400).json({ error: sbError.message });
+    }
+
+    const supabaseId = sbData.user.id;
+
+    // 2. Create user in Prisma
+    let user;
+    try {
+      user = await prisma.user.create({
+        data: {
+          id: supabaseId,
+          firstName: firstName || "First",
+          lastName: lastName || "Last",
+          email: normedEmail,
+          role: role || "PATIENT",
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date(),
+          gender: gender || "PREFER_NOT_TO_SAY",
+        },
+      });
+    } catch (dbError) {
+      console.error("❌ Prisma User Create Error:", dbError);
+      // Clean up Supabase user if DB create fails
+      await supabaseAdmin.auth.admin.deleteUser(supabaseId);
+      return res.status(500).json({ error: "Failed to save user in database", details: dbError.message });
+    }
+
+    // 3. Provision profile
+    try {
+      await ensureDefaultProfile(user, specialization);
+    } catch (profileError) {
+      console.error("⚠️ Profile provision error:", profileError);
+    }
+
+    // 4. Generate JWT
+    const token = jwt.sign(
+      { id: user.id, role: user.role, type: "USER" },
+      JWT_SECRET,
+      { expiresIn: "1d" },
+    );
+
+    return res.status(201).json({
+      message: "Registration successful",
+      user,
+      token,
+    });
+  } catch (err) {
+    console.error("Registration error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------------
 // Register Success (Supabase Sync)
 // -------------------------
 router.post("/register-success", async (req, res) => {

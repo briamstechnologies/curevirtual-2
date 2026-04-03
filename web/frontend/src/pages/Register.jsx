@@ -47,33 +47,12 @@ export default function Register() {
 
     setSubmitting(true);
     try {
-      // Register with Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        options: {
-          data: {
-            firstName: form.firstName,
-            lastName: form.lastName,
-            role: form.role,
-            dateOfBirth: form.dateOfBirth,
-            gender: form.gender,
-            specialization:
-              form.specialization === "Other" ? form.customProfession : form.specialization,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      console.log("✅ Registration successful:", data);
-
-      // Sync with backend immediately
-      await api.post("/auth/register-success", {
-        supabaseId: data.user.id,
-        email: form.email.trim().toLowerCase(),
+      // Register via Backend (Admin Bypass)
+      const response = await api.post("/auth/register", {
         firstName: form.firstName,
         lastName: form.lastName,
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
         role: form.role,
         dateOfBirth: form.dateOfBirth,
         gender: form.gender,
@@ -81,7 +60,9 @@ export default function Register() {
           form.specialization === "Other" ? form.customProfession : form.specialization,
       });
 
-      toast.success("Registration successful! Please check your email for the verification link.");
+      console.log("✅ Registration successful:", response.data);
+
+      toast.success("Registration successful! You can now log in.");
 
       setTimeout(() => {
         window.location.href = "/login";
