@@ -11,6 +11,12 @@ import { formatLiteralDateTime } from "../../Lib/timeUtils";
 // Use the same component as BookAppointment for consistent slot logic
 import BookingSlots from "../../components/BookingSlots";
 
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import CheckoutForm from "../../components/CheckoutForm";
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+
 export default function MyAppointments() {
   const role = "PATIENT";
   const patientUserId = localStorage.getItem("userId");
@@ -25,6 +31,8 @@ export default function MyAppointments() {
   const [toCancelId, setToCancelId] = useState(null);
   const [rescheduleId, setRescheduleId] = useState(null);
   const [joiningCallId, setJoiningCallId] = useState(null);
+  const [paymentClientSecret, setPaymentClientSecret] = useState(null);
+  const [payingAppointmentId, setPayingAppointmentId] = useState(null);
 
   // Track previous callStatus to detect transitions
   const prevCallStatuses = useRef({});
@@ -174,6 +182,31 @@ export default function MyAppointments() {
       console.error("Booking error:", err);
       toast.error(err?.response?.data?.error || "Failed to book appointment");
     }
+  };
+
+  const handlePay = async (appt) => {
+    try {
+      const res = await api.post("/session/create", {
+        patientId: patientUserId,
+        doctorId: appt.doctorId,
+        appointmentId: appt.id
+      });
+      if (res.data.clientSecret) {
+        setPaymentClientSecret(res.data.clientSecret);
+        setPayingAppointmentId(appt.id);
+      } else {
+        toast.error("No checkout token returned.");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to start payment");
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    toast.success("Payment completed successfully!");
+    setPaymentClientSecret(null);
+    setPayingAppointmentId(null);
+    fetchAppointments(); // Refresh statuses
   };
 
   const askCancel = (id) => {
@@ -465,6 +498,15 @@ export default function MyAppointments() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center gap-3">
+                          {(a.status === "PENDING" || a.status === "PENDING_PAYMENT") && (
+                            <button
+                              onClick={() => handlePay(a)}
+                              className="px-3 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/30 text-orange-500 hover:bg-orange-500 hover:text-white transition-all text-xs font-bold whitespace-nowrap"
+                              title="Pay for Session"
+                            >
+                              Pay Now
+                            </button>
+                          )}
                           {(a.status === "PENDING" || a.status === "APPROVED") && (
                             <>
                               <button
@@ -614,6 +656,32 @@ export default function MyAppointments() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {paymentClientSecret && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPaymentClientSecret(null)}></div>
+          <div className="relative w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+            <h3 className="text-xl font-black text-gray-800 tracking-tighter uppercase mb-6 text-center">
+              Complete Payment
+            </h3>
+            <div className="bg-blue-50 text-blue-800 p-4 rounded-xl mb-6 flex justify-between font-bold text-sm">
+              <span>Session Fee</span>
+              <span>$10.00</span>
+            </div>
+            <Elements stripe={stripePromise} options={{ clientSecret: paymentClientSecret }}>
+              <CheckoutForm 
+                clientSecret={paymentClientSecret} 
+                onSuccess={handlePaymentSuccess} 
+                onCancel={() => {
+                  setPaymentClientSecret(null);
+                  setPayingAppointmentId(null);
+                }} 
+              />
+            </Elements>
           </div>
         </div>
       )}

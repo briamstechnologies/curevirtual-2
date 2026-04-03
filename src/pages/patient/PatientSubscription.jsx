@@ -5,7 +5,12 @@ import api from "../../Lib/api";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
-import SubscriptionCheckout from "../../components/payments/SubscriptionCheckout";
+
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import CheckoutForm from "../../components/CheckoutForm";
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 const PLACEHOLDER_LOGO = "/images/logo/Asset3.png";
 
@@ -27,9 +32,7 @@ export default function PatientSubscription() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [plan, setPlan] = useState("MONTHLY");
-  
-  // Custom Inline Subscription Checkout Workflow
-  const [showCheckout, setShowCheckout] = useState(false);
+  const [clientSecret, setClientSecret] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -59,26 +62,74 @@ export default function PatientSubscription() {
   }, [load]);
 
   const handleSubscribe = async () => {
-    if (!userId) {
-      toast.error("No user id found.");
-      return;
-    }
-    if (plan === "MONTHLY" && !prices.monthlyUsd) {
-      toast.error("Monthly price is not configured.");
-      return;
-    }
-    if (plan === "YEARLY" && !prices.yearlyUsd) {
-      toast.error("Yearly price is not configured.");
-      return;
-    }
+    try {
+      if (!userId) {
+        toast.error("No user id found.");
+        return;
+      }
 
-    // Show the inline checkout form instead of redirecting
-    setShowCheckout(true);
+      setProcessing(true);
+      const res = await api.post("/subscription/create", {
+        userId,
+        plan, // "MONTHLY" | "YEARLY"
+      });
+
+      const data = res?.data || {};
+
+      if (data.clientSecret) {
+        setClientSecret(data.clientSecret);
+      } else if (data.mockSuccess) {
+        toast.success("Subscription updated successfully!");
+        load(); 
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.error || err?.message || "Failed to start checkout");
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handleCheckoutSuccess = () => {
-    setShowCheckout(false);
-    load(); // Refresh data locally
+  const handleSubscribeFallback = async () => {
+    try {
+      if (!userId) {
+        toast.error("No user id found.");
+        return;
+      }
+      if (plan === "MONTHLY" && !prices.monthlyUsd) {
+        toast.error("Monthly price is not configured.");
+        return;
+      }
+      if (plan === "YEARLY" && !prices.yearlyUsd) {
+        toast.error("Yearly price is not configured.");
+        return;
+      }
+
+      setProcessing(true);
+      const res = await api.post("/subscription/stripe/checkout", {
+        userId,
+        plan, // "MONTHLY" | "YEARLY"
+      });
+
+      const data = res?.data || {};
+      const url = data.url;
+
+      if (data.mockSuccess) {
+        toast.success("Subscription updated successfully!");
+        load(); // Refresh data in place
+        return;
+      }
+
+      if (!url) throw new Error("Checkout URL not returned from server");
+
+      window.location.href = url; // Stripe Checkout
+    } catch (err) {
+      console.error(err);
+      const msg = err?.response?.data?.error || err?.message || "Failed to start checkout";
+      toast.error(msg);
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const statusColor =
@@ -121,55 +172,54 @@ export default function PatientSubscription() {
                 )}
               </div>
 
-              {/* Pick plan & subscribe */}
-              <div className="w-full md:w-auto flex items-center gap-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="plan"
-                      value="MONTHLY"
-                      checked={plan === "MONTHLY"}
-                      onChange={() => setPlan("MONTHLY")}
+            <div className="mt-8 bg-white rounded-xl overflow-hidden min-h-[400px] p-6 shadow-md border border-[var(--border)]">
+              {clientSecret ? (
+                <div className="w-full max-w-md mx-auto">
+                  <h3 className="text-xl font-bold mb-4">Complete Payment</h3>
+                  <Elements stripe={stripePromise} options={{ clientSecret }}>
+                    <CheckoutForm 
+                      clientSecret={clientSecret} 
+                      onSuccess={() => { setClientSecret(null); load(); }} 
+                      onCancel={() => setClientSecret(null)} 
                     />
-                    <span>Monthly — {fmtUSD(Number(prices.monthlyUsd || 0))}</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="plan"
-                      value="YEARLY"
-                      checked={plan === "YEARLY"}
-                      onChange={() => { setPlan("YEARLY"); setShowCheckout(false); }}
-                    />
-                    <span>Yearly — {fmtUSD(Number(prices.yearlyUsd || 0))}</span>
-                  </label>
+                  </Elements>
                 </div>
+              ) : (
+                <div className="w-full max-w-sm mx-auto flex flex-col items-center justify-center p-8 bg-[var(--bg-glass)] border border-[var(--border)] rounded-2xl shadow-lg">
+                  <h2 className="text-2xl font-black text-[var(--text-main)] mb-2">Subscribe</h2>
+                  <p className="text-[var(--text-soft)] text-center text-sm mb-6">Choose a plan to get unlimited access.</p>
+                  
+                  <div className="flex bg-[var(--bg-main)] p-1 rounded-full w-full mb-6 relative">
+                    <button 
+                      className={`flex-1 py-2 text-sm font-bold rounded-full transition-all ${plan === 'MONTHLY' ? 'bg-[var(--brand-blue)] text-white shadow-md' : 'text-[var(--text-soft)]'}`}
+                      onClick={() => setPlan('MONTHLY')}
+                    >
+                      Monthly
+                    </button>
+                    <button 
+                      className={`flex-1 py-2 text-sm font-bold rounded-full transition-all ${plan === 'YEARLY' ? 'bg-[var(--brand-blue)] text-white shadow-md' : 'text-[var(--text-soft)]'}`}
+                      onClick={() => setPlan('YEARLY')}
+                    >
+                      Yearly
+                    </button>
+                  </div>
+                  
+                  <div className="text-4xl font-extrabold mb-8 text-[var(--text-main)]">
+                    {plan === 'MONTHLY' ? fmtUSD(prices.monthlyUsd || 10) : fmtUSD(prices.yearlyUsd || 100)}
+                    <span className="text-sm font-normal text-[var(--text-muted)]">/{plan === "MONTHLY" ? "mo" : "yr"}</span>
+                  </div>
 
-                {!showCheckout && (
-                  <button
-                    onClick={handleSubscribe}
-                    disabled={processing}
-                    className="rounded bg-[#027906] hover:bg-[#190366] px-5 py-2 font-semibold disabled:opacity-60 text-white"
+                  <button 
+                    disabled={processing || status.status === "ACTIVE"} 
+                    onClick={handleSubscribe} 
+                    className="w-full py-3 bg-[var(--brand-blue)] text-white hover:bg-blue-600 rounded-xl font-bold transition-all disabled:opacity-50 flex justify-center"
                   >
-                    {processing ? "Processing..." : "Subscribe / Renew"}
+                    {processing ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : status.status === "ACTIVE" ? "Current Plan" : "Subscribe Now"}
                   </button>
-                )}
-              </div>
-            </div>
-
-            {/* Inline Checkout Component */}
-            {showCheckout && (
-                <div className="mt-8 border-t border-[var(--border)] pt-8">
-                  <SubscriptionCheckout 
-                    planType={plan} 
-                    amount={plan === "MONTHLY" ? prices.monthlyUsd : prices.yearlyUsd}
-                    onSuccess={handleCheckoutSuccess}
-                    onCancel={() => setShowCheckout(false)}
-                  />
                 </div>
-            )}
-            
+              )}
+            </div>
+            </div>
           </div>
 
           {/* History */}
