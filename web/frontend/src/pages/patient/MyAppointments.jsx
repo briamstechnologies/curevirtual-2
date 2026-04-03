@@ -176,6 +176,21 @@ export default function MyAppointments() {
     }
   };
 
+  const handlePay = async (appt) => {
+    try {
+      const res = await api.post("/payments/create-session-payment", {
+        appointmentId: appt.id
+      });
+      if (res.data.url) {
+        window.location.href = res.data.url;
+      } else {
+        toast.error("No checkout URL returned.");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to start payment");
+    }
+  };
+
   const askCancel = (id) => {
     setToCancelId(id);
     setConfirmOpen(true);
@@ -465,6 +480,15 @@ export default function MyAppointments() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center gap-3">
+                          {(a.status === "PENDING" || a.status === "PENDING_PAYMENT") && (
+                            <button
+                              onClick={() => handlePay(a)}
+                              className="px-3 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/30 text-orange-500 hover:bg-orange-500 hover:text-white transition-all text-xs font-bold whitespace-nowrap"
+                              title="Pay for Session"
+                            >
+                              Pay Now
+                            </button>
+                          )}
                           {(a.status === "PENDING" || a.status === "APPROVED") && (
                             <>
                               <button

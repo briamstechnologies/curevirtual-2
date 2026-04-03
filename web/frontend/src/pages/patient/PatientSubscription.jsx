@@ -52,9 +52,14 @@ export default function PatientSubscription() {
 
   useEffect(() => {
     load();
+    // Load Stripe Pricing Table Script
+    const script = document.createElement("script");
+    script.src = "https://js.stripe.com/v3/pricing-table.js";
+    script.async = true;
+    document.body.appendChild(script);
   }, [load]);
 
-  const handleSubscribe = async () => {
+  const handleSubscribeFallback = async () => {
     try {
       if (!userId) {
         toast.error("No user id found.");
@@ -136,39 +141,14 @@ export default function PatientSubscription() {
                 )}
               </div>
 
-              {/* Pick plan & subscribe */}
-              <div className="w-full md:w-auto flex items-center gap-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="plan"
-                      value="MONTHLY"
-                      checked={plan === "MONTHLY"}
-                      onChange={() => setPlan("MONTHLY")}
-                    />
-                    <span>Monthly — {fmtUSD(Number(prices.monthlyUsd || 0))}</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="plan"
-                      value="YEARLY"
-                      checked={plan === "YEARLY"}
-                      onChange={() => setPlan("YEARLY")}
-                    />
-                    <span>Yearly — {fmtUSD(Number(prices.yearlyUsd || 0))}</span>
-                  </label>
-                </div>
-
-                <button
-                  onClick={handleSubscribe}
-                  disabled={processing}
-                  className="rounded bg-[#027906] hover:bg-[#190366] px-5 py-2 font-semibold disabled:opacity-60"
-                >
-                  {processing ? "Processing..." : "Subscribe / Renew"}
-                </button>
-              </div>
+            <div className="mt-8 bg-white rounded-xl overflow-hidden min-h-[500px]">
+              <stripe-pricing-table 
+                pricing-table-id="prctbl_1TI7P7JRgbcTRwUORrn5odP7"
+                publishable-key="pk_test_51TI6ZfJRgbcTRwUOXq9EVTqvxQdDOp2Vw7hauCdWlFZyNNMCOFDPSXNHpRUBsFPSWrmBMBItvVPwsgalxQAji0R900uh9XFno4"
+                client-reference-id={userId}
+              >
+              </stripe-pricing-table>
+            </div>
             </div>
           </div>
 

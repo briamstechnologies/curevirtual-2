@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^6.1.0",
+    "@stripe/stripe-js": "^9.0.1",
     "@supabase/supabase-js": "^2.90.1",
     "@zegocloud/zego-uikit-prebuilt": "^2.17.2",
     "axios": "^1.12.2",

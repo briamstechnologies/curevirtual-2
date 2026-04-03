@@ -9,19 +9,19 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const { verifyToken } = require("../middleware/rbac");
 
 /**
- * POST /api/payments/create-appointment-intent
- * Input: { appointmentId, amount, currency }
- * Description: Creates a PaymentIntent for a specific appointment.
+ * POST /api/payments/create-session-payment
+ * Input: { appointmentId }
+ * Description: Creates a Stripe Checkout session for a per-session consultation payment.
  */
-router.post("/create-appointment-intent", verifyToken, async (req, res) => {
+router.post("/create-session-payment", verifyToken, async (req, res) => {
   try {
-    const { appointmentId, amount, currency = "usd" } = req.body;
+    const { appointmentId } = req.body;
+    const priceId = process.env.STRIPE_PRICE_ID_SESSION;
 
-    if (!appointmentId || !amount) {
-      return res.status(400).json({ error: "appointmentId and amount are required" });
+    if (!appointmentId) {
+      return res.status(400).json({ error: "appointmentId is required" });
     }
 
-    // 1. Fetch appointment to ensure it exists and belongs to the user (if patient)
     const appointment = await prisma.appointment.findUnique({
       where: { id: appointmentId },
       include: { 
@@ -34,131 +34,88 @@ router.post("/create-appointment-intent", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Appointment not found" });
     }
 
-    // 2. Create Stripe PaymentIntent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe expects amount in cents
-      currency,
-      metadata: {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      line_items: [{ price: priceId, quantity: 1 }],
+      metadata: { 
         appointmentId,
         patientId: appointment.patientId,
         doctorId: appointment.doctorId,
-        type: "APPOINTMENT_PAYMENT"
+        type: "APPOINTMENT_PAYMENT" 
       },
-      description: `Appointment with Dr. ${appointment.doctor.user.lastName}`,
-      receipt_email: appointment.patient.user.email
+      customer_email: req.user.email,
+      success_url: `${process.env.APP_BASE_URL || 'https://curevirtual-2.vercel.app'}/patient/appointments?status=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.APP_BASE_URL || 'https://curevirtual-2.vercel.app'}/patient/appointments?status=cancel`,
     });
 
-    // 3. Record the transaction in our database as PENDING
+    // Record the transaction in our database as PENDING
     await prisma.transaction.create({
       data: {
         userId: req.user.id,
         appointmentId,
         type: "APPOINTMENT_PAYMENT",
-        amount,
-        currency,
+        amount: 10,
+        currency: "usd",
         status: "PENDING",
         provider: "STRIPE",
-        providerTxId: paymentIntent.id,
-        description: `Payment intent created for appointment ${appointmentId}`
+        providerTxId: session.id,
+        description: `Stripe checkout session created for appointment ${appointmentId}`
       }
     });
 
-    // 4. Update appointment status to reflect payment is in progress
     await prisma.appointment.update({
       where: { id: appointmentId },
-      data: { status: "PENDING_PAYMENT", paymentId: paymentIntent.id }
+      data: { status: "PENDING_PAYMENT", paymentId: session.id }
     });
 
-    res.json({
-      success: true,
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id
-    });
+    res.json({ url: session.url });
   } catch (err) {
-    console.error("❌ create-appointment-intent error:", err);
-    res.status(500).json({ error: err.message || "Failed to create payment intent" });
+    console.error("❌ create-session-payment error:", err);
+    res.status(500).json({ error: err.message || "Failed to create session payment" });
   }
 });
 
 /**
  * POST /api/payments/create-subscription
- * Input: { planType, userId }
- * Description: Sets up a recurring subscription.
+ * Input: { planType, userType }
+ * Description: Creates a Stripe Checkout Session for a subscription.
  */
 router.post("/create-subscription", verifyToken, async (req, res) => {
   try {
-    const { planType } = req.body; // "MONTHLY" or "YEARLY"
+    const { planType, userType } = req.body; 
+    const priceId = process.env.STRIPE_PRICE_ID_MONTHLY;
     const userId = req.user.id;
 
-    if (!["MONTHLY", "YEARLY"].includes(planType)) {
-      return res.status(400).json({ error: "Invalid planType. Use MONTHLY or YEARLY." });
-    }
+    // We can also allow them to use their specific pricing
+    let finalPriceId = priceId;
+    if (userType === 'PATIENT') finalPriceId = process.env.STRIPE_PRICE_ID_PATIENT_MONTHLY || priceId;
+    if (userType === 'DOCTOR') finalPriceId = process.env.STRIPE_PRICE_ID_DOCTOR_MONTHLY || priceId;
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    // 1. Ensure Stripe Customer exists for this user
-    let customerId = user.stripeCustomerId;
-    if (!customerId) {
-        const customer = await stripe.customers.create({
-            email: user.email,
-            name: `${user.firstName} ${user.lastName}`,
-            metadata: { userId }
-        });
-        customerId = customer.id;
-        await prisma.user.update({
-            where: { id: userId },
-            data: { stripeCustomerId: customerId }
-        });
-    }
-
-    // 2. Resolve Price based on user role and plan
-    // In a real app, these would be pre-created in Stripe. 
-    // Here we'll check SubscriptionSetting or use defaults.
-    const settings = await prisma.subscriptionSetting.findFirst();
-    let amount = 0;
-    if (user.role === "DOCTOR") {
-        amount = planType === "MONTHLY" ? (settings?.doctorMonthlyUsd || 50) : (settings?.doctorYearlyUsd || 500);
-    } else {
-        amount = planType === "MONTHLY" ? (settings?.patientMonthlyUsd || 20) : (settings?.patientYearlyUsd || 200);
-    }
-
-    // 3. Check for existing Price in Stripe or create dynamic one (simplified for demo)
-    const price = await stripe.prices.create({
-      unit_amount: Math.round(amount * 100),
-      currency: "usd",
-      recurring: { interval: planType === "MONTHLY" ? "month" : "year" },
-      product_data: { name: `${user.role} ${planType} Plan` },
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'subscription',
+      line_items: [{ price: finalPriceId, quantity: 1 }],
+      metadata: { userId, userType, plan: planType || "MONTHLY", type: "SUBSCRIPTION" },
+      success_url: `${process.env.APP_BASE_URL || 'https://curevirtual-2.vercel.app'}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.APP_BASE_URL || 'https://curevirtual-2.vercel.app'}/subscription-cancel`,
+      customer_email: req.user.email
     });
 
-    // 4. Create the Subscription
-    const subscription = await stripe.subscriptions.create({
-      customer: customerId,
-      items: [{ price: price.id }],
-      payment_behavior: "default_incomplete",
-      payment_settings: { save_default_payment_method: "on_subscription" },
-      expand: ["latest_invoice.payment_intent"],
-      metadata: { userId, planType }
-    });
-
-    // 5. Record the subscription in our database
     await prisma.subscription.create({
       data: {
         userId,
-        plan: planType,
+        plan: planType || "MONTHLY",
         status: "PENDING",
         provider: "STRIPE",
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscription.id,
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000)
-      }
+        reference: session.id,
+        currency: "USD",
+        stripeCustomerId: req.user?.stripeCustomerId || "customer_placeholder",
+        stripeSubscriptionId: session.id,
+      },
     });
 
-    res.json({
-      success: true,
-      subscriptionId: subscription.id,
-      clientSecret: subscription.latest_invoice.payment_intent.client_secret,
-    });
+    res.json({ url: session.url });
   } catch (err) {
     console.error("❌ create-subscription error:", err);
     res.status(500).json({ error: err.message || "Failed to create subscription" });
@@ -212,6 +169,47 @@ router.post("/webhook", async (req, res) => {
     const dataObject = event.data.object;
 
     switch (event.type) {
+      // Catch completed checkout sessions
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        const { type, appointmentId, plan } = session.metadata || {};
+        const userId = session.metadata?.userId || session.client_reference_id;
+
+        if (type === "APPOINTMENT_PAYMENT" && appointmentId) {
+          await prisma.appointment.update({
+            where: { id: appointmentId },
+            data: { status: "APPROVED", paymentStatus: "PAID" }
+          });
+          const txn = await prisma.transaction.findFirst({ where: { providerTxId: session.id } });
+          if (txn) {
+            await prisma.transaction.update({
+              where: { id: txn.id },
+              data: { status: "SUCCESS" }
+            });
+          }
+          console.log(`✅ Appointment ${appointmentId} confirmed via Stripe Checkout.`);
+        } else if (type === "SUBSCRIPTION" && userId) {
+          const subscriptionId = session.subscription || session.id;
+          await prisma.subscription.updateMany({
+            where: { userId, reference: session.id },
+            data: {
+              status: "ACTIVE",
+              reference: String(subscriptionId),
+              stripeSubscriptionId: String(subscriptionId),
+              currency: "USD",
+              plan: plan || "MONTHLY",
+            },
+          });
+          
+          await prisma.user.update({
+            where: { id: userId },
+            data: { subscriptionState: "ACTIVE" }
+          });
+          console.log(`🚀 Subscription ${subscriptionId} activated for user ${userId}.`);
+        }
+        break;
+      }
+
       // One-time Payment (Appointment)
       case "payment_intent.succeeded": {
         const { appointmentId, type } = dataObject.metadata;
