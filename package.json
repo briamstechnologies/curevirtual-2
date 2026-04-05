@@ -2,14 +2,13 @@
   "name": "curevirtual-unified",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "prisma:generate": "prisma generate",
-    "start": "prisma generate && node server.js"
+    "start": "cd web/backend && npm install && npx prisma generate && node server.js"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.1.0",
