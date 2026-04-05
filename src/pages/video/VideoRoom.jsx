@@ -1,11 +1,12 @@
 import { useParams, useNavigate } from "react-router-dom";
-import JitsiVideoCall from "../../components/JitsiVideoCall";
+import ZegoVideoCall from "../../components/ZegoVideoCall";
 
 export default function VideoRoomPage() {
   const { roomName } = useParams();
   const navigate = useNavigate();
 
   const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "User";
+  const userId = localStorage.getItem("userId") || `dummy-${Date.now()}`;
 
   const handleClose = () => {
     navigate("/video/lobby");
@@ -32,7 +33,7 @@ export default function VideoRoomPage() {
 
   return (
     <div className="h-screen w-screen bg-black">
-      <JitsiVideoCall roomName={roomName} displayName={userName} onClose={handleClose} />
+      <ZegoVideoCall roomName={roomName} userName={userName} userId={userId} onClose={handleClose} />
     </div>
   );
 }

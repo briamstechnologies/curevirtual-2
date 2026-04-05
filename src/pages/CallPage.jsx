@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../Lib/api";
-import JitsiVideoCall from "../components/JitsiVideoCall";
+import ZegoVideoCall from "../components/ZegoVideoCall";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { toast } from "react-toastify";
 
@@ -121,16 +121,17 @@ const CallPage = () => {
     );
   }
 
-  // Determine display name
   const role = localStorage.getItem("role") || localStorage.getItem("userRole");
   const displayName =
     role === "DOCTOR" ? appointment.doctorName || "Doctor" : appointment.patientName || "Patient";
+  const userId = localStorage.getItem("userId") || `dummy-${Date.now()}`;
 
   return (
     <div className="w-full h-screen overflow-hidden bg-black">
-      <JitsiVideoCall
+      <ZegoVideoCall
         roomName={appointment.roomName}
-        displayName={displayName}
+        userName={displayName}
+        userId={userId}
         onClose={handleClose}
       />
     </div>
