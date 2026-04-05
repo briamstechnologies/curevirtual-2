@@ -62,34 +62,7 @@ export default function DoctorSubscription() {
     load();
   }, [load]);
 
-  const handleSubscribe = async () => {
-    try {
-      if (!userId) {
-        toast.error("No user id found.");
-        return;
-      }
 
-      setProcessing(true);
-      const res = await api.post("/subscription/create", {
-        userId,
-        plan, // "MONTHLY" | "YEARLY"
-      });
-
-      const data = res?.data || {};
-
-      if (data.clientSecret) {
-        setClientSecret(data.clientSecret);
-      } else if (data.mockSuccess) {
-        toast.success("Subscription updated successfully!");
-        load(); 
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(err?.response?.data?.error || err?.message || "Failed to start checkout");
-    } finally {
-      setProcessing(false);
-    }
-  };
 
   const handleSubscribeFallback = async () => {
     try {
@@ -213,7 +186,7 @@ export default function DoctorSubscription() {
 
                 <button 
                   disabled={processing || status.status === "ACTIVE"} 
-                  onClick={handleSubscribe} 
+                  onClick={handleSubscribeFallback} 
                   className="w-full py-3 bg-[var(--brand-blue)] text-white hover:bg-blue-600 rounded-xl font-bold transition-all disabled:opacity-50 flex justify-center"
                 >
                   {processing ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : status.status === "ACTIVE" ? "Current Plan" : "Subscribe Now"}
