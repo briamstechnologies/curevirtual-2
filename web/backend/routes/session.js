@@ -3,7 +3,7 @@ const router = express.Router();
 const prisma = require("../prisma/prismaClient");
 const Stripe = require("stripe");
 
-const stripeSecret = process.env.STRIPE_SECRET_KEY;
+const stripeSecret = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
 const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
 
 const { verifyToken } = require("../middleware/rbac");
@@ -15,13 +15,15 @@ const { verifyToken } = require("../middleware/rbac");
  */
 router.post("/create", verifyToken, async (req, res) => {
   try {
-    const { patientId, doctorId, appointmentId } = req.body;
+    const { doctorId, appointmentId } = req.body;
+    const patientId = req.user.id; // Corrected: Use the logged-in user's ID
 
-    if (!patientId || !doctorId) {
-      return res.status(400).json({ error: "patientId and doctorId are required" });
+    if (!doctorId) {
+      return res.status(400).json({ error: "doctorId is required" });
     }
 
     if (!stripe) {
+      console.error("❌ Stripe is not configured: STRIPE_SECRET_KEY/STRIPE_SECRET missing.");
       return res.status(500).json({ error: "Stripe is not configured" });
     }
 
@@ -65,8 +67,16 @@ router.post("/create", verifyToken, async (req, res) => {
 
     return res.json({ clientSecret: paymentIntent.client_secret });
   } catch (err) {
-    console.error("❌ /api/session/create error:", err);
-    return res.status(500).json({ error: err.message || "Failed to create session payment" });
+    console.error("❌ /api/session/create Detailed Error:", {
+      message: err.message,
+      stack: err.stack,
+      body: req.body,
+      userId: req.user?.id
+    });
+    return res.status(500).json({ 
+      error: "Failed to create session payment", 
+      details: err.message 
+    });
   }
 });
 
