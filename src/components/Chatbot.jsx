@@ -9,7 +9,7 @@ export default function Chatbot() {
   const [messages, setMessages] = useState([
     {
       sender: "bot",
-      text: "Confirm",
+      text: "Ask Bright",
     },
   ]);
   const [input, setInput] = useState("");
@@ -82,7 +82,7 @@ export default function Chatbot() {
               <FaRobot className="text-xl" />
             </div>
             <div>
-              <h3 className="font-bold text-sm">Medical Assistant</h3>
+              <h3 className="font-bold text-sm">Bright AI</h3>
               <div className="flex items-center gap-1.5 opacity-90">
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                 <span className="text-[10px] font-medium tracking-wide">ONLINE</span>
