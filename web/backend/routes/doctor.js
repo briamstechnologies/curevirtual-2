@@ -268,6 +268,7 @@ router.put("/profile", async (req, res) => {
         emergencyContactName: emergencyContactName ?? "",
         emergencyContactEmail: emergencyContactEmail ?? "",
       },
+      include: { user: true },
     });
 
     // Fetch updated user to get email for notification

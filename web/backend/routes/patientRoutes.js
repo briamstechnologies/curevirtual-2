@@ -59,6 +59,7 @@ router.get("/profile", async (req, res) => {
             email: true,
             dateOfBirth: true,
             gender: true,
+            maritalStatus: true,
           },
         },
         appointments: true,
@@ -83,6 +84,7 @@ router.get("/profile", async (req, res) => {
               phone: true,
               dateOfBirth: true,
               gender: true,
+              maritalStatus: true,
             },
           },
           appointments: true,
@@ -221,6 +223,21 @@ router.put("/profile", async (req, res) => {
         medicalRecordNumber: medicalRecordNumber || null,
         insuranceProvider: insuranceProvider || null,
         insuranceMemberId: insuranceMemberId || null,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            dateOfBirth: true,
+            gender: true,
+            maritalStatus: true,
+            
+          },
+        },
       },
     });
 
