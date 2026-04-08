@@ -258,7 +258,7 @@ export default function Register() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-5">
+                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-0">
                   Marital Status
                 </label>
                 <select
