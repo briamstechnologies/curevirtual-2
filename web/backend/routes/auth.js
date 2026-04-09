@@ -210,7 +210,7 @@ router.post("/register-success", async (req, res) => {
 // -------------------------
 router.post("/login-sync", async (req, res) => {
   try {
-    const { email, supabaseId, supabaseAccessToken } = req.body || {};
+    const { email, supabaseAccessToken } = req.body || {};
 
     if (!email) {
       return res.status(400).json({ error: "Missing email" });
@@ -260,8 +260,14 @@ router.post("/login-sync", async (req, res) => {
       user: {
         id: account.id,
         name: `${account.firstName} ${account.lastName}`.trim(),
+        firstName: account.firstName,
+        lastName: account.lastName,
         role: account.role,
         email: account.email,
+        phone: account.phone,
+        gender: account.gender,
+        dateOfBirth: account.dateOfBirth,
+        maritalStatus: account.maritalStatus,
         type: "USER",
       },
     });

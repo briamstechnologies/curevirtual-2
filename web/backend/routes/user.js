@@ -18,6 +18,10 @@ router.get("/:id", verifyToken, async (req, res) => {
         lastName: true,
         role: true,
         email: true,
+        phone: true,
+        gender: true,
+        dateOfBirth: true,
+        maritalStatus: true,
         createdAt: true,
       },
     });

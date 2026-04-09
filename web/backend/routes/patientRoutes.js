@@ -235,7 +235,6 @@ router.put("/profile", async (req, res) => {
             dateOfBirth: true,
             gender: true,
             maritalStatus: true,
-            
           },
         },
       },

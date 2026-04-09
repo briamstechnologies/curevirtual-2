@@ -26,6 +26,8 @@ export default function Register() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
+  const [otp, setOtp] = useState("");
   const { theme } = useTheme();
 
   const handleChange = (e) => {
@@ -79,7 +81,32 @@ export default function Register() {
 
       console.log("✅ Registration successful:", data);
 
-      // Sync with backend immediately
+      // Show OTP verification instead of immediately syncing to backend!
+      setShowOtp(true);
+      toast.success("OTP sent! Please check your email.");
+    } catch (err) {
+      console.error("Registration error:", err);
+      toast.error(err.message || "Registration failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: form.email.trim().toLowerCase(),
+        token: otp,
+        type: 'signup'
+      });
+
+      if (error) throw error;
+
+      // Sync with backend immediately after verifying
       await api.post("/auth/register-success", {
         supabaseId: data.user.id,
         email: form.email.trim().toLowerCase(),
@@ -93,14 +120,13 @@ export default function Register() {
           form.specialization === "Other" ? form.customProfession : form.specialization,
       });
 
-      toast.success("Registration successful! Please check your email for the verification link.");
-
+      toast.success("Verification successful! Redirecting to login...");
       setTimeout(() => {
         window.location.href = "/login";
-      }, 3000);
+      }, 2000);
     } catch (err) {
-      console.error("Registration error:", err);
-      toast.error(err.message || "Registration failed. Please try again.");
+      console.error("OTP Verification error:", err);
+      toast.error(err.message || "Invalid OTP. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -183,6 +209,49 @@ export default function Register() {
             </p>
           </div>
 
+          {showOtp ? (
+            <div className="space-y-6">
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">
+                  Enter OTP sent to {form.email}
+                </label>
+                <div className="relative group">
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all">
+                    <FiShield />
+                  </div>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 pl-14 pr-6 text-sm font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner"
+                    placeholder="123456"
+                    required
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleVerifyOtp}
+                disabled={submitting || !otp}
+                className="btn btn-secondary w-full !py-4.5 !rounded-2xl text-xs flex items-center justify-center gap-3 shadow-2xl disabled:opacity-70 mt-4 group"
+              >
+                {submitting ? (
+                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    Verify Account <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowOtp(false)}
+                className="w-full text-[10px] font-black text-[var(--brand-blue)] uppercase tracking-widest hover:underline text-center mt-2 group"
+              >
+                Back to Registration
+              </button>
+            </div>
+          ) : (
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-2">
               <div className="space-y-1.5">
@@ -449,6 +518,7 @@ export default function Register() {
               )}
             </button>
           </form>
+          )}
 
           <footer className="mt-8 text-center border-t border-[var(--border)] pt-8">
             <p className="text-xs font-bold text-[var(--text-soft)] uppercase tracking-widest">

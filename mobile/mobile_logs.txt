@@ -1,0 +1,1000 @@
+04-09 05:19:21.395  2448  2448 D StatusBarIconController: ignoring old pipeline callback because the new wifi icon is enabled
+04-09 05:19:21.420  1144  1198 I VSyncReactor: Current= 120, Period= 120, hwcPeriod= 120
+04-09 05:19:21.427  1368  7625 D CompatibilityChangeReporter: Compat change id reported: 261072174; UID 1000; state: ENABLED
+04-09 05:19:21.452  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 45(45),als:248,green:70,ir:0,delta_avg:0,delta_max:187,stdev:2,stdev_per_4sample:4,magig_code or itime:384
+04-09 05:19:21.699   702   702 D io_stats: !@   8,0 r 34200125 819010240 w 8864751 120351932 d 2887975 182849312 f 0 0 iot 15548732 0 th 0 0 0 pt 0 inp 0 0 143880.854
+04-09 05:19:21.700   702   702 D io_stats: !@ Read_top(KB): o.android.imoim(1434) 172
+04-09 05:19:21.700   702   702 D io_stats: !@ Write_top(KB): kworker/u16:12(15987) 348 ndroid.game.gos(3843) 80 com.whatsapp(3976) 16
+04-09 05:19:22.409  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 45(45),als:248,green:70,ir:0,delta_avg:0,delta_max:186,stdev:2,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:22.774  1368  2106 W ProcessStats: Tracking association SourceState{59f2e89 system/1000 Persist #1288267} whose proc state 0 is better than process ProcessState{f24fd00 com.google.android.providers.media.module/10283 pkg=com.google.android.providers.media.module} proc state 1 (21 skipped)
+04-09 05:19:22.965   708  4053 I keystore2: system/security/keystore2/src/watchdog.rs:319 - Watchdog thread idle -> terminating. Have a great day.
+04-09 05:19:23.370  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 45(45),als:248,green:70,ir:0,delta_avg:0,delta_max:185,stdev:1,stdev_per_4sample:4,magig_code or itime:384
+04-09 05:19:23.700   702   702 D io_stats: !@   8,0 r 34200125 819010240 w 8864849 120352408 d 2888048 182849896 f 0 0 iot 15548784 0 th 0 0 0 pt 0 inp 0 0 143882.854
+04-09 05:19:23.887  1368  2243 W DeviceStorageMonitorService: updateBroadcasts(/data) oldLevel:0, newLevel:0, seq:1
+04-09 05:19:23.888  1368  2243 D DeviceStorageMonitorService: Available File Node Number is [13124177]
+04-09 05:19:23.888  1368  2243 W DeviceStorageMonitorService: updateBroadcasts_filenode(/data) fn_oldLevel:0, fn_newLevel:0, seq:1
+04-09 05:19:24.330  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 45(45),als:248,green:70,ir:0,delta_avg:0,delta_max:186,stdev:2,stdev_per_4sample:4,magig_code or itime:384
+04-09 05:19:24.368  1368  3573 D FreecessController: com.whatsapp(10410) is important[18]
+04-09 05:19:24.406  1368  3697 D SemWifiUsabilityStatsMonitor: onWifiUsabilityStats - seqNum 21868, isSameBssidAndFreq true
+04-09 05:19:24.410  2448  2448 D StatusBarIconController: ignoring old pipeline callback because the new wifi icon is enabled
+04-09 05:19:24.575  1368  2331 D WifiConnectivityMonitor: Stop WCM Poll. cnt : 5
+04-09 05:19:24.575  1368  2331 I WifiConnectivityMonitor: LinkQualityMonitorCallback was not registered yet
+04-09 05:19:24.937  1047  1047 I android.hardware.health@2.1-service-samsung: updateLrpSysfs: write: 376
+04-09 05:19:24.939  1368  2408 D BatteryService: Sending ACTION_BATTERY_CHANGED: level:100, status:2, health:2, remain:0, ac:false, usb:true, wireless:false, pogo:false, misc:0xf0000, charge_type:1, charger_type:1, voltage:4191, temperature:357, online:19, charging_status:0, cycle_count:0, current_avg:839, ps:false, hvc:true, capacity:280000, current_event:0x8000, current_now:841, mcc:0, mcv:0, cc:4500000, present:true, scale:100, technology:Li-ion
+04-09 05:19:24.949  1368  2346 I DeviceBatteryInfoService: action: android.intent.action.BATTERY_CHANGED
+04-09 05:19:24.949  1368  2346 I DeviceBatteryInfoService: phone battery level: 100
+04-09 05:19:24.949  1368  2346 I DeviceBatteryInfoService: phone battery status: 2
+04-09 05:19:24.952  1368  2190 D MotionRecognitionService: [SAR]  onReceive : ACTION_BATTERY_CHANGED, Plugged: 2
+04-09 05:19:24.953  2448  2448 I AODBatteryManager: updateBatteryData: ACTION_BATTERY_CHANGED
+04-09 05:19:24.953  2426  2426 D SemBigDataInfoController: Intent: android.intent.action.BATTERY_CHANGED
+04-09 05:19:24.954  1368  1368 D AdaptiveBrightnessLongtermModelBuilder: Received android.intent.action.BATTERY_CHANGED
+04-09 05:19:24.954 15520 15520 I [SCPMV2][SystemMonitorReceiver]: onReceive: android.intent.action.BATTERY_CHANGED
+04-09 05:19:24.955  2448  2448 I AODBatteryManager: saveBatteryData : AOD BatteryData [mBatteryLevel=100, mBatteryStatus=CHARGING, mBatteryPlugType=USB, mBatteryPlugged=true, mRemainingChargeTime=0, mBatteryChargingType=2, mBatteryChargerType=FAST, mBatteryOnline=NOT_DEFINED, mBatterySwellingMode=NONE, mBatteryProtectMode=false, mBatteryProtectModeType=2, mSleepChargingEvent=null, mSleepChargingEventFinishTime=null]
+04-09 05:19:24.955  2448  2448 D SamsungBatteryMeterDrawable: onBatteryLevelChanged isSomethingChanged: false
+04-09 05:19:24.955  2448  2448 D SamsungBatteryMeterDrawable: onBatteryLevelChanged isSomethingChanged: false
+04-09 05:19:24.955  2448  2448 D SamsungBatteryMeterDrawable: onBatteryLevelChanged isSomethingChanged: false
+04-09 05:19:24.955  2426  2426 D SemBigDataInfoController: Intent: android.intent.action.BATTERY_CHANGED
+04-09 05:19:24.956  2448  2448 I PowerUI : mBootCompleted = true |  mFullyConnected = true
+04-09 05:19:24.956  2448  2448 I PowerUI : BATTERY_HEALTH_CHECK extraHealth=2 mBatteryMiscEvent=983040
+04-09 05:19:24.956  2448  2448 W PowerUI : Plug reason
+04-09 05:19:24.956  2448  2448 W PowerUI : Skip charging animation - by plug status
+04-09 05:19:24.956  2448  2448 D PowerUI : priorPlugType = 2 mPlugType = 2 priorBatteryStatus = 2 mBatteryStatus = 2
+04-09 05:19:24.956  2448  2448 W PowerUI : Plug reason
+04-09 05:19:24.956  2448  2448 W PowerUI : Skip charging sound - by plug status
+04-09 05:19:24.956  2448  2448 I PowerUI : oldMisalign : false, curMisalign : false
+04-09 05:19:24.957  2448 14784 D SecPowerUI.Notification: dismissing low battery warning: level=100
+04-09 05:19:24.957  2448 14784 D SecPowerUI.Notification: updateNotification mWarning=false mPlaySound=false
+04-09 05:19:24.957  2448 14784 D SecPowerUI.Notification: SecBatteryStatsSnapshot{batteryLevel=100, currentBatteryMode=0, chargingTime=0, chargingType=11, batteryHealth=2, automaticTestMode=false, isHiccupState=false, optChargingFinishTime=}
+04-09 05:19:24.957  2448  2448 D SecPowerUI.Notification: showChargingNotice oldChargingType : 11 / currentChargingType : 11, oldChargingTime : 0 / mChargingTime : 0
+04-09 05:19:24.957  2448  2448 D SecPowerUI.Notification: showChargingNotice There is no change about charging status, so return!
+04-09 05:19:24.957  2448  2448 D PowerUI : Battery swelling mode - priorBatterySwellingMode = 0 mBatterySwellingMode = 0 mBatteryStatus = 2
+04-09 05:19:24.957  2448  2448 I PowerUI : mBatteryMiscEvent = 983040
+04-09 05:19:24.957  2448  2448 I PowerUI : checkBatteryProtectionNotification : 2, pb value : 3, plugType : 2, level : 100
+04-09 05:19:24.957  2448  2448 D SecPowerUI.Notification: SecBatteryStatsSnapshot{batteryLevel=100, currentBatteryMode=0, chargingTime=0, chargingType=11, batteryHealth=2, automaticTestMode=false, isHiccupState=false, optChargingFinishTime=}
+04-09 05:19:24.958  2448 14784 D SecPowerUI.Notification: 1. restoreScreenTimeOut - saved_value : :
+04-09 05:19:24.958  2448 14784 E SecPowerUI.Notification: no saved value, so we do nothing !!
+04-09 05:19:24.958  2448  2448 D KeyguardUpdateMonitor: handleBatteryUpdate
+04-09 05:19:25.292  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 45(45),als:248,green:70,ir:0,delta_avg:0,delta_max:187,stdev:2,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:25.701   702   702 D io_stats: !@   8,0 r 34200125 819010240 w 8864883 120352828 d 2888055 182849948 f 0 0 iot 15548800 0 th 0 0 0 pt 0 inp 0 0 143884.855
+04-09 05:19:25.701   702   702 D io_stats: !@ Write_top(KB): kworker/u16:0(25403) 316 com.whatsapp(3976) 228
+04-09 05:19:26.252  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 45(46),als:248,green:70,ir:0,delta_avg:0,delta_max:185,stdev:2,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:26.634  1049 25643 I sensors-hal: handle_sns_client_event:123, auto_rotation_event_2: mode:255, type:1:0/-2.075,0.110,8.751, ar:0
+04-09 05:19:26.646 18788 18788 I [GR]_BackTapAccelerometer: nMinorPeaks = 3
+04-09 05:19:26.646 18788 18788 I [GR]_BackTapAccelerometer: Rejecting window since the number of minor peaks : 3
+04-09 05:19:27.048   548  4145 I NearbyMediums: Found Fast Ble Advertisements :
+04-09 05:19:27.048   548  4145 I NearbyMediums: BleAdvertisement { version=2, socketVersion=2, isFast=true, serviceIdHash=null, data=[ 0x23 0x47 0x5a 0x43 0x51 0x11 0x32 0xcc 0xcb 0x0a 0xb1 0x9d 0xa6 0x3c 0xe0 0x4b 0xe1 0x6d 0x11 0x48 0x3e 0x89 0x5a ], deviceToken=[ 0xde 0x16 ], rxAdvertisement=null } : 1 times.
+04-09 05:19:27.048   548  4145 I NearbyMediums: Total 1 fast advertisements from 1 unique advertisers.
+04-09 05:19:27.049   548  4145 I NearbyMediums: Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing, NearbyConnections.TxAdvertisement}
+04-09 05:19:27.210  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 45(45),als:249,green:70,ir:0,delta_avg:0,delta_max:186,stdev:2,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:27.421  1368  3697 D SemWifiUsabilityStatsMonitor: onWifiUsabilityStats - seqNum 21869, isSameBssidAndFreq true
+04-09 05:19:27.426  2448  2448 D StatusBarIconController: ignoring old pipeline callback because the new wifi icon is enabled
+04-09 05:19:27.456  1144  1198 I VSyncReactor: Current= 120, Period= 120, hwcPeriod= 120
+04-09 05:19:27.512 18788 18788 I [GR]_BackTapAccelerometer: nMinorPeaks = 1
+04-09 05:19:27.513 18788 18788 I [GR]_BackTapAccelerometer: Model detected FalseTap at T : 293154173406181 with confidence : 0.98321116
+04-09 05:19:27.702   702   702 D io_stats: !@   8,0 r 34200127 819010300 w 8864883 120352828 d 2888055 182849948 f 0 0 iot 15548808 0 th 0 0 0 pt 0 inp 0 0 143886.856
+04-09 05:19:27.774  1485  1674 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:27.775  1485  1674 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:27.780  1368  2295 D SemCellularStateManager: onSignalStrengthsChanged: mCellularSignalLevel=0
+04-09 05:19:27.782  2448  2448 D MobileSignalTransitionManager: updateSignalTransition
+04-09 05:19:27.784  2448  2448 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+04-09 05:19:27.788  1485  1674 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:27.788  1485  1674 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:27.790  2893  3216 E GlobalSettingsRepoBase: globalgcsettings No matched key : support_ssac_nr
+04-09 05:19:27.790  2893  3216 I VolteServiceModule: onBarringInfoChanged: barringInfo BarringInfo {mCellIdentity=CellIdentityWcdma:{ mLac=3***1 mCid=1****91 mPsc=475 mUarfcn=0 mMcc=410 mMnc=03 mAlphaLong= mAlphaShort= mAdditionalPlmns={} mCsgInfo=null}, mBarringServiceInfos={0={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 1={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 2={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 3={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 4={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 5={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 6={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 7={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 8={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 9={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}}} uacConvertSsac false
+04-09 05:19:27.790  2893  3216 I SsacInfo: voiceBarringInfo mConditionalBarringFactor:0 mConditionalBarringTimeSeconds:0
+04-09 05:19:27.790  2893  3216 I SsacInfo: videoBarringInfo mConditionalBarringFactor:0 mConditionalBarringTimeSeconds:0
+04-09 05:19:27.790  2893  3216 I SsacManager<0>: updateSSACInfo : Voice(100:0) Video(100:0)
+04-09 05:19:27.790  2893  3216 I SsacManager<0>: Voice Call: updateSSACInfo : f[100], t[0]
+04-09 05:19:27.790  2893  3216 I SsacManager<0>: Video Call: updateSSACInfo : f[100], t[0]
+04-09 05:19:27.793  1368  2295 D SemCellularStateManager: onSignalStrengthsChanged: mCellularSignalLevel=2
+04-09 05:19:27.794  2448  2448 D MobileSignalTransitionManager: updateSignalTransition
+04-09 05:19:27.797  2665  2706 I EPDG -- SIM0 IwlanNetworkService: requestNetworkRegistrationInfo for domain 2
+04-09 05:19:27.797  2448  2448 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+04-09 05:19:27.798  2665  2793 I EPDG -- SIM0 IwlanNetworkService: Calling onRequestNetworkRegistrationInfoComplete.resultCode = 0, netState = NetworkRegistrationInfo{ domain=PS transportType=WLAN registrationState=UNKNOWN networkRegistrationState=UNKNOWN roamingType=NOT_ROAMING accessNetworkTechnology=IWLAN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=null nrState=**** rRplmn= isUsingCarrierAggregation=false}
+04-09 05:19:27.799  1485  1736 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:27.801  1368  2295 D SemCellularStateManager: onSignalStrengthsChanged: mCellularSignalLevel=1
+04-09 05:19:27.803  1485  1736 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:27.804  2448  2448 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+04-09 05:19:27.807  1368  2234 D ConnectivityService: notifyType CALLBACK_CAP_CHANGED for [536 CELLULAR]
+04-09 05:19:27.809  7976  8579 I HBD     : g onCapabilitiesChanged network : 536 current network state : wifi 
+04-09 05:19:27.813  2426  2426 D DataNetwork: getCallStateForSlot 0
+04-09 05:19:27.815  1368  2234 D ConnectivityService: notifyType CALLBACK_CAP_CHANGED for [535 CELLULAR]
+04-09 05:19:27.816  1368  2295 D SemCellularStateManager: onCellInfoChanged: cellInfoList Number of cell: 1
+04-09 05:19:27.816  1368  2295 D SemCellularStateManager: onCellInfoChanged: Registered = true, mCellularCellId = 1065791
+04-09 05:19:27.816  2893  2893 I TelephonyCallbackForPdnController<0>: onCellInfoChanged: xxxxx
+04-09 05:19:27.816  2893  3189 I PdnController<1>: onCapabilitiesChanged: network 535 networkCapabilities [ Transports: CELLULAR Capabilities: IMS&NOT_METERED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&MMTEL LinkUpBandwidth>=3681Kbps LinkDnBandwidth>=3681Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> SubscriptionIds: {1} UnderlyingNetworks: Null]
+04-09 05:19:27.816  2893  2893 I ImsCallSessionManager: onCellInfoChanged, phoneId: 0
+04-09 05:19:27.816  2893  3142 I RegiMgr-Handler: handleMessage: EVENT_CELL_INFO_CHANGED
+04-09 05:19:27.816  2893  3142 I RegiMgr<0>: tryRegister:
+04-09 05:19:27.817  2893  3142 I RegiMgr<0>: RegisterTask(s): SamsungCMC_PD (IDLE), Global GC RCS (IDLE)
+04-09 05:19:27.817  2893  3142 I RegiMgr<1>: RegisterTask(s): SamsungCMC_PD (IDLE), Zong Pakistan VoLTE (REGISTERED, rat = 13, service = [mmtel-video, smsip, mmtel]), Global GC RCS (IDLE)
+04-09 05:19:27.817  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.817  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:27.817  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister id: 10000
+04-09 05:19:27.817  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:27.818  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:27.818  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:27.818  1368  2234 D ConnectivityService: notifyType CALLBACK_CAP_CHANGED for [536 CELLULAR]
+04-09 05:19:27.820  7976  8579 I HBD     : g onCapabilitiesChanged network : 536 current network state : wifi 
+04-09 05:19:27.823  1368  2234 D ConnectivityService: notifyType CALLBACK_CAP_CHANGED for [535 CELLULAR]
+04-09 05:19:27.824  2893  3189 I PdnController<1>: onCapabilitiesChanged: network 535 networkCapabilities [ Transports: CELLULAR Capabilities: IMS&NOT_METERED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&MMTEL LinkUpBandwidth>=1914Kbps LinkDnBandwidth>=7873Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> SubscriptionIds: {1} UnderlyingNetworks: Null]
+04-09 05:19:27.826  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:27.826  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:27.828  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:27.828  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.828  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:27.828  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:27.831  2893  3142 I CmcAccountManager: hasSecondaryDevice : no SD with current PD
+04-09 05:19:27.831  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:27.831  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.831  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:27.831  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister id: 1173
+04-09 05:19:27.831  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:27.832  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:27.832  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:27.833  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:27.833  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:27.835  1368  1368 D SemWifiService: onServiceStateChanged : state - 1, dataNetworkType : 13
+04-09 05:19:27.835  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:27.835  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.835  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:27.835  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:27.836  2893  3142 I RegiGvnBase: checkRegiStatus: getState()=IDLE mIsUpdateRegistering=false
+04-09 05:19:27.836  2893  3142 I RegiMgr<0>: getTelephonyCallStatus:
+04-09 05:19:27.836  1038  1038 V sec_audio_hw: sec_dev_set_parameters : l_call_2g_tdma=false
+04-09 05:19:27.836  1038  1038 D audio_hw_primary: adev_set_parameters: enter: l_call_2g_tdma=false
+04-09 05:19:27.836  1038  1038 V audio_hw_sec: sec_set_parameters: enter
+04-09 05:19:27.836  1038  1038 D audio_hw_primary: adev_set_parameters: exit with code(0)
+04-09 05:19:27.837  2893  3142 I ConfigProvider: query uri:xxxxx
+04-09 05:19:27.839  1368  2295 W SemWifiBackOff.Fcc: service state is STATE_OUT_OF_SERVICE telephony country iso: pk
+04-09 05:19:27.840  2893  3142 I ConfigProvider: queryStorage path content://com.samsung.rcs.autoconfigurationprovider/parameter/version#simslot0
+04-09 05:19:27.842  1368  2295 V SemWifiBackOff.5G: checkAndSetup nrFrequencyRange=0 / prevNrFrequencyRange=0
+04-09 05:19:27.842  1368  2295 V SemWifiBackOff.5G: restore back off mode, current: [NONE]
+04-09 05:19:27.842  2893  3142 I RegiGvnRcs: isReadyToRegister: User don't try RCS service yet
+04-09 05:19:27.842  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:27.854  1368  7032 I LocationAccessPolicy: com.android.systemui is aware of fine but the app-ops permission is specifically denied.
+04-09 05:19:27.854  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForFine: DENIED_SOFT
+04-09 05:19:27.854  1368  7032 I LocationAccessPolicy: com.android.systemui is aware of coarse but the app-ops permission is specifically denied.
+04-09 05:19:27.855  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForCoarse: DENIED_SOFT
+04-09 05:19:27.856  1368  7032 I LocationAccessPolicy: com.android.systemui is aware of fine but the app-ops permission is specifically denied.
+04-09 05:19:27.856  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForFine: DENIED_SOFT
+04-09 05:19:27.857  1368  7032 I LocationAccessPolicy: com.android.systemui is aware of coarse but the app-ops permission is specifically denied.
+04-09 05:19:27.857  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForCoarse: DENIED_SOFT
+04-09 05:19:27.858  1368  7032 I LocationAccessPolicy: com.android.systemui is aware of fine but the app-ops permission is specifically denied.
+04-09 05:19:27.858  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForFine: DENIED_SOFT
+04-09 05:19:27.858  1368  1368 D SemWifiApServiceImpl: onServiceStateChanged : 1dataNetworkType : 13
+04-09 05:19:27.858  1368  1368 W NSLocationMonitor: onServiceStateChanged, state=1 / channel=2147483647
+04-09 05:19:27.858  1368  1368 I NSLocationMonitor: networkType[13]=LTE / nrState=false
+04-09 05:19:27.858  1368  7032 I LocationAccessPolicy: com.android.systemui is aware of coarse but the app-ops permission is specifically denied.
+04-09 05:19:27.858  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForCoarse: DENIED_SOFT
+04-09 05:19:27.858  1368  1368 W NSLocationMonitor: onServiceStateChanged, state=1 / channel=2147483647
+04-09 05:19:27.858  1368  1368 I NSLocationMonitor: networkType[13]=LTE / nrState=false
+04-09 05:19:27.859  1368  2697 D SLocation: CellLocationManager - onServiceStateChanged 1
+04-09 05:19:27.859  2448  2448 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+04-09 05:19:27.860  2893  3216 I VolteServiceModule: onServiceStateChanged({mVoiceRegState=1(OUT_OF_SERVICE), mDataRegState=1(OUT_OF_SERVICE), mChannelNumber=2147483647, duplexMode()=0, mCellBandwidths=[], mOperatorAlphaLong=, mOperatorAlphaShort=, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=3(UMTS), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=*1, mSystemId=*1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, VoiceRegType=0, Snap=0, PsOnly=false, FemtocellInd=0, SprDisplayRoam=false, OptRadioTech=0, MsimSubmode=0, IsVoiceCallAvailable=false, mIsEmergencyOnly=true, isUsingCarrierAggregation=false, mArfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=PS transportType=WLAN registrationState=UNKNOWN networkRegistrationState=UNKNOWN roamingType=NOT_ROAMING accessNetworkTechnology=IWLAN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=null nrState=**** rRplmn= isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=NOT_REG_SEARCHING networkRegistrationState=NOT_REG_SEARCHING roamingType=NOT_ROAMING accessNetworkTechnology=UMTS rejectCause=0 emergencyEnabled=true availableServices=[EMERGENCY] cellIdentity=CellIdentityWcdma:{ mLac=3***1 mCid=1****91 mPsc=475 mUarfcn=2147483647 mMcc=410 mMnc=03 mAlphaLong=Ufone mAlphaShort=Ufone mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=0 mSystemIsInPrl=0 mDefaultRoamingIndicator=0} dataSpecificInfo=null nrState=**** rRplmn=41003 isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=DENIED networkRegistrationState=DENIED roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=CellIdentityLte:{ mCi=0 mPci=0 mTac=2147483647 mEarfcn=2147483647 mBands=[] mBandwidth=2147483647 mMcc=null mMnc=null mAlphaLong= mAlphaShort= mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 16 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false mLteAttachResultType = 0 mLteAttachExtraInfo = 0 LteVopsSupportInfo :  mVopsSupport = 1 mEmcBearerSupport = 1 } nrState=**** rRplmn= isUsingCarrierAggregation=false}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=, mOperatorAlphaShortRaw=, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false})
+04-09 05:19:27.860  2893  3216 I VolteServiceModule: mIsLteEpsOnlyAttached(0):false
+04-09 05:19:27.860  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 10070, callingPid: 24810, resultForFine: DENIED_HARD
+04-09 05:19:27.860  2448  2448 D MobileIconViewModel: [mobile] (0/7) connected=false dataConnected=false dataType=DefaultIcon(iconGroup=IconGroup(Unknown)) networkType=UNKNOWN simCard=ETC
+04-09 05:19:27.860  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 10070, callingPid: 24810, resultForCoarse: DENIED_HARD
+04-09 05:19:27.860  2893  2893 I TelephonyCallbackForPdnController<0>: onServiceStateChanged: state={mVoiceRegState=1(OUT_OF_SERVICE), mDataRegState=1(OUT_OF_SERVICE), mChannelNumber=2147483647, duplexMode()=0, mCellBandwidths=[], mOperatorAlphaLong=, mOperatorAlphaShort=, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=3(UMTS), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=*1, mSystemId=*1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, VoiceRegType=0, Snap=0, PsOnly=false, FemtocellInd=0, SprDisplayRoam=false, OptRadioTech=0, MsimSubmode=0, IsVoiceCallAvailable=false, mIsEmergencyOnly=true, isUsingCarrierAggregation=false, mArfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=PS transportType=WLAN registrationState=UNKNOWN networkRegistrationState=UNKNOWN roamingType=NOT_ROAMING accessNetworkTechnology=IWLAN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=null nrState=**** rRplmn= isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=NOT_REG_SEARCHING networkRegistrationState=NOT_REG_SEARCHING roamingType=NOT_ROAMING accessNetworkTechnology=UMTS rejectCause=0 emergencyEnabled=true availableServices=[EMERGENCY] cellIdentity=CellIdentityWcdma:{ mLac=3***1 mCid=1****91 mPsc=475 mUarfcn=2147483647 mMcc=410 mMnc=03 mAlphaLong=Ufone mAlphaShort=Ufone mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=0 mSystemIsInPrl=0 mDefaultRoamingIndicator=0} dataSpecificInfo=null nrState=**** rRplmn=41003 isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=DENIED networkRegistrationState=DENIED roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=CellIdentityLte:{ mCi=0 mPci=0 mTac=2147483647 mEarfcn=2147483647 mBands=[] mBandwidth=2147483647 mMcc=null mMnc=null mAlphaLong= mAlphaShort= mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 16 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false mLteAttachResultType = 0 mLteAttachExtraInfo = 0 LteVopsSupportInfo :  mVopsSupport = 1 mEmcBearerSupport = 1 } nrState=**** rRplmn= isUsingCarrierAggregation=false}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=, mOperatorAlphaShortRaw=, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}Changed=EmcBsIndi:UNKNOWN=>NOT_SUPPORTED, VoiceNet:16=>3, Operator:41004=>41003
+04-09 05:19:27.860  2893  2893 I PdnController<0>: notifyDataConnectionState
+04-09 05:19:27.860  2893  2893 I PdnController<0>: initialize PendedEPDGWeakSignal flag
+04-09 05:19:27.860  2893  2893 I PdnController<0>: setPendedEPDGWeakSignal
+04-09 05:19:27.860  2893  2893 I PdnController<0>: notifyDataConnectionState: needNotify=true networkType=13 isEpdgConnected=false dataNetType=0=>13 dataRegState=1=>1
+04-09 05:19:27.861  3464  3583 W NetworkManager_FLP: updateServiceStateChanged, serviceState=1 / isRegistered=true / channel=2147483647 / networkTypeName=LTE / nr=false
+04-09 05:19:27.861  2665  6860 I EPDG -- SIM0 [NetController]: WWAN Voice Regi: 1 Roaming: 0
+04-09 05:19:27.861  2665  6860 I EPDG -- SIM0 [NetController]: WWAN Data Regi: 1 Rat: 13 Roaming: false
+04-09 05:19:27.861  3464  3583 I NetworkManager_FLP: Success to update networkStatus, Service=1 / Network=LTE(band=0, ch=2147483647) / MobileData=true, roaming=false / WIFI=true, conn=true / BT=true, conn=false
+04-09 05:19:27.861  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 10152, callingPid: 24401, resultForFine: DENIED_HARD
+04-09 05:19:27.861  3464  3583 W NetworkManager_FLP: updateServiceStateChanged, serviceState=1 / isRegistered=true / channel=2147483647 / networkTypeName=LTE / nr=false
+04-09 05:19:27.861  2893  2893 I ImsCallSessionManager: onDataConnectionStateChanged(): networkType [LTE]isWifiConnected [true], phoneId [0]
+04-09 05:19:27.861  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 10152, callingPid: 24401, resultForCoarse: DENIED_HARD
+04-09 05:19:27.862  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 9510152, callingPid: 24395, resultForFine: DENIED_HARD
+04-09 05:19:27.862  1368  7032 I LocationAccessPolicy: checkLocationPermission - callingUid: 9510152, callingPid: 24395, resultForCoarse: DENIED_HARD
+04-09 05:19:27.862  2893  2893 I RegiMgr-Handler<0>: onDataConnectionStateChanged(): networkType [LTE], isWifiConnected [true]
+04-09 05:19:27.862  2665  6860 I EPDG -- SIM0 [NetController]: onNetworkStatusChanged: disable Epdg
+04-09 05:19:27.862  2893  2893 E #IMSREGI: (0, GoogleGC_ALL) [LTE] LATCH(DataConnect changed) : 126431.321s
+04-09 05:19:27.862  2893  2893 I TelephonyCallbackForPdnController<0>: notifySnapshotState: snapshotState=0 old=0
+04-09 05:19:27.862  2893  3142 I RegiMgr-Handler: handleMessage: EVENT_NETWORK_TYPE
+04-09 05:19:27.863  2893  3142 I RegiMgr-NetEvtCtr<0>: onNetworkChanged: suspendByIrat=false
+04-09 05:19:27.863  2893  3142 I NetworkState: setAllCellInfo : Cleared by null set !!!!
+04-09 05:19:27.863  1368  7032 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1331 android.content.Context.sendBroadcastMultiplePermissions:2480 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3657 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 
+04-09 05:19:27.863  1368  1399 W System  : A resource failed to call close. 
+04-09 05:19:27.865  1368  7032 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1364 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3662 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 android.os.Binder.execTransactInternal:1380 
+04-09 05:19:27.865  2893  3142 I RegiMgr-NetEvtCtr<0>: onNetworkEventChanged:Changed Event: Network type(0=>13), Voice network(0=>3), isWifiConnected(false=> true), Operator(=>41003)
+04-09 05:19:27.865  2893  3142 I VolteServiceModule: onNetworkChanged: NetworkEvent [network=13, voiceNetwork=3, voiceOverPs=UNKNOWN, outOfService=true, isDataRoaming=false, isVoiceRoaming=false, csOutOfService=true, isWifiConnected=true, isEpdgConnected=false, isEpdgAvailable=false, operatorNumeric=41003, isPsOnlyReg=false, isDataConnected=false]
+04-09 05:19:27.865  2893  3142 E #IMSCR  : 04-09 05:19:27 0x30000009:0,0->13
+04-09 05:19:27.866  2893  3142 I ImModule: updateFeatures: phoneId = 0
+04-09 05:19:27.866  2893  3216 I VolteServiceModule: tryDisconnect(0) delay 100
+04-09 05:19:27.866  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:27.866  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:27.866  1368  1368 D SemWifiService: received: android.intent.action.SERVICE_STATE
+04-09 05:19:27.866  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:27.866  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:27.866  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:27.866  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:27.866  2893  3142 I ConfigProvider: query uri:xxxxx
+04-09 05:19:27.866  1368  7032 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1364 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3671 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 android.os.Binder.execTransactInternal:1380 
+04-09 05:19:27.867  1368  7032 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1364 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3677 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 android.os.Binder.execTransactInternal:1380 
+04-09 05:19:27.868  2893  3142 I ConfigProvider: queryStorage path content://com.samsung.rcs.autoconfigurationprovider/parameter/geolocPushAuth#simslot0
+04-09 05:19:27.869  2893  3142 I FeatureUpdater: isEnableGls: false
+04-09 05:19:27.869  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:27.869  2893  3142 I FeatureUpdater: FEATURE_CHATBOT_EXTENDED_MSG enabled ver:1.3
+04-09 05:19:27.869  2893  3142 I CapexInfo: getFeatureTag: features = 0 []
+04-09 05:19:27.869  2893  3142 I FeatureUpdater: updateFeatures: 
+04-09 05:19:27.869  2893  3142 I RcsUtils: isDualRcsReg: false
+04-09 05:19:27.869  2893  3142 I CapabilityUtil<0>: onNetworkChanged: mAvailablePhoneId = ! phoneId
+04-09 05:19:27.869  2893  3142 I SmsServiceModule: regInfo: null
+04-09 05:19:27.869  2893  3142 I SmsServiceModule: disallow sms Service
+04-09 05:19:27.869  2893  3142 I SmsServiceModule: Sms Service queryCapabilityStatus[0]: removeCapabilities CAPABILITY_TYPE_SMS
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 E CmcServiceHelper: disallow Call Service
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 E CmcServiceHelper: disallow Call Service
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:27.869  2893  3142 E CmcServiceHelper: disallow Call Service
+04-09 05:19:27.869  2893  3142 E GlobalSettingsRepoBase: globalgcsettings No matched key : ss_domain_setting
+04-09 05:19:27.869  2893  3142 I UtServiceModule<0>: isUtEnabled with policy : CS_ALWAYS enabled = false
+04-09 05:19:27.869  2893  3142 I CapabilityDiscModule<0>: queryCapabilityStatus
+04-09 05:19:27.869  2893  3142 E CapabilityUtil<0>: checkModuleReady: config is null
+04-09 05:19:27.869  2893  3142 I CapabilityDiscModule<0>: isUceServiceAvailable: not ready
+04-09 05:19:27.869  2893  3142 E CapabilityUtil<0>: checkModuleReady: config is null
+04-09 05:19:27.869  2893  3142 I CapabilityDiscModule<0>: isUceServiceAvailable: not ready
+04-09 05:19:27.869  2893  3142 I SecImsNotifier: slot[0]: updateCapabilities: capabilities=MmTel Capabilities - [Voice: false Video: false UT: false SMS: false CALL_COMPOSER: false]
+04-09 05:19:27.870  2893  3142 I SecImsServiceConnector<0>: getMmTelFeatureImpl
+04-09 05:19:27.870  2893  3142 E SecImsServiceConnector: connect to local SecImsService #1 attempt
+04-09 05:19:27.870  2893  3142 I SecImsService: createMmTelFeatureForSubscription: slotId=0,subscriptionId=-1
+04-09 05:19:27.870  2893  3142 I SecImsNotifier: slot[0]: updateRcsCapabilities: capabilities=Capabilities: 0
+04-09 05:19:27.870  2893  3142 I SecImsServiceConnector<0>: getRcsFeatureImpl
+04-09 05:19:27.870  2893  3142 E SecImsServiceConnector: connect to local SecImsService #1 attempt
+04-09 05:19:27.870  2893  3142 I SecImsService: createRcsFeatureForSubscription: slotId=0,subscriptionId=-1
+04-09 05:19:27.870  2893  3142 I RegiMgr-NetEvtCtr<0>: handleNetworkEventBeforeRegister: new network event=NetworkEvent [network=13, voiceNetwork=3, voiceOverPs=UNKNOWN, outOfService=true, isDataRoaming=false, isVoiceRoaming=false, csOutOfService=true, isWifiConnected=true, isEpdgConnected=false, isEpdgAvailable=false, operatorNumeric=41003, isPsOnlyReg=false, isDataConnected=false], old network event=NetworkEvent [network=0, voiceNetwork=0, voiceOverPs=UNKNOWN, outOfService=true, isDataRoaming=false, isVoiceRoaming=false, csOutOfService=true, isWifiConnected=false, isEpdgConnected=false, isEpdgAvailable=false, operatorNumeric=, isPsOnlyReg=false, isDataConnected=false]
+04-09 05:19:27.870  2893  3142 I RegiMgr-NetEvtCtr<0>: handleNetworkEventBeforeRegister: new network event=NetworkEvent [network=13, voiceNetwork=3, voiceOverPs=UNKNOWN, outOfService=true, isDataRoaming=false, isVoiceRoaming=false, csOutOfService=true, isWifiConnected=true, isEpdgConnected=false, isEpdgAvailable=false, operatorNumeric=41003, isPsOnlyReg=false, isDataConnected=false], old network event=NetworkEvent [network=0, voiceNetwork=0, voiceOverPs=UNKNOWN, outOfService=true, isDataRoaming=false, isVoiceRoaming=false, csOutOfService=true, isWifiConnected=false, isEpdgConnected=false, isEpdgAvailable=false, operatorNumeric=, isPsOnlyReg=false, isDataConnected=false]
+04-09 05:19:27.870  2893  3142 I RegiMgr-NetEvtCtr<0>: out of service.
+04-09 05:19:27.870  2893  3142 I TelephonyManagerWrapper<0>: getRilSimOperator: ETC
+04-09 05:19:27.870  2893  3142 I SimManager<0>: hasIsim: [false]
+04-09 05:19:27.870  2893  3142 E GlobalSettingsRepoBase: globalgcsettings No matched key : use_usim_on_invalid_isim
+04-09 05:19:27.870  2448  2448 D CarrierTextController: carrierTextForSimState(7)-(order: 0) : Emergency calls only
+04-09 05:19:27.870  2448  2448 D CarrierTextController: carrierTextForSimState(1)-(order: 1) : ZONG
+04-09 05:19:27.870  2893  3142 I SimManager<0>: mSimState:LOADED, mIsimLoaded:false, hasIsim():false
+04-09 05:19:27.870  2448  2448 D CarrierTextController: setText : Emergency calls only • ZONG
+04-09 05:19:27.871  2893  3142 I TelephonyManagerWrapper<0>: getRilSimOperator: ETC
+04-09 05:19:27.871  2448  2448 D CarrierTextController: carrierTextForSimState(7)-(order: 0) : Emergency calls only
+04-09 05:19:27.871  2448  2448 D CarrierTextController: carrierTextForSimState(1)-(order: 1) : ZONG
+04-09 05:19:27.871  2893  3142 I SimManager<0>: hasIsim: [false]
+04-09 05:19:27.871  2448  2448 D CarrierTextController: setText : Emergency calls only • ZONG
+04-09 05:19:27.871  2893  3142 E GlobalSettingsRepoBase: globalgcsettings No matched key : use_usim_on_invalid_isim
+04-09 05:19:27.871  2448  2448 D CarrierTextController: carrierTextForSimState(7)-(order: 0) : Emergency calls only
+04-09 05:19:27.871  2448  2448 D CarrierTextController: carrierTextForSimState(1)-(order: 1) : ZONG
+04-09 05:19:27.871  2448  2448 D CarrierTextController: setText : Emergency calls only • ZONG
+04-09 05:19:27.871  2426  2426 D ServiceStateProvider: subId=7
+04-09 05:19:27.871  2448  2448 D FaceWidgetPagesController: onRefreshCarrierInfo()
+04-09 05:19:27.871  2893  3142 E GlobalSettingsRepoBase: globalgcsettings No matched key : ss_enable_in_roaming
+04-09 05:19:27.871  2893  3142 I RegiMgr-NetEvtCtr<0>: onNetworkEventChanged: tryRegister by phoneID
+04-09 05:19:27.871  2893  3142 I RegiMgr<0>: tryRegister:
+04-09 05:19:27.871  2448  2448 D FaceWidgetClockRoamManager: isNetworkRoamingState id=7
+04-09 05:19:27.871  2448  2448 D FaceWidgetClockRoamManager: isNetworkRoamingState false
+04-09 05:19:27.871  2448  2448 D FaceWidgetClockRoamManager: onRefreshCarrierInfo(pre, now): false, false
+04-09 05:19:27.871  2448  2448 D FaceWidgetClockPage: onRefreshCarrierInfo : isChanged false mIsRoaming false
+04-09 05:19:27.871  2893  3142 I RegiMgr<0>: RegisterTask(s): SamsungCMC_PD (IDLE), Global GC RCS (IDLE)
+04-09 05:19:27.871  2893  3142 I RegiMgr<1>: RegisterTask(s): SamsungCMC_PD (IDLE), Zong Pakistan VoLTE (REGISTERED, rat = 13, service = [mmtel-video, smsip, mmtel]), Global GC RCS (IDLE)
+04-09 05:19:27.871  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.871  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:27.871  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister id: 10000
+04-09 05:19:27.871  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:27.872  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:27.872  1368  3073 I Telecom:SamsungTelecomServiceImpl: isInCall - callingPackage : com.android.systemui / callingUser : UserHandle{0} / hasCrossUserAccess : true
+04-09 05:19:27.873  2448  2448 D ShadeCarrierGroup: handleUpdateCarrierInfo [Emergency calls only • ZONG] isLatin=false
+04-09 05:19:27.873  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:27.873 31434 31434 D CellBroadcastReceiver: onReceive Intent { act=android.intent.action.SERVICE_STATE flg=0x1000010 cmp=com.google.android.cellbroadcastreceiver/com.android.cellbroadcastreceiver.CellBroadcastReceiver (has extras) }
+04-09 05:19:27.873  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:27.873  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:27.874 31434 31434 D CellBroadcastReceiver: onServiceStateChanged, ss: 1
+04-09 05:19:27.874 31434 31434 D CellBroadcastReceiver: networkOperator: 41003
+04-09 05:19:27.874 31434 31434 D CellBroadcastReceiver: roamingNetworks: [XXX]
+04-09 05:19:27.875  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:27.875  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.875  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:27.875  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:27.875  1368  2697 D SLocation: CellLocationManager - onCellLocationChanged 7 / 0
+04-09 05:19:27.875 31434 31434 D CellBroadcastReceiver: update supported roaming operator as 
+04-09 05:19:27.876  2893  3142 I CmcAccountManager: hasSecondaryDevice : no SD with current PD
+04-09 05:19:27.876  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:27.876  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.876  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:27.876  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister id: 1173
+04-09 05:19:27.876  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:27.876  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:27.877  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:27.877  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:27.877  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:27.878  2426  2426 D DataNetwork: getCallStateForSlot 0
+04-09 05:19:27.879  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:27.879  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.879  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:27.879  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:27.879  2893  3142 I RegiGvnBase: checkRegiStatus: getState()=IDLE mIsUpdateRegistering=false
+04-09 05:19:27.879  2893  3142 I RegiMgr<0>: getTelephonyCallStatus:
+04-09 05:19:27.880  2893  3142 I ConfigProvider: query uri:xxxxx
+04-09 05:19:27.882  1368  2234 D ConnectivityService: notifyType CALLBACK_CAP_CHANGED for [536 CELLULAR]
+04-09 05:19:27.883  2448  2448 W View    : requestLayout() improperly called by android.widget.FrameLayout{fb82b5b V.E...... ......ID 0,146-1080,2361 #7f0a0846 app:id/qs_frame} during layout: running second layout pass
+04-09 05:19:27.884  2448  2448 D MultiSIMController: onReceive() - action = android.intent.action.SERVICE_STATE
+04-09 05:19:27.885  7976  8579 I HBD     : g onCapabilitiesChanged network : 536 current network state : wifi 
+04-09 05:19:27.886  2893  3142 I ConfigProvider: queryStorage path content://com.samsung.rcs.autoconfigurationprovider/parameter/version#simslot0
+04-09 05:19:27.887  1368  2234 D ConnectivityService: notifyType CALLBACK_CAP_CHANGED for [535 CELLULAR]
+04-09 05:19:27.887  1368  3073 D CompatibilityChangeReporter: Compat change id reported: 181658987; UID 1000; state: ENABLED
+04-09 05:19:27.888  2448  2448 D MultiSIMController: MESSAGE_UPDATE_SERVICE_STATE
+04-09 05:19:27.888  2893  3142 I RegiGvnRcs: isReadyToRegister: User don't try RCS service yet
+04-09 05:19:27.888  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:27.888  2893  3142 I GeolocationCon: handleMessage : what = SERVICE_STATE_CHANGED
+04-09 05:19:27.889  2893  3142 I GeolocationCon: matchTimingReqLocation ,match=0, timing=4
+04-09 05:19:27.889  2893  3142 I GeolocationCon: profile is null
+04-09 05:19:27.889  2893  3189 I PdnController<1>: onCapabilitiesChanged: network 535 networkCapabilities [ Transports: CELLULAR Capabilities: IMS&NOT_METERED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&MMTEL LinkUpBandwidth>=1959Kbps LinkDnBandwidth>=3400Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> SubscriptionIds: {1} UnderlyingNetworks: Null]
+04-09 05:19:27.889  2893  3142 I GeolocationCon<0>: getLastAccessedNetworkCountryIso: Not accessed yet
+04-09 05:19:27.889  2893  3142 I RegiMgr-Handler: handleMessage: EVENT_DO_PENDING_UPDATE_REGISTRATION
+04-09 05:19:27.889  2426  2426 I Telephony: TelecomAccountRegistry$TelecomAccountTelephonyCallback: onServiceStateChanged: newState=1, mServiceState=1
+04-09 05:19:27.890  2426  2426 I Telephony: TelecomAccountRegistry$AccountEntry: isRttCurrentlySupported -- regular acct,, hasVoiceAvailability: false, isRttSupported: false, alwaysAllowWhileRoaming: false, isRoaming: false, isOnWfc: false
+04-09 05:19:27.890  2426  2426 I Telephony: TelecomAccountRegistry$AccountEntry: isRttCurrentlySupported -- regular acct,, hasVoiceAvailability: true, isRttSupported: false, alwaysAllowWhileRoaming: false, isRoaming: false, isOnWfc: false
+04-09 05:19:27.890  2426  2426 V PhoneGlobals: handleServiceStateChanged
+04-09 05:19:27.890  2426  2426 D NotificationMgr: updateNetworkSelection, Use Samsung codes instead of AOSP codes
+04-09 05:19:27.890  2426  2426 V PhoneGlobals: subId=7, mDefaultDataSubId=1, ss roaming=false
+04-09 05:19:27.891  2448  2448 D MobileIconViewModel: [mobile] (0/7) connected=false dataConnected=false dataType=DefaultIcon(iconGroup=IconGroup(Unknown)) networkType=LTE simCard=ETC
+04-09 05:19:27.892  2448  2448 D MobileIconViewModel: [mobile] (0/7) connected=false dataConnected=false dataType=DefaultIcon(iconGroup=IconGroup(4G)) networkType=LTE simCard=ETC
+04-09 05:19:27.893  2448  2448 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+04-09 05:19:27.893  2426  2426 D DataNetwork: getCallStateForSlot 0
+04-09 05:19:27.897  1368  2295 D SemCellularStateManager: onCellInfoChanged: cellInfoList Number of cell: 1
+04-09 05:19:27.897  1368  2295 D SemCellularStateManager: onCellInfoChanged: Registered = true, mCellularCellId = 1065791
+04-09 05:19:27.897  2893  2893 I TelephonyCallbackForPdnController<0>: onCellInfoChanged: xxxxx
+04-09 05:19:27.897  2893  2893 I ImsCallSessionManager: onCellInfoChanged, phoneId: 0
+04-09 05:19:27.898  2893  3142 I RegiMgr-Handler: handleMessage: EVENT_CELL_INFO_CHANGED
+04-09 05:19:27.898  2893  3142 I RegiMgr<0>: tryRegister:
+04-09 05:19:27.898  2893  3142 I RegiMgr<0>: RegisterTask(s): SamsungCMC_PD (IDLE), Global GC RCS (IDLE)
+04-09 05:19:27.898  2893  3142 I RegiMgr<1>: RegisterTask(s): SamsungCMC_PD (IDLE), Zong Pakistan VoLTE (REGISTERED, rat = 13, service = [mmtel-video, smsip, mmtel]), Global GC RCS (IDLE)
+04-09 05:19:27.898  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.898  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:27.898  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister id: 10000
+04-09 05:19:27.898  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:27.899  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:27.899  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:27.900  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:27.900  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:27.901  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:27.902  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.902  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:27.902  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:27.903  2893  3142 I CmcAccountManager: hasSecondaryDevice : no SD with current PD
+04-09 05:19:27.903  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:27.903  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.903  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:27.903  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister id: 1173
+04-09 05:19:27.903  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:27.903  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:27.904  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:27.904  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:27.904  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:27.906  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:27.906  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:27.906  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:27.906  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:27.906  2893  3142 I RegiGvnBase: checkRegiStatus: getState()=IDLE mIsUpdateRegistering=false
+04-09 05:19:27.906  2893  3142 I RegiMgr<0>: getTelephonyCallStatus:
+04-09 05:19:27.907  2893  3142 I ConfigProvider: query uri:xxxxx
+04-09 05:19:27.910  2893  3142 I ConfigProvider: queryStorage path content://com.samsung.rcs.autoconfigurationprovider/parameter/version#simslot0
+04-09 05:19:27.911  2893  3142 I RegiGvnRcs: isReadyToRegister: User don't try RCS service yet
+04-09 05:19:27.911  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:27.988  7976  7976 I HBD     : g onCapabilityChanged  setNetworkState currentNetworkState : wifi 
+04-09 05:19:28.170  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 45(46),als:249,green:71,ir:0,delta_avg:0,delta_max:186,stdev:2,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:28.389   548  4146 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+04-09 05:19:28.817  4676  5114 I SDHMS:C : SIOP:: AP:416 BAT:357 USB:0 CHG:410 PA:404 WIFI:402 BLK:0 SUBBAT:0 SKIN:373 SKINF:368 SKINB:373 LRP:373 LRF:368 LRB:373 
+04-09 05:19:28.817  4676  5114 I SDHMS:C : MODEMQ:: MMWTHM:270(270) 
+04-09 05:19:28.930  2426  2599 D PhoneInterfaceManager: setDataEnabledForReason() Reason=1 Pid=1368 App=system
+04-09 05:19:28.931  2426  2599 D PhoneInterfaceManager: setDataEnabledForReason() Reason=1 Pid=1368 App=system
+04-09 05:19:28.935  1368  2446 D NetworkStatsObservers: Unregistering RequestInfo from pid/uid:1368/1000(android) for DataUsageRequest [ requestId=461, networkTemplate=NetworkTemplate: matchRule=MOBILE, matchSubscriberIds=[410040...], matchWifiNetworkKeys=[], metered=YES, defaultNetwork=NO, thresholdInBytes=4424521 ] accessLevel:3
+04-09 05:19:28.935  1368  2203 D NetworkStatsObservers: Registering observer for RequestInfo from pid/uid:1368/1000(android) for DataUsageRequest [ requestId=462, networkTemplate=NetworkTemplate: matchRule=MOBILE, matchSubscriberIds=[410040...], matchWifiNetworkKeys=[], metered=YES, defaultNetwork=NO, thresholdInBytes=4420290 ] accessLevel:3
+04-09 05:19:29.130  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(46),als:249,green:71,ir:0,delta_avg:0,delta_max:185,stdev:1,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:29.360 18133 18133 I wpa_supplicant: Heartbeat 2910
+04-09 05:19:29.370  1368  3573 D FreecessController: com.whatsapp(10410) is important[18]
+04-09 05:19:29.702   702   702 D io_stats: !@ Read_top(KB): stagram.android(26172) 60
+04-09 05:19:29.960  2448  2448 D SecPowerUI.Notification: showChargingNotice oldChargingType : 11 / currentChargingType : 11, oldChargingTime : 0 / mChargingTime : 0
+04-09 05:19:29.960  2448  2448 D SecPowerUI.Notification: showChargingNotice There is no change about charging status, so return!
+04-09 05:19:30.093  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(47),als:250,green:72,ir:0,delta_avg:0,delta_max:186,stdev:1,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:30.094  3844  3859 I AidlLazyServiceRegistrar: Process has 0 (of 1 available) client(s) in use after notification artd has clients: 0
+04-09 05:19:30.094  3844  3859 I AidlLazyServiceRegistrar: Trying to shut down the service. No clients in use for any service in process.
+04-09 05:19:30.096  3844  3859 I AidlLazyServiceRegistrar: Unregistered all clients and exiting
+04-09 05:19:30.437  1368  3697 D SemWifiUsabilityStatsMonitor: onWifiUsabilityStats - seqNum 21870, isSameBssidAndFreq true
+04-09 05:19:30.449  2448  2448 D StatusBarIconController: ignoring old pipeline callback because the new wifi icon is enabled
+04-09 05:19:30.915  1041 25416 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-09 05:19:30.915  1041 25416 D vendor.qti.bluetooth@1.0-ibs_handler: SerialClockVote: vote for UART CLK ON
+04-09 05:19:30.915  1041 25416 D vendor.qti.bluetooth@1.0-wake_lock: Acquire wakelock is acquired 
+04-09 05:19:30.915  1041 25416 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-09 05:19:30.924 25313 25420 D BtGatt.GattService: onScanResult to scannerId: 4- eventType=0x10, addressType=1, address=XX:XX:XX:XX:C6:C7, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-81, periodicAdvInt=0x0
+04-09 05:19:30.965  1041 25416 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-09 05:19:30.965  1041 25416 D vendor.qti.bluetooth@1.0-ibs_handler: SerialClockVote: vote for UART CLK OFF
+04-09 05:19:31.052  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 45(45),als:248,green:69,ir:0,delta_avg:0,delta_max:184,stdev:2,stdev_per_4sample:4,magig_code or itime:384
+04-09 05:19:31.116  1041 25355 D vendor.qti.bluetooth@1.0-wake_lock: Release wakelock is released 
+04-09 05:19:31.200  4676  4676 I SDHMS:LOAD: type: LoadsFreqs, value: 0:26:0:844799:1766400:806400:707711:1516800:691200:315:315:315
+04-09 05:19:31.703   702   702 D io_stats: !@   8,0 r 34200127 819010300 w 8864894 120356184 d 2888055 182849948 f 0 0 iot 15548832 0 th 0 0 0 pt 0 inp 0 0 143890.857
+04-09 05:19:32.010  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 45(47),als:249,green:71,ir:0,delta_avg:0,delta_max:185,stdev:1,stdev_per_4sample:4,magig_code or itime:384
+04-09 05:19:32.046 18788 18788 I [GR]_BackTapAccelerometer: nMinorPeaks = 0
+04-09 05:19:32.046 18788 18788 I [GR]_BackTapAccelerometer: Edge Tap detected
+04-09 05:19:32.220  2448  2448 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+04-09 05:19:32.957  1041 25416 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-09 05:19:32.957  1041 25416 D vendor.qti.bluetooth@1.0-ibs_handler: SerialClockVote: vote for UART CLK ON
+04-09 05:19:32.957  1041 25416 D vendor.qti.bluetooth@1.0-wake_lock: Acquire wakelock is acquired 
+04-09 05:19:32.957  1041 25416 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-09 05:19:32.965 25313 25420 D BtGatt.GattService: onScanResult to scannerId: 4- eventType=0x10, addressType=1, address=XX:XX:XX:XX:C6:C7, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-92, periodicAdvInt=0x0
+04-09 05:19:32.969  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 47(47),als:249,green:71,ir:0,delta_avg:0,delta_max:185,stdev:1,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:33.005  1368  2106 W ProcessStats: Tracking association SourceState{59f2e89 system/1000 Persist #1288273} whose proc state 0 is better than process ProcessState{f24fd00 com.google.android.providers.media.module/10283 pkg=com.google.android.providers.media.module} proc state 1 (1 skipped)
+04-09 05:19:33.006  1041 25416 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-09 05:19:33.006  1041 25416 D vendor.qti.bluetooth@1.0-ibs_handler: SerialClockVote: vote for UART CLK OFF
+04-09 05:19:33.156  1041 25355 D vendor.qti.bluetooth@1.0-wake_lock: Release wakelock is released 
+04-09 05:19:33.448  1368  3697 D SemWifiUsabilityStatsMonitor: onWifiUsabilityStats - seqNum 21871, isSameBssidAndFreq true
+04-09 05:19:33.704   702   702 D io_stats: !@ Write_top(KB): kworker/u16:8(24176) 3356
+04-09 05:19:33.930  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(46),als:249,green:71,ir:0,delta_avg:0,delta_max:185,stdev:1,stdev_per_4sample:4,magig_code or itime:384
+04-09 05:19:34.004  1485  1674 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:34.004  1485  1674 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:34.008  2448  2448 D MobileSignalTransitionManager: updateSignalTransition
+04-09 05:19:34.011  2448  2448 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+04-09 05:19:34.014  2893  3216 E GlobalSettingsRepoBase: globalgcsettings No matched key : support_ssac_nr
+04-09 05:19:34.015  2893  3216 I VolteServiceModule: onBarringInfoChanged: barringInfo BarringInfo {mCellIdentity=CellIdentityGsm:{ mLac=**6 mCid=2***6 mArfcn=0 mBsic=0x0 mMcc=410 mMnc=04 mAlphaLong= mAlphaShort= mAdditionalPlmns={}}, mBarringServiceInfos={0={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 1={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 2={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 3={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 4={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 5={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 6={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 7={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 8={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}, 9={isBarred: false (type: 0, isConditionally: false), factor: 0, timeseconds: 0}}} uacConvertSsac false
+04-09 05:19:34.015  2893  3216 I SsacInfo: voiceBarringInfo mConditionalBarringFactor:0 mConditionalBarringTimeSeconds:0
+04-09 05:19:34.015  2893  3216 I SsacInfo: videoBarringInfo mConditionalBarringFactor:0 mConditionalBarringTimeSeconds:0
+04-09 05:19:34.015  2893  3216 I SsacManager<0>: updateSSACInfo : Voice(100:0) Video(100:0)
+04-09 05:19:34.015  2893  3216 I SsacManager<0>: Voice Call: updateSSACInfo : f[100], t[0]
+04-09 05:19:34.015  2893  3216 I SsacManager<0>: Video Call: updateSSACInfo : f[100], t[0]
+04-09 05:19:34.015  1368  2295 D SemCellularStateManager: onSignalStrengthsChanged: mCellularSignalLevel=3
+04-09 05:19:34.019  2448  2448 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+04-09 05:19:34.021  2665  2706 I EPDG -- SIM0 IwlanNetworkService: requestNetworkRegistrationInfo for domain 2
+04-09 05:19:34.022  2665  2793 I EPDG -- SIM0 IwlanNetworkService: Calling onRequestNetworkRegistrationInfoComplete.resultCode = 0, netState = NetworkRegistrationInfo{ domain=PS transportType=WLAN registrationState=UNKNOWN networkRegistrationState=UNKNOWN roamingType=NOT_ROAMING accessNetworkTechnology=IWLAN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=null nrState=**** rRplmn= isUsingCarrierAggregation=false}
+04-09 05:19:34.022  1485  1736 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:34.024  1485  1736 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:34.025  1368  2234 D ConnectivityService: notifyType CALLBACK_CAP_CHANGED for [536 CELLULAR]
+04-09 05:19:34.029  2426  2426 D DataNetwork: getCallStateForSlot 0
+04-09 05:19:34.029  7976  8579 I HBD     : g onCapabilitiesChanged network : 536 current network state : wifi 
+04-09 05:19:34.032  1368  2234 D ConnectivityService: notifyType CALLBACK_CAP_CHANGED for [535 CELLULAR]
+04-09 05:19:34.033  2893  3189 I PdnController<1>: onCapabilitiesChanged: network 535 networkCapabilities [ Transports: CELLULAR Capabilities: IMS&NOT_METERED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&MMTEL LinkUpBandwidth>=9800Kbps LinkDnBandwidth>=9800Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> SubscriptionIds: {1} UnderlyingNetworks: Null]
+04-09 05:19:34.033  1368  2295 D SemCellularStateManager: onCellInfoChanged: cellInfoList Number of cell: 1
+04-09 05:19:34.033  1368  2295 D SemCellularStateManager: onCellInfoChanged: Registered = true, mCellularCellId = 24606
+04-09 05:19:34.033  2893  2893 I TelephonyCallbackForPdnController<0>: onCellInfoChanged: xxxxx
+04-09 05:19:34.033  2893  2893 I ImsCallSessionManager: onCellInfoChanged, phoneId: 0
+04-09 05:19:34.034  2893  3142 I RegiMgr-Handler: handleMessage: EVENT_CELL_INFO_CHANGED
+04-09 05:19:34.034  2893  3142 I RegiMgr<0>: tryRegister:
+04-09 05:19:34.034  2893  3142 I RegiMgr<0>: RegisterTask(s): SamsungCMC_PD (IDLE), Global GC RCS (IDLE)
+04-09 05:19:34.034  2893  3142 I RegiMgr<1>: RegisterTask(s): SamsungCMC_PD (IDLE), Zong Pakistan VoLTE (REGISTERED, rat = 13, service = [mmtel-video, smsip, mmtel]), Global GC RCS (IDLE)
+04-09 05:19:34.034  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:34.034  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:34.034  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister id: 10000
+04-09 05:19:34.034  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:34.035  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:34.035  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:34.035  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:34.035  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:34.037  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:34.037  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:34.037  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:34.037  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:34.040  2893  3142 I CmcAccountManager: hasSecondaryDevice : no SD with current PD
+04-09 05:19:34.040  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:34.040  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:34.040  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:34.040  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister id: 1173
+04-09 05:19:34.040  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:34.041  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:34.041  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:34.042  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:34.042  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:34.043  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:34.043  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:34.044  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:34.044  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:34.044  2893  3142 I RegiGvnBase: checkRegiStatus: getState()=IDLE mIsUpdateRegistering=false
+04-09 05:19:34.044  2893  3142 I RegiMgr<0>: getTelephonyCallStatus:
+04-09 05:19:34.045  2893  3142 I ConfigProvider: query uri:xxxxx
+04-09 05:19:34.047  1368  1368 D SemWifiService: onServiceStateChanged : state - 1, dataNetworkType : 0
+04-09 05:19:34.047  1368  3014 I LocationAccessPolicy: com.android.systemui is aware of fine but the app-ops permission is specifically denied.
+04-09 05:19:34.047  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForFine: DENIED_SOFT
+04-09 05:19:34.047  2893  3142 I ConfigProvider: queryStorage path content://com.samsung.rcs.autoconfigurationprovider/parameter/version#simslot0
+04-09 05:19:34.047  1368  3014 I LocationAccessPolicy: com.android.systemui is aware of coarse but the app-ops permission is specifically denied.
+04-09 05:19:34.047  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForCoarse: DENIED_SOFT
+04-09 05:19:34.048  1368  3014 I LocationAccessPolicy: com.android.systemui is aware of fine but the app-ops permission is specifically denied.
+04-09 05:19:34.048  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForFine: DENIED_SOFT
+04-09 05:19:34.048  1368  3014 I LocationAccessPolicy: com.android.systemui is aware of coarse but the app-ops permission is specifically denied.
+04-09 05:19:34.048  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForCoarse: DENIED_SOFT
+04-09 05:19:34.049  1038  1038 V sec_audio_hw: sec_dev_set_parameters : l_call_2g_tdma=true
+04-09 05:19:34.049  1038  1038 D audio_hw_primary: adev_set_parameters: enter: l_call_2g_tdma=true
+04-09 05:19:34.049  1038  1038 V audio_hw_sec: sec_set_parameters: enter
+04-09 05:19:34.049  1038  1038 D audio_hw_primary: adev_set_parameters: exit with code(0)
+04-09 05:19:34.050  2893  3142 I RegiGvnRcs: isReadyToRegister: User don't try RCS service yet
+04-09 05:19:34.050  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:34.050  1368  3014 I LocationAccessPolicy: com.android.systemui is aware of fine but the app-ops permission is specifically denied.
+04-09 05:19:34.050  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForFine: DENIED_SOFT
+04-09 05:19:34.050  1368  1368 D SemWifiApServiceImpl: onServiceStateChanged : 1dataNetworkType : 0
+04-09 05:19:34.050  1368  1368 W NSLocationMonitor: onServiceStateChanged, state=1 / channel=2147483647
+04-09 05:19:34.050  1368  1368 I NSLocationMonitor: networkType[0]=UNKNOWN / nrState=false
+04-09 05:19:34.050  1368  3014 I LocationAccessPolicy: com.android.systemui is aware of coarse but the app-ops permission is specifically denied.
+04-09 05:19:34.050  1368  1368 W NSLocationMonitor: onServiceStateChanged, state=1 / channel=2147483647
+04-09 05:19:34.050  2448  2448 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+04-09 05:19:34.050  1368  1368 I NSLocationMonitor: networkType[0]=UNKNOWN / nrState=false
+04-09 05:19:34.050  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForCoarse: DENIED_SOFT
+04-09 05:19:34.051  3464  3583 W NetworkManager_FLP: updateServiceStateChanged, serviceState=1 / isRegistered=true / channel=2147483647 / networkTypeName=UNKNOWN / nr=false
+04-09 05:19:34.051  3464  3583 I NetworkManager_FLP: Success to update networkStatus, Service=1 / Network=UNKNOWN(band=0, ch=2147483647) / MobileData=true, roaming=false / WIFI=true, conn=true / BT=true, conn=false
+04-09 05:19:34.051  3464  3583 W NetworkManager_FLP: updateServiceStateChanged, serviceState=1 / isRegistered=true / channel=2147483647 / networkTypeName=UNKNOWN / nr=false
+04-09 05:19:34.051  1368  2697 D SLocation: CellLocationManager - onServiceStateChanged 1
+04-09 05:19:34.052  2448  2448 D MobileIconViewModel: [mobile] (0/7) connected=false dataConnected=false dataType=DefaultIcon(iconGroup=IconGroup(4G)) networkType=LTE simCard=ETC
+04-09 05:19:34.052  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 10070, callingPid: 24810, resultForFine: DENIED_HARD
+04-09 05:19:34.052  2893  2893 I TelephonyCallbackForPdnController<0>: onServiceStateChanged: state={mVoiceRegState=1(OUT_OF_SERVICE), mDataRegState=1(OUT_OF_SERVICE), mChannelNumber=2147483647, duplexMode()=0, mCellBandwidths=[], mOperatorAlphaLong=, mOperatorAlphaShort=, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=16(GSM), getRilDataRadioTechnology=0(Unknown), mCssIndicator=unsupported, mNetworkId=*1, mSystemId=*1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, VoiceRegType=0, Snap=0, PsOnly=false, FemtocellInd=0, SprDisplayRoam=false, OptRadioTech=0, MsimSubmode=0, IsVoiceCallAvailable=false, mIsEmergencyOnly=true, isUsingCarrierAggregation=false, mArfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=PS transportType=WLAN registrationState=UNKNOWN networkRegistrationState=UNKNOWN roamingType=NOT_ROAMING accessNetworkTechnology=IWLAN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=null nrState=**** rRplmn= isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=NOT_REG_SEARCHING networkRegistrationState=NOT_REG_SEARCHING roamingType=NOT_ROAMING accessNetworkTechnology=GSM rejectCause=0 emergencyEnabled=true availableServices=[EMERGENCY] cellIdentity=CellIdentityGsm:{ mLac=**6 mCid=2***6 mArfcn=2147483647 mBsic=0x7fffffff mMcc=410 mMnc=04 mAlphaLong=Zong mAlphaShort=Zong mAdditionalPlmns={}} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=0 mSystemIsInPrl=0 mDefaultRoamingIndicator=0} dataSpecificInfo=null nrState=**** rRplmn=41004 isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=DENIED networkRegistrationState=DENIED roamingType=NOT_ROAMING accessNetworkTechnology=UNKNOWN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 16 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false mLteAttachResultType = 0 mLteAttachExtraInfo = 0 LteVopsSupportInfo :  mVopsSupport = 1 mEmcBearerSupport = 1 } nrState=**** rRplmn= isUsingCarrierAggregation=false}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=, mOperatorAlphaShortRaw=, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}Changed=EmcBsIndi:NOT_SUPPORTED=>UNKNOWN, VoiceNet:3=>16, Operator:41003=>41004
+04-09 05:19:34.052  2893  2893 I PdnController<0>: notifyDataConnectionState
+04-09 05:19:34.052  2893  2893 I PdnController<0>: notifyDataConnectionState: needNotify=true networkType=0 isEpdgConnected=false dataNetType=13=>0 dataRegState=1=>1
+04-09 05:19:34.052  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 10070, callingPid: 24810, resultForCoarse: DENIED_HARD
+04-09 05:19:34.052  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 10152, callingPid: 24401, resultForFine: DENIED_HARD
+04-09 05:19:34.052  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 10152, callingPid: 24401, resultForCoarse: DENIED_HARD
+04-09 05:19:34.052  1368  2295 W SemWifiBackOff.Fcc: service state is STATE_OUT_OF_SERVICE telephony country iso: pk
+04-09 05:19:34.052  2893  3216 I VolteServiceModule: onServiceStateChanged({mVoiceRegState=1(OUT_OF_SERVICE), mDataRegState=1(OUT_OF_SERVICE), mChannelNumber=2147483647, duplexMode()=0, mCellBandwidths=[], mOperatorAlphaLong=, mOperatorAlphaShort=, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=16(GSM), getRilDataRadioTechnology=0(Unknown), mCssIndicator=unsupported, mNetworkId=*1, mSystemId=*1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, VoiceRegType=0, Snap=0, PsOnly=false, FemtocellInd=0, SprDisplayRoam=false, OptRadioTech=0, MsimSubmode=0, IsVoiceCallAvailable=false, mIsEmergencyOnly=true, isUsingCarrierAggregation=false, mArfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=PS transportType=WLAN registrationState=UNKNOWN networkRegistrationState=UNKNOWN roamingType=NOT_ROAMING accessNetworkTechnology=IWLAN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=null nrState=**** rRplmn= isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=NOT_REG_SEARCHING networkRegistrationState=NOT_REG_SEARCHING roamingType=NOT_ROAMING accessNetworkTechnology=GSM rejectCause=0 emergencyEnabled=true availableServices=[EMERGENCY] cellIdentity=CellIdentityGsm:{ mLac=**6 mCid=2***6 mArfcn=2147483647 mBsic=0x7fffffff mMcc=410 mMnc=04 mAlphaLong=Zong mAlphaShort=Zong mAdditionalPlmns={}} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=0 mSystemIsInPrl=0 mDefaultRoamingIndicator=0} dataSpecificInfo=null nrState=**** rRplmn=41004 isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=DENIED networkRegistrationState=DENIED roamingType=NOT_ROAMING accessNetworkTechnology=UNKNOWN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 16 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false mLteAttachResultType = 0 mLteAttachExtraInfo = 0 LteVopsSupportInfo :  mVopsSupport = 1 mEmcBearerSupport = 1 } nrState=**** rRplmn= isUsingCarrierAggregation=false}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=, mOperatorAlphaShortRaw=, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false})
+04-09 05:19:34.052  2893  3216 I VolteServiceModule: mIsLteEpsOnlyAttached(0):false
+04-09 05:19:34.053  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 9510152, callingPid: 24395, resultForFine: DENIED_HARD
+04-09 05:19:34.053  1368  3014 I LocationAccessPolicy: checkLocationPermission - callingUid: 9510152, callingPid: 24395, resultForCoarse: DENIED_HARD
+04-09 05:19:34.053  2665  6860 I EPDG -- SIM0 [NetController]: WWAN Voice Regi: 1 Roaming: 0
+04-09 05:19:34.053  2665  6860 I EPDG -- SIM0 [NetController]: WWAN Data Regi: 1 Rat: 0 Roaming: false
+04-09 05:19:34.053  1368  3014 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1331 android.content.Context.sendBroadcastMultiplePermissions:2480 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3657 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 
+04-09 05:19:34.053  2893  2893 I ImsCallSessionManager: onDataConnectionStateChanged(): networkType [UNKNOWN]isWifiConnected [true], phoneId [0]
+04-09 05:19:34.054  2893  2893 I RegiMgr-Handler<0>: onDataConnectionStateChanged(): networkType [UNKNOWN], isWifiConnected [true]
+04-09 05:19:34.054  2893  3142 I RegiMgr-Handler: handleMessage: EVENT_NETWORK_TYPE
+04-09 05:19:34.054  2893  3142 I RegiMgr-NetEvtCtr<0>: onNetworkChanged: suspendByIrat=false
+04-09 05:19:34.054  2893  3142 I NetworkState: setAllCellInfo : Cleared by null set !!!!
+04-09 05:19:34.054  2893  2893 I TelephonyCallbackForPdnController<0>: notifySnapshotState: snapshotState=0 old=0
+04-09 05:19:34.054  1368  2295 V SemWifiBackOff.5G: checkAndSetup nrFrequencyRange=0 / prevNrFrequencyRange=0
+04-09 05:19:34.054  1368  2295 V SemWifiBackOff.5G: restore back off mode, current: [NONE]
+04-09 05:19:34.054  2665  6860 I EPDG -- SIM0 [NetController]: onNetworkStatusChanged: disable Epdg
+04-09 05:19:34.055  1368  3014 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1364 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3662 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 android.os.Binder.execTransactInternal:1380 
+04-09 05:19:34.055  2893  3142 I RegiMgr-NetEvtCtr<0>: onNetworkEventChanged:Changed Event: Voice network(0=>16), isWifiConnected(false=> true), Operator(=>41004)
+04-09 05:19:34.055  2893  3142 I VolteServiceModule: onNetworkChanged: NetworkEvent [network=0, voiceNetwork=16, voiceOverPs=UNKNOWN, outOfService=true, isDataRoaming=false, isVoiceRoaming=false, csOutOfService=true, isWifiConnected=true, isEpdgConnected=false, isEpdgAvailable=false, operatorNumeric=41004, isPsOnlyReg=false, isDataConnected=false]
+04-09 05:19:34.055  2893  3142 E #IMSCR  : 04-09 05:19:34 0x30000009:0,13->0
+04-09 05:19:34.055  2893  3142 I ImModule: updateFeatures: phoneId = 0
+04-09 05:19:34.055  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:34.055  2893  3216 I VolteServiceModule: tryDisconnect(0) delay 100
+04-09 05:19:34.055  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:34.055  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:34.055  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:34.055  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:34.055  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:34.056  2893  3142 I ConfigProvider: query uri:xxxxx
+04-09 05:19:34.056  1368  1368 D SemWifiService: received: android.intent.action.SERVICE_STATE
+04-09 05:19:34.058  1368  3014 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1364 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3671 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 android.os.Binder.execTransactInternal:1380 
+04-09 05:19:34.058  2893  3142 I ConfigProvider: queryStorage path content://com.samsung.rcs.autoconfigurationprovider/parameter/geolocPushAuth#simslot0
+04-09 05:19:34.058  2893  3142 I FeatureUpdater: isEnableGls: false
+04-09 05:19:34.058  2893  3142 I ImsServiceSwitchEur[0]:  isRcsEnabled: true mDefaultSms true mUpsmEnabled false mEmergencyEnabled false
+04-09 05:19:34.058  2893  3142 I FeatureUpdater: FEATURE_CHATBOT_EXTENDED_MSG enabled ver:1.3
+04-09 05:19:34.058  2893  3142 I CapexInfo: getFeatureTag: features = 0 []
+04-09 05:19:34.058  2893  3142 I FeatureUpdater: updateFeatures: 
+04-09 05:19:34.058  2893  3142 I RcsUtils: isDualRcsReg: false
+04-09 05:19:34.058  2893  3142 I CapabilityUtil<0>: onNetworkChanged: mAvailablePhoneId = ! phoneId
+04-09 05:19:34.058  2893  3142 I SmsServiceModule: regInfo: null
+04-09 05:19:34.058  2893  3142 I SmsServiceModule: disallow sms Service
+04-09 05:19:34.058  2893  3142 I SmsServiceModule: Sms Service queryCapabilityStatus[0]: removeCapabilities CAPABILITY_TYPE_SMS
+04-09 05:19:34.058  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.058  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.058  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.058  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.058  2893  3142 E CmcServiceHelper: disallow Call Service
+04-09 05:19:34.059  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.059  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.059  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.059  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.059  2893  3142 E CmcServiceHelper: disallow Call Service
+04-09 05:19:34.059  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.059  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.059  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.059  2893  3142 I CmcAccountManager: isSupportDualSimCMC: false
+04-09 05:19:34.059  2893  3142 E CmcServiceHelper: disallow Call Service
+04-09 05:19:34.059  2893  3142 E GlobalSettingsRepoBase: globalgcsettings No matched key : ss_domain_setting
+04-09 05:19:34.059  2893  3142 I UtServiceModule<0>: isUtEnabled with policy : CS_ALWAYS enabled = false
+04-09 05:19:34.059  2893  3142 I CapabilityDiscModule<0>: queryCapabilityStatus
+04-09 05:19:34.059  2893  3142 E CapabilityUtil<0>: checkModuleReady: config is null
+04-09 05:19:34.059  2893  3142 I CapabilityDiscModule<0>: isUceServiceAvailable: not ready
+04-09 05:19:34.059  2893  3142 E CapabilityUtil<0>: checkModuleReady: config is null
+04-09 05:19:34.059  2893  3142 I CapabilityDiscModule<0>: isUceServiceAvailable: not ready
+04-09 05:19:34.059  2893  3142 I SecImsNotifier: slot[0]: updateCapabilities: capabilities=MmTel Capabilities - [Voice: false Video: false UT: false SMS: false CALL_COMPOSER: false]
+04-09 05:19:34.059  2893  3142 I SecImsServiceConnector<0>: getMmTelFeatureImpl
+04-09 05:19:34.059  2893  3142 E SecImsServiceConnector: connect to local SecImsService #1 attempt
+04-09 05:19:34.059  2893  3142 I SecImsService: createMmTelFeatureForSubscription: slotId=0,subscriptionId=-1
+04-09 05:19:34.059  2893  3142 I SecImsNotifier: slot[0]: updateRcsCapabilities: capabilities=Capabilities: 0
+04-09 05:19:34.059  2893  3142 I SecImsServiceConnector<0>: getRcsFeatureImpl
+04-09 05:19:34.059  2893  3142 E SecImsServiceConnector: connect to local SecImsService #1 attempt
+04-09 05:19:34.059  2893  3142 I SecImsService: createRcsFeatureForSubscription: slotId=0,subscriptionId=-1
+04-09 05:19:34.059  2893  3142 I RegiMgr-NetEvtCtr<0>: handleNetworkEventBeforeRegister: new network event=NetworkEvent [network=0, voiceNetwork=16, voiceOverPs=UNKNOWN, outOfService=true, isDataRoaming=false, isVoiceRoaming=false, csOutOfService=true, isWifiConnected=true, isEpdgConnected=false, isEpdgAvailable=false, operatorNumeric=41004, isPsOnlyReg=false, isDataConnected=false], old network event=NetworkEvent [network=0, voiceNetwork=0, voiceOverPs=UNKNOWN, outOfService=true, isDataRoaming=false, isVoiceRoaming=false, csOutOfService=true, isWifiConnected=false, isEpdgConnected=false, isEpdgAvailable=false, operatorNumeric=, isPsOnlyReg=false, isDataConnected=false]
+04-09 05:19:34.059  2893  3142 I RegiMgr-NetEvtCtr<0>: handleNetworkEventBeforeRegister: new network event=NetworkEvent [network=0, voiceNetwork=16, voiceOverPs=UNKNOWN, outOfService=true, isDataRoaming=false, isVoiceRoaming=false, csOutOfService=true, isWifiConnected=true, isEpdgConnected=false, isEpdgAvailable=false, operatorNumeric=41004, isPsOnlyReg=false, isDataConnected=false], old network event=NetworkEvent [network=0, voiceNetwork=0, voiceOverPs=UNKNOWN, outOfService=true, isDataRoaming=false, isVoiceRoaming=false, csOutOfService=true, isWifiConnected=false, isEpdgConnected=false, isEpdgAvailable=false, operatorNumeric=, isPsOnlyReg=false, isDataConnected=false]
+04-09 05:19:34.059  2893  3142 I RegiMgr-NetEvtCtr<0>: out of service.
+04-09 05:19:34.059  2893  3142 I TelephonyManagerWrapper<0>: getRilSimOperator: ETC
+04-09 05:19:34.059  2893  3142 I SimManager<0>: hasIsim: [false]
+04-09 05:19:34.060  2893  3142 E GlobalSettingsRepoBase: globalgcsettings No matched key : use_usim_on_invalid_isim
+04-09 05:19:34.060  2893  3142 I SimManager<0>: mSimState:LOADED, mIsimLoaded:false, hasIsim():false
+04-09 05:19:34.060  2893  3142 I TelephonyManagerWrapper<0>: getRilSimOperator: ETC
+04-09 05:19:34.060  2893  3142 I SimManager<0>: hasIsim: [false]
+04-09 05:19:34.060  2893  3142 E GlobalSettingsRepoBase: globalgcsettings No matched key : use_usim_on_invalid_isim
+04-09 05:19:34.060  2893  3142 E GlobalSettingsRepoBase: globalgcsettings No matched key : ss_enable_in_roaming
+04-09 05:19:34.060  2893  3142 I RegiMgr-NetEvtCtr<0>: onNetworkEventChanged: tryRegister by phoneID
+04-09 05:19:34.060  2893  3142 I RegiMgr<0>: tryRegister:
+04-09 05:19:34.060  2893  3142 I RegiMgr<0>: RegisterTask(s): SamsungCMC_PD (IDLE), Global GC RCS (IDLE)
+04-09 05:19:34.060  2893  3142 I RegiMgr<1>: RegisterTask(s): SamsungCMC_PD (IDLE), Zong Pakistan VoLTE (REGISTERED, rat = 13, service = [mmtel-video, smsip, mmtel]), Global GC RCS (IDLE)
+04-09 05:19:34.060  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:34.060  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:34.060  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister id: 10000
+04-09 05:19:34.060  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:34.061  1368  3014 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1364 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3677 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 android.os.Binder.execTransactInternal:1380 
+04-09 05:19:34.061  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:34.062  2426  2426 D ServiceStateProvider: subId=7
+04-09 05:19:34.063  2448  2448 D MultiSIMController: onReceive() - action = android.intent.action.SERVICE_STATE
+04-09 05:19:34.063  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:34.063  2448  2448 D CarrierTextController: carrierTextForSimState(7)-(order: 0) : Emergency calls only
+04-09 05:19:34.063  2448  2448 D CarrierTextController: carrierTextForSimState(1)-(order: 1) : ZONG
+04-09 05:19:34.063  2448  2448 D CarrierTextController: setText : Emergency calls only • ZONG
+04-09 05:19:34.063  2448  2448 D CarrierTextController: carrierTextForSimState(7)-(order: 0) : Emergency calls only
+04-09 05:19:34.063  2448  2448 D CarrierTextController: carrierTextForSimState(1)-(order: 1) : ZONG
+04-09 05:19:34.063  2448  2448 D CarrierTextController: setText : Emergency calls only • ZONG
+04-09 05:19:34.063  2448  2448 D CarrierTextController: carrierTextForSimState(7)-(order: 0) : Emergency calls only
+04-09 05:19:34.063  2448  2448 D CarrierTextController: carrierTextForSimState(1)-(order: 1) : ZONG
+04-09 05:19:34.063  2448  2448 D CarrierTextController: setText : Emergency calls only • ZONG
+04-09 05:19:34.063  2448  2448 D FaceWidgetPagesController: onRefreshCarrierInfo()
+04-09 05:19:34.063 31434 31434 D CellBroadcastReceiver: onReceive Intent { act=android.intent.action.SERVICE_STATE flg=0x1000010 cmp=com.google.android.cellbroadcastreceiver/com.android.cellbroadcastreceiver.CellBroadcastReceiver (has extras) }
+04-09 05:19:34.064  2448  2448 D FaceWidgetClockRoamManager: isNetworkRoamingState id=7
+04-09 05:19:34.064  2448  2448 D FaceWidgetClockRoamManager: isNetworkRoamingState false
+04-09 05:19:34.064  2448  2448 D FaceWidgetClockRoamManager: onRefreshCarrierInfo(pre, now): false, false
+04-09 05:19:34.064  2448  2448 D FaceWidgetClockPage: onRefreshCarrierInfo : isChanged false mIsRoaming false
+04-09 05:19:34.064  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:34.064  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:34.064 31434 31434 D CellBroadcastReceiver: onServiceStateChanged, ss: 1
+04-09 05:19:34.064 31434 31434 D CellBroadcastReceiver: networkOperator: 41004
+04-09 05:19:34.064  1368  3014 I Telecom:SamsungTelecomServiceImpl: isInCall - callingPackage : com.android.systemui / callingUser : UserHandle{0} / hasCrossUserAccess : true
+04-09 05:19:34.065 31434 31434 D CellBroadcastReceiver: update supported roaming operator as 
+04-09 05:19:34.065  2448  2448 D MultiSIMController: MESSAGE_UPDATE_SERVICE_STATE
+04-09 05:19:34.066  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:34.066  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:34.066  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:34.066  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:34.067  2893  3142 I CmcAccountManager: hasSecondaryDevice : no SD with current PD
+04-09 05:19:34.067  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:34.067  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:34.067  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:34.067  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister id: 1173
+04-09 05:19:34.067  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:34.067  1368  2697 D SLocation: CellLocationManager - onCellLocationChanged 7 / 0
+04-09 05:19:34.068  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:34.068  2448  2448 D ShadeCarrierGroup: handleUpdateCarrierInfo [Emergency calls only • ZONG] isLatin=false
+04-09 05:19:34.068  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:34.068  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:34.068  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:34.070  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:34.070  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:34.070  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:34.070  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:34.070  2893  3142 I RegiGvnBase: checkRegiStatus: getState()=IDLE mIsUpdateRegistering=false
+04-09 05:19:34.071  2893  3142 I RegiMgr<0>: getTelephonyCallStatus:
+04-09 05:19:34.071  2448  2448 D MobileIconViewModel: [mobile] (0/7) connected=false dataConnected=false dataType=DefaultIcon(iconGroup=IconGroup(4G)) networkType=UNKNOWN simCard=ETC
+04-09 05:19:34.071  2448  2448 D MobileIconViewModel: [mobile] (0/7) connected=false dataConnected=false dataType=DefaultIcon(iconGroup=IconGroup(Unknown)) networkType=UNKNOWN simCard=ETC
+04-09 05:19:34.072  2893  3142 I ConfigProvider: query uri:xxxxx
+04-09 05:19:34.072  2426  2426 I Telephony: TelecomAccountRegistry$TelecomAccountTelephonyCallback: onServiceStateChanged: newState=1, mServiceState=1
+04-09 05:19:34.073  2426  2426 I Telephony: TelecomAccountRegistry$AccountEntry: isRttCurrentlySupported -- regular acct,, hasVoiceAvailability: false, isRttSupported: false, alwaysAllowWhileRoaming: false, isRoaming: false, isOnWfc: false
+04-09 05:19:34.073  2426  2426 I Telephony: TelecomAccountRegistry$AccountEntry: isRttCurrentlySupported -- regular acct,, hasVoiceAvailability: true, isRttSupported: false, alwaysAllowWhileRoaming: false, isRoaming: false, isOnWfc: false
+04-09 05:19:34.073  2426  2426 V PhoneGlobals: handleServiceStateChanged
+04-09 05:19:34.073  2426  2426 D NotificationMgr: updateNetworkSelection, Use Samsung codes instead of AOSP codes
+04-09 05:19:34.073  2426  2426 V PhoneGlobals: subId=7, mDefaultDataSubId=1, ss roaming=false
+04-09 05:19:34.074  2893  3142 I ConfigProvider: queryStorage path content://com.samsung.rcs.autoconfigurationprovider/parameter/version#simslot0
+04-09 05:19:34.076  2893  3142 I RegiGvnRcs: isReadyToRegister: User don't try RCS service yet
+04-09 05:19:34.076  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:34.076  2893  3142 I GeolocationCon: handleMessage : what = SERVICE_STATE_CHANGED
+04-09 05:19:34.077  2893  3142 I GeolocationCon: matchTimingReqLocation ,match=0, timing=4
+04-09 05:19:34.077  2893  3142 I GeolocationCon: profile is null
+04-09 05:19:34.077  2893  3142 I GeolocationCon<0>: getLastAccessedNetworkCountryIso: Not accessed yet
+04-09 05:19:34.077  2893  3142 I RegiMgr-Handler: handleMessage: EVENT_DO_PENDING_UPDATE_REGISTRATION
+04-09 05:19:34.077  2448  2448 W View    : requestLayout() improperly called by android.widget.FrameLayout{fb82b5b V.E...... ......ID 0,146-1080,2361 #7f0a0846 app:id/qs_frame} during layout: running second layout pass
+04-09 05:19:34.078  2448  2448 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+04-09 05:19:34.131  7976  7976 I HBD     : g onCapabilityChanged  setNetworkState currentNetworkState : wifi 
+04-09 05:19:34.373  1368  3573 D FreecessController: com.whatsapp(10410) is important[18]
+04-09 05:19:34.533   548  4146 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+04-09 05:19:34.574  3976  4068 D TrafficStats: tagSocket(180) with statsTag=0x4, statsUid=-1
+04-09 05:19:34.635  1368  2106 D CompatibilityChangeReporter: Compat change id reported: 265195908; UID 10410; state: ENABLED
+04-09 05:19:34.889  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(47),als:249,green:70,ir:0,delta_avg:0,delta_max:185,stdev:2,stdev_per_4sample:4,magig_code or itime:384
+04-09 05:19:34.993  1047  1047 I android.hardware.health@2.1-service-samsung: updateLrpSysfs: write: 373
+04-09 05:19:34.995  1368  2220 D BatteryService: Sending ACTION_BATTERY_CHANGED: level:100, status:2, health:2, remain:0, ac:false, usb:true, wireless:false, pogo:false, misc:0xf0000, charge_type:1, charger_type:1, voltage:4190, temperature:357, online:19, charging_status:0, cycle_count:0, current_avg:851, ps:false, hvc:true, capacity:280000, current_event:0x8000, current_now:824, mcc:0, mcv:0, cc:4500000, present:true, scale:100, technology:Li-ion
+04-09 05:19:35.007  1368  2346 I DeviceBatteryInfoService: action: android.intent.action.BATTERY_CHANGED
+04-09 05:19:35.007  1368  2346 I DeviceBatteryInfoService: phone battery level: 100
+04-09 05:19:35.007  1368  2346 I DeviceBatteryInfoService: phone battery status: 2
+04-09 05:19:35.009  2448  2448 I AODBatteryManager: updateBatteryData: ACTION_BATTERY_CHANGED
+04-09 05:19:35.009  1368  2190 D MotionRecognitionService: [SAR]  onReceive : ACTION_BATTERY_CHANGED, Plugged: 2
+04-09 05:19:35.010  2448  2448 I AODBatteryManager: saveBatteryData : AOD BatteryData [mBatteryLevel=100, mBatteryStatus=CHARGING, mBatteryPlugType=USB, mBatteryPlugged=true, mRemainingChargeTime=0, mBatteryChargingType=2, mBatteryChargerType=FAST, mBatteryOnline=NOT_DEFINED, mBatterySwellingMode=NONE, mBatteryProtectMode=false, mBatteryProtectModeType=2, mSleepChargingEvent=null, mSleepChargingEventFinishTime=null]
+04-09 05:19:35.010  2448  2448 D SamsungBatteryMeterDrawable: onBatteryLevelChanged isSomethingChanged: false
+04-09 05:19:35.010  2426  2426 D SemBigDataInfoController: Intent: android.intent.action.BATTERY_CHANGED
+04-09 05:19:35.010  2426  2426 D SemBigDataInfoController: Intent: android.intent.action.BATTERY_CHANGED
+04-09 05:19:35.010  2448  2448 D SamsungBatteryMeterDrawable: onBatteryLevelChanged isSomethingChanged: false
+04-09 05:19:35.010  2448  2448 D SamsungBatteryMeterDrawable: onBatteryLevelChanged isSomethingChanged: false
+04-09 05:19:35.010  2448  2448 I PowerUI : mBootCompleted = true |  mFullyConnected = true
+04-09 05:19:35.010  2448  2448 I PowerUI : BATTERY_HEALTH_CHECK extraHealth=2 mBatteryMiscEvent=983040
+04-09 05:19:35.010  2448  2448 W PowerUI : Plug reason
+04-09 05:19:35.010  2448  2448 W PowerUI : Skip charging animation - by plug status
+04-09 05:19:35.010  2448  2448 D PowerUI : priorPlugType = 2 mPlugType = 2 priorBatteryStatus = 2 mBatteryStatus = 2
+04-09 05:19:35.010  2448  2448 W PowerUI : Plug reason
+04-09 05:19:35.010  2448  2448 W PowerUI : Skip charging sound - by plug status
+04-09 05:19:35.010  2448  2448 I PowerUI : oldMisalign : false, curMisalign : false
+04-09 05:19:35.010  1368  1368 D AdaptiveBrightnessLongtermModelBuilder: Received android.intent.action.BATTERY_CHANGED
+04-09 05:19:35.011  2448 22027 D SecPowerUI.Notification: dismissing low battery warning: level=100
+04-09 05:19:35.011  2448 22027 D SecPowerUI.Notification: updateNotification mWarning=false mPlaySound=false
+04-09 05:19:35.011  2448 22027 D SecPowerUI.Notification: SecBatteryStatsSnapshot{batteryLevel=100, currentBatteryMode=0, chargingTime=0, chargingType=11, batteryHealth=2, automaticTestMode=false, isHiccupState=false, optChargingFinishTime=}
+04-09 05:19:35.011 15520 15520 I [SCPMV2][SystemMonitorReceiver]: onReceive: android.intent.action.BATTERY_CHANGED
+04-09 05:19:35.011  2448  2448 D SecPowerUI.Notification: showChargingNotice oldChargingType : 11 / currentChargingType : 11, oldChargingTime : 0 / mChargingTime : 0
+04-09 05:19:35.011  2448  2448 D SecPowerUI.Notification: showChargingNotice There is no change about charging status, so return!
+04-09 05:19:35.011  2448 22027 D SecPowerUI.Notification: 1. restoreScreenTimeOut - saved_value : :
+04-09 05:19:35.011  2448  2448 D PowerUI : Battery swelling mode - priorBatterySwellingMode = 0 mBatterySwellingMode = 0 mBatteryStatus = 2
+04-09 05:19:35.011  2448  2448 I PowerUI : mBatteryMiscEvent = 983040
+04-09 05:19:35.011  2448  2448 I PowerUI : checkBatteryProtectionNotification : 2, pb value : 3, plugType : 2, level : 100
+04-09 05:19:35.011  2448 22027 E SecPowerUI.Notification: no saved value, so we do nothing !!
+04-09 05:19:35.011  2448  2448 D SecPowerUI.Notification: SecBatteryStatsSnapshot{batteryLevel=100, currentBatteryMode=0, chargingTime=0, chargingType=11, batteryHealth=2, automaticTestMode=false, isHiccupState=false, optChargingFinishTime=}
+04-09 05:19:35.012  2448  2448 D KeyguardUpdateMonitor: handleBatteryUpdate
+04-09 05:19:35.111  2426  2774 D PhoneInterfaceManager: setDataEnabledForReason() Reason=1 Pid=1368 App=system
+04-09 05:19:35.112  2426  2774 D PhoneInterfaceManager: setDataEnabledForReason() Reason=1 Pid=1368 App=system
+04-09 05:19:35.705   702   702 D io_stats: !@   8,0 r 34200134 819010484 w 8864907 120359752 d 2888055 182849948 f 0 0 iot 15548864 0 th 0 0 0 pt 0 inp 0 0 143894.859
+04-09 05:19:35.852  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(46),als:249,green:71,ir:0,delta_avg:0,delta_max:186,stdev:1,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:35.882   711   711 W keymaster_tee: [WRN]begin req PARAMS: A32 B2 P64 
+04-09 05:19:35.885   711   711 D keymaster_swd: keymaster_swd [WRN] (km_usage_expire_datetime_valid:223) for purpose 0 we shuldn't check KM_TAG_USAGE_EXPIRE_DATETIME
+04-09 05:19:35.885   711   711 D keymaster_swd: keymaster_swd [WRN] (km_add_tag:500) skip: non repetable tag already exists with different value: 2684354
+04-09 05:19:35.885   711   711 D keymaster_swd: keymaster_swd [WRN] (swd_run_cb:260) swd_begin() returns 0
+04-09 05:19:35.886   708 26034 I keystore2: system/security/keystore2/src/security_level.rs:454 - In create_operation. Success to create IKeystoreOperation. 1000, None
+04-09 05:19:35.889   711   711 D keymaster_swd: keymaster_swd [WRN] (swd_run_cb:260) swd_update() returns 0
+04-09 05:19:35.891   711   711 D keymaster_swd: keymaster_swd [WRN] (swd_run_cb:260) swd_update() returns 0
+04-09 05:19:35.892   711   711 D keymaster_swd: keymaster_swd [WRN] (swd_run_cb:260) swd_update() returns 0
+04-09 05:19:35.894   711   711 D keymaster_swd: keymaster_swd [WRN] (swd_run_cb:260) swd_update() returns 0
+04-09 05:19:35.896   711   711 D keymaster_swd: keymaster_swd [WRN] (swd_run_cb:260) swd_update() returns 0
+04-09 05:19:35.897   711   711 D keymaster_swd: keymaster_swd [WRN] (swd_run_cb:260) swd_update() returns 0
+04-09 05:19:35.898   711   711 D keymaster_swd: keymaster_swd [WRN] (swd_run_cb:260) swd_update() returns 0
+04-09 05:19:35.900   711   711 D keymaster_swd: keymaster_swd [WRN] (swd_run_cb:260) swd_finish() returns 0
+04-09 05:19:36.461  1368  3697 D SemWifiUsabilityStatsMonitor: onWifiUsabilityStats - seqNum 21872, isSameBssidAndFreq true
+04-09 05:19:36.473  1049 25643 I sensors-hal: handle_sns_client_event:123, auto_rotation_event_2: mode:255, type:1:0/-2.132,0.266,9.571, ar:0
+04-09 05:19:36.810  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 47(47),als:249,green:70,ir:0,delta_avg:0,delta_max:185,stdev:2,stdev_per_4sample:4,magig_code or itime:384
+04-09 05:19:37.050   548  4146 I NearbyMediums: Found Fast Ble Advertisements :
+04-09 05:19:37.050   548  4146 I NearbyMediums: BleAdvertisement { version=2, socketVersion=2, isFast=true, serviceIdHash=null, data=[ 0x23 0x47 0x5a 0x43 0x51 0x11 0x32 0xcc 0xcb 0x0a 0xb1 0x9d 0xa6 0x3c 0xe0 0x4b 0xe1 0x6d 0x11 0x48 0x3e 0x89 0x5a ], deviceToken=[ 0xde 0x16 ], rxAdvertisement=null } : 2 times.
+04-09 05:19:37.050   548  4146 I NearbyMediums: Total 2 fast advertisements from 1 unique advertisers.
+04-09 05:19:37.051   548  4146 I NearbyMediums: Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing, NearbyConnections.TxAdvertisement}
+04-09 05:19:37.705   702   702 D io_stats: !@   8,0 r 34200158 819010620 w 8864916 120359784 d 2888055 182849948 f 0 0 iot 15548896 0 th 0 0 0 pt 0 inp 0 0 143896.860
+04-09 05:19:37.706   702   702 D io_stats: !@ Read_top(KB): loop46(876) 140 system_server(1368) 80 com.whatsapp(3976) 64
+04-09 05:19:37.706   702   702 D io_stats: !@ Write_top(KB): kworker/u16:3(16443) 2828 .devicesecurity(3828) 724 system_server(1368) 24
+04-09 05:19:37.770  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(46),als:249,green:71,ir:0,delta_avg:0,delta_max:186,stdev:2,stdev_per_4sample:4,magig_code or itime:384
+04-09 05:19:38.730  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(46),als:249,green:70,ir:0,delta_avg:0,delta_max:186,stdev:2,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:38.816  4676  5114 I SDHMS:C : SIOP:: AP:410 BAT:357 USB:0 CHG:405 PA:400 WIFI:400 BLK:0 SUBBAT:0 SKIN:370 SKINF:366 SKINB:370 LRP:370 LRF:366 LRB:370 
+04-09 05:19:38.816  4676  5114 I SDHMS:C : MODEMQ:: MMWTHM:270(270) 
+04-09 05:19:39.024  1368  2134 D ActivityManager: Received BROADCAST intent 0xa8a5 Key{broadcastIntent pkg=com.whatsapp intent=act=com.whatsapp.alarm.CLIENT_PING_PERIODIC pkg=com.whatsapp flags=0x4000000 u=0} requestCode=0 sent=0 from uid 1000
+04-09 05:19:39.030  1368  2134 D ActivityManager: Received BROADCAST intent 0x793e865 Key{broadcastIntent pkg=com.sec.android.sdhms intent=act=com.sec.android.alarm.refresh.battery_stats flags=0x4000000 u=0} requestCode=0 sent=0 from uid 1000
+04-09 05:19:39.168  1368  2588 I SemBatteryUsageStatsProvider: makeWakeupReasonListName WhiteList Tag/tableName=Abort: alarmtimer suspending blocked by timerfd_alarmproc
+04-09 05:19:39.168  1368  2588 I SemBatteryUsageStatsProvider: makeWakeupReasonListName WhiteList Tag/tableName=Abort: alarmtimer suspending blocked by alarm_handle_timer
+04-09 05:19:39.174  4676  5115 I SDHMS:u : Polling event handleUpdatedDeltaLocked will starts.
+04-09 05:19:39.175  4676  4879 I SDHMS:BatteryStatsDBProvider: BarTender DB Provider Insert Start
+04-09 05:19:39.175  4676  5115 I SDHMS:u : handleUpdatedDeltaLocked : 2026-04-09 05:09:33.74 ~ 2026-04-09 05:19:39.174   reason=POLLING
+04-09 05:19:39.175  4676  5115 I SDHMS:u : Polling event handleUpdatedDeltaLocked finished.
+04-09 05:19:39.179   923   923 E audit   : type=1400 audit(1775693979.177:279726): avc:  denied  { ioctl } for  pid=4676 comm=5344484D532048616E646C65722054 path="/data/user/0/com.sec.android.sdhms/databases/sec_batterystats" dev="dm-52" ino=4361 ioctlcmd=0xf522 scontext=u:r:system_app:s0 tcontext=u:object_r:system_app_data_file:s0 tclass=file permissive=0 SEPF_SM-A528B_12_0001 audit_filtered
+04-09 05:19:39.185   923   923 E audit   : type=1400 audit(1775693979.181:279727): avc:  denied  { ioctl } for  pid=4676 comm=5344484D532048616E646C65722054 path="/data/user/0/com.sec.android.sdhms/databases/sec_batterystats" dev="dm-52" ino=4361 ioctlcmd=0xf522 scontext=u:r:system_app:s0 tcontext=u:object_r:system_app_data_file:s0 tclass=file permissive=0 SEPF_SM-A528B_12_0001 audit_filtered
+04-09 05:19:39.229  4676  4879 I SDHMS:BatteryStatsDBProvider: BarTender DB Provider Insert End
+04-09 05:19:39.231   923   923 E audit   : type=1400 audit(1775693979.229:279728): avc:  denied  { ioctl } for  pid=4676 comm=5344484D532048616E646C65722054 path="/data/user/0/com.sec.android.sdhms/databases/sec_batterystats_ext" dev="dm-52" ino=7421 ioctlcmd=0xf522 scontext=u:r:system_app:s0 tcontext=u:object_r:system_app_data_file:s0 tclass=file permissive=0 SEPF_SM-A528B_12_0001 audit_filtered
+04-09 05:19:39.247  4676  4879 I SDHMS:BatteryStatsDBProvider: BarTender DB Provider Query Start
+04-09 05:19:39.248   923   923 E audit   : type=1400 audit(1775693979.245:279729): avc:  denied  { ioctl } for  pid=4676 comm=5344484D532048616E646C65722054 path="/data/user/0/com.sec.android.sdhms/databases/sec_batterystats" dev="dm-52" ino=4361 ioctlcmd=0xf522 scontext=u:r:system_app:s0 tcontext=u:object_r:system_app_data_file:s0 tclass=file permissive=0 SEPF_SM-A528B_12_0001 audit_filtered
+04-09 05:19:39.250   923   923 E audit   : type=1400 audit(1775693979.249:279730): avc:  denied  { ioctl } for  pid=4676 comm=5344484D532048616E646C65722054 path="/data/user/0/com.sec.android.sdhms/databases/sec_batterystats" dev="dm-52" ino=4361 ioctlcmd=0xf522 scontext=u:r:system_app:s0 tcontext=u:object_r:system_app_data_file:s0 tclass=file permissive=0 SEPF_SM-A528B_12_0001 audit_filtered
+04-09 05:19:39.251  4676  4879 I SDHMS:BatteryStatsDBProvider: BarTender DB Provider Query End
+04-09 05:19:39.252  4676  4879 I SDHMS:BarTender:Gatherer:BatteryStats: BarTender addStats To DB (56 ms) ExtDB (17 ms)
+04-09 05:19:39.252  4676  4879 I SDHMS:BarTender:Gatherer:BatteryStats:  BatteryStats refreshed (73 ms) analyzed (5 ms)
+04-09 05:19:39.370 18133 18133 I wpa_supplicant: Heartbeat 2911
+04-09 05:19:39.378  1368  3573 D FreecessController: com.whatsapp(state: Initial -> Freezeable, Reason: JOB_ADD)
+04-09 05:19:39.472  1368  3697 D SemWifiUsabilityStatsMonitor: onWifiUsabilityStats - seqNum 21873, isSameBssidAndFreq true
+04-09 05:19:39.692  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(47),als:250,green:70,ir:0,delta_avg:0,delta_max:185,stdev:1,stdev_per_4sample:4,magig_code or itime:384
+04-09 05:19:39.706   702   702 D io_stats: !@   8,0 r 34200220 819011072 w 8865037 120360264 d 2888114 182853636 f 0 0 iot 15549032 0 th 0 0 0 pt 0 inp 0 0 143898.860
+04-09 05:19:40.019  2448  2448 D SecPowerUI.Notification: showChargingNotice oldChargingType : 11 / currentChargingType : 11, oldChargingTime : 0 / mChargingTime : 0
+04-09 05:19:40.019  2448  2448 D SecPowerUI.Notification: showChargingNotice There is no change about charging status, so return!
+04-09 05:19:40.652  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(46),als:249,green:70,ir:0,delta_avg:0,delta_max:186,stdev:2,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:41.283  4676  4676 I SDHMS:LOAD: type: LoadsFreqs, value: 0:32:0:806400:806400:806400:720383:1900800:691200:315:315:315
+04-09 05:19:41.610  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(46),als:249,green:71,ir:0,delta_avg:0,delta_max:186,stdev:2,stdev_per_4sample:4,magig_code or itime:384
+04-09 05:19:41.707   702   702 D io_stats: !@   8,0 r 34200227 819011148 w 8865043 120360288 d 2888114 182853636 f 0 0 iot 15549044 0 th 0 0 0 pt 0 inp 0 0 143900.861
+04-09 05:19:41.707   702   702 D io_stats: !@ Read_top(KB): c.android.sdhms(4676) 320 system_server(1368) 104 stagram.android(26172) 76
+04-09 05:19:41.707   702   702 D io_stats: !@ Write_top(KB): c.android.sdhms(4676) 188 kworker/u16:3(16443) 24
+04-09 05:19:41.943  1368  1762 I ActivityManager: Killing 2967:com.google.android.apps.walletnfcrel/u0a376 (adj 985): cached idle & background restricted
+04-09 05:19:41.952  1368  1765 I libprocessgroup: Successfully killed process cgroup uid 10376 pid 2967 in 5ms
+04-09 05:19:41.989   969   969 I Zygote  : Process 2967 exited due to signal 9 (Killed)
+04-09 05:19:41.996  1368  1713 D DisplayManagerService: Drop pending events for gone uid 10376
+04-09 05:19:41.998 25313 25313 D HidDeviceService: handleMessage(): msg.what=8
+04-09 05:19:42.090  1368  1838 W PackageManager: Verification with id 20 not found. It may be invalid or overridden by integrity verification
+04-09 05:19:42.146  1041 25416 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-09 05:19:42.146  1041 25416 D vendor.qti.bluetooth@1.0-ibs_handler: SerialClockVote: vote for UART CLK ON
+04-09 05:19:42.147  1041 25416 D vendor.qti.bluetooth@1.0-wake_lock: Acquire wakelock is acquired 
+04-09 05:19:42.147  1041 25416 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-09 05:19:42.155 25313 25420 D BtGatt.GattService: onScanResult to scannerId: 4- eventType=0x10, addressType=1, address=XX:XX:XX:XX:C6:C7, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-78, periodicAdvInt=0x0
+04-09 05:19:42.197  1041 25416 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-09 05:19:42.197  1041 25416 D vendor.qti.bluetooth@1.0-ibs_handler: SerialClockVote: vote for UART CLK OFF
+04-09 05:19:42.204  2806  3211 I Finsky  : [15759] Stats for Executor: BlockingExecutor ves@88f3deb[Running, pool size = 4, active threads = 0, queued tasks = 0, completed tasks = 23]
+04-09 05:19:42.205  2806  3211 I Finsky  : [15759] Stats for Executor: LightweightExecutor ves@89d2748[Running, pool size = 4, active threads = 0, queued tasks = 0, completed tasks = 152]
+04-09 05:19:42.304  3034  3234 I Finsky:background: [15772] Stats for Executor: bgExecutor ves@615c28b[Running, pool size = 4, active threads = 0, queued tasks = 0, completed tasks = 23]
+04-09 05:19:42.328  2806  3211 I Finsky  : [15759] Stats for Executor: bgExecutor ves@691d9e1[Running, pool size = 4, active threads = 0, queued tasks = 0, completed tasks = 111]
+04-09 05:19:42.332  3034  3234 I Finsky:background: [15772] Stats for Executor: LightweightExecutor ves@b0c5f68[Running, pool size = 4, active threads = 0, queued tasks = 0, completed tasks = 20]
+04-09 05:19:42.347  1041 25355 D vendor.qti.bluetooth@1.0-wake_lock: Release wakelock is released 
+04-09 05:19:42.483  3034  3234 I Finsky:background: [15772] Stats for Executor: BlockingExecutor ves@bc67f81[Running, pool size = 1, active threads = 0, queued tasks = 0, completed tasks = 5]
+04-09 05:19:42.487  1368  3697 D SemWifiUsabilityStatsMonitor: onWifiUsabilityStats - seqNum 21874, isSameBssidAndFreq true
+04-09 05:19:42.487  1368  2308 I SemWifiLinkQualityMonitor: Link stat: 385 / 78 / 1.00 (9) / 390 / -45.0 || 100.0 : 390.00 / 0.5 : 1.00 / 0.55 : 0.20 / G (G) || 0.11 ms / 72.20 Mbps / N || 0 / N / 0 Y / 0 Y
+04-09 05:19:42.569  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(47),als:250,green:71,ir:0,delta_avg:0,delta_max:186,stdev:2,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:42.778   923   923 E audit   : type=1400 audit(1775693982.773:279731): avc:  denied  { ioctl } for  pid=548 comm="lowpool[547]" path="/data/data/com.google.android.gms/databases/ns.db" dev="dm-52" ino=478947 ioctlcmd=0xf522 scontext=u:r:gmscore_app:s0:c512,c768 tcontext=u:object_r:privapp_data_file:s0:c512,c768 tclass=file permissive=0 SEPF_SM-A528B_12_0001 audit_filtered
+04-09 05:19:43.530  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(46),als:249,green:70,ir:0,delta_avg:0,delta_max:185,stdev:1,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:43.708   702   702 D io_stats: !@   8,0 r 34200391 819017640 w 8865048 120360304 d 2888114 182853636 f 0 0 iot 15549152 0 th 0 0 0 pt 0 inp 0 0 143902.862
+04-09 05:19:43.825  1485  1674 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:43.835  2665  2706 I EPDG -- SIM0 IwlanNetworkService: requestNetworkRegistrationInfo for domain 2
+04-09 05:19:43.836  1485  1736 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:43.836  2665  2793 I EPDG -- SIM0 IwlanNetworkService: Calling onRequestNetworkRegistrationInfoComplete.resultCode = 0, netState = NetworkRegistrationInfo{ domain=PS transportType=WLAN registrationState=UNKNOWN networkRegistrationState=UNKNOWN roamingType=NOT_ROAMING accessNetworkTechnology=IWLAN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=null nrState=**** rRplmn= isUsingCarrierAggregation=false}
+04-09 05:19:43.838  1485  1736 D SemNativeCarrierFeature_vendor: getInstance
+04-09 05:19:43.847  1368  2295 D SemCellularStateManager: onCellInfoChanged: cellInfoList Number of cell: 1
+04-09 05:19:43.847  1368  2295 D SemCellularStateManager: onCellInfoChanged: Registered = true, mCellularCellId = 5695
+04-09 05:19:43.848  2893  2893 I TelephonyCallbackForPdnController<0>: onCellInfoChanged: xxxxx
+04-09 05:19:43.848  2893  2893 I ImsCallSessionManager: onCellInfoChanged, phoneId: 0
+04-09 05:19:43.848  2893  3142 I RegiMgr-Handler: handleMessage: EVENT_CELL_INFO_CHANGED
+04-09 05:19:43.848  2893  3142 I RegiMgr<0>: tryRegister:
+04-09 05:19:43.849  2893  3142 I RegiMgr<0>: RegisterTask(s): SamsungCMC_PD (IDLE), Global GC RCS (IDLE)
+04-09 05:19:43.849  2893  3142 I RegiMgr<1>: RegisterTask(s): SamsungCMC_PD (IDLE), Zong Pakistan VoLTE (REGISTERED, rat = 13, service = [mmtel-video, smsip, mmtel]), Global GC RCS (IDLE)
+04-09 05:19:43.849  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:43.849  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:43.849  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister id: 10000
+04-09 05:19:43.849  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:43.850  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:43.850  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:43.851  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:43.851  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:43.853  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:43.853  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:43.853  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:43.853  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:43.856  2893  3142 I CmcAccountManager: hasSecondaryDevice : no SD with current PD
+04-09 05:19:43.856  2893  3142 I RegiMgr<0>: [SamsungCMC_PD|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:43.856  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:43.856  2893  3142 I RegisterTask: isSuspended: mSuspended(false) mSuspendByIrat(false)
+04-09 05:19:43.856  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister id: 1173
+04-09 05:19:43.857  2893  3142 I RegiMgr : isPdnConnected: false, PdnType: 0
+04-09 05:19:43.857  2893  3142 I PdnController: getDefaultNetworkBearer:  WIFI
+04-09 05:19:43.858  2893  3142 I RegiMgr-Utils<0>: findBestNetwork: WIFI needWifiNetwork = true
+04-09 05:19:43.858  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister: slot 1's call state: 0
+04-09 05:19:43.858  2893  3142 I RegiGvnBase<0>: isReadyToDualRegister : true
+04-09 05:19:43.860  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkInitialRegistrationIsReady: APM ON [false], Roamimg [false]
+04-09 05:19:43.860  2893  3142 I RcsPolicyMgr<0>: pendingRcsRegister: mActiveDataPhoneId = 1
+04-09 05:19:43.860  2893  3142 I ImsProfile: isRttSupportByCallApp : false ttyType : 1
+04-09 05:19:43.860  2893  3142 I RegiMgr-Utils<0>: getPriorityRegiedTask : isPriority  High? true
+04-09 05:19:43.861  2893  3142 I RegiGvnBase: checkRegiStatus: getState()=IDLE mIsUpdateRegistering=false
+04-09 05:19:43.861  2893  3142 I RegiMgr<0>: getTelephonyCallStatus:
+04-09 05:19:43.862  2893  3142 I ConfigProvider: query uri:xxxxx
+04-09 05:19:43.862  1368  1368 D SemWifiService: onServiceStateChanged : state - 1, dataNetworkType : 0
+04-09 05:19:43.863  1368  2588 I LocationAccessPolicy: com.android.systemui is aware of fine but the app-ops permission is specifically denied.
+04-09 05:19:43.863  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForFine: DENIED_SOFT
+04-09 05:19:43.863  1368  2588 I LocationAccessPolicy: com.android.systemui is aware of coarse but the app-ops permission is specifically denied.
+04-09 05:19:43.863  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForCoarse: DENIED_SOFT
+04-09 05:19:43.864  1368  2588 I LocationAccessPolicy: com.android.systemui is aware of fine but the app-ops permission is specifically denied.
+04-09 05:19:43.864  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForFine: DENIED_SOFT
+04-09 05:19:43.864  1368  2588 I LocationAccessPolicy: com.android.systemui is aware of coarse but the app-ops permission is specifically denied.
+04-09 05:19:43.864  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForCoarse: DENIED_SOFT
+04-09 05:19:43.865  1368  2588 I LocationAccessPolicy: com.android.systemui is aware of fine but the app-ops permission is specifically denied.
+04-09 05:19:43.865  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForFine: DENIED_SOFT
+04-09 05:19:43.865  1368  1368 D SemWifiApServiceImpl: onServiceStateChanged : 1dataNetworkType : 0
+04-09 05:19:43.865  1368  1368 W NSLocationMonitor: onServiceStateChanged, state=1 / channel=2147483647
+04-09 05:19:43.865  1368  1368 I NSLocationMonitor: networkType[0]=UNKNOWN / nrState=false
+04-09 05:19:43.866  1368  2588 I LocationAccessPolicy: com.android.systemui is aware of coarse but the app-ops permission is specifically denied.
+04-09 05:19:43.866  1368  1368 W NSLocationMonitor: onServiceStateChanged, state=1 / channel=2147483647
+04-09 05:19:43.866  1368  1368 I NSLocationMonitor: networkType[0]=UNKNOWN / nrState=false
+04-09 05:19:43.866  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 10046, callingPid: 2448, resultForCoarse: DENIED_SOFT
+04-09 05:19:43.866  3464  3583 W NetworkManager_FLP: updateServiceStateChanged, serviceState=1 / isRegistered=true / channel=2147483647 / networkTypeName=UNKNOWN / nr=false
+04-09 05:19:43.867  2893  3142 I ConfigProvider: queryStorage path content://com.samsung.rcs.autoconfigurationprovider/parameter/version#simslot0
+04-09 05:19:43.867  3464  3583 W NetworkManager_FLP: updateServiceStateChanged, serviceState=1 / isRegistered=true / channel=2147483647 / networkTypeName=UNKNOWN / nr=false
+04-09 05:19:43.867  2665  6860 I EPDG -- SIM0 [NetController]: WWAN Voice Regi: 1 Roaming: 0
+04-09 05:19:43.867  2665  6860 I EPDG -- SIM0 [NetController]: WWAN Data Regi: 1 Rat: 0 Roaming: false
+04-09 05:19:43.867  1368  2295 W SemWifiBackOff.Fcc: service state is STATE_OUT_OF_SERVICE telephony country iso: pk
+04-09 05:19:43.867  2893  2893 I TelephonyCallbackForPdnController<0>: onServiceStateChanged: state={mVoiceRegState=1(OUT_OF_SERVICE), mDataRegState=1(OUT_OF_SERVICE), mChannelNumber=2147483647, duplexMode()=0, mCellBandwidths=[], mOperatorAlphaLong=, mOperatorAlphaShort=, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=16(GSM), getRilDataRadioTechnology=0(Unknown), mCssIndicator=unsupported, mNetworkId=*1, mSystemId=*1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, VoiceRegType=0, Snap=0, PsOnly=false, FemtocellInd=0, SprDisplayRoam=false, OptRadioTech=0, MsimSubmode=0, IsVoiceCallAvailable=false, mIsEmergencyOnly=true, isUsingCarrierAggregation=false, mArfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=PS transportType=WLAN registrationState=UNKNOWN networkRegistrationState=UNKNOWN roamingType=NOT_ROAMING accessNetworkTechnology=IWLAN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=null nrState=**** rRplmn= isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=NOT_REG_SEARCHING networkRegistrationState=NOT_REG_SEARCHING roamingType=NOT_ROAMING accessNetworkTechnology=GSM rejectCause=0 emergencyEnabled=true availableServices=[EMERGENCY] cellIdentity=CellIdentityGsm:{ mLac=**6 mCid=5**5 mArfcn=2147483647 mBsic=0x7fffffff mMcc=410 mMnc=04 mAlphaLong=Zong mAlphaShort=Zong mAdditionalPlmns={}} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=0 mSystemIsInPrl=0 mDefaultRoamingIndicator=0} dataSpecificInfo=null nrState=**** rRplmn=41004 isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=DENIED networkRegistrationState=DENIED roamingType=NOT_ROAMING accessNetworkTechnology=UNKNOWN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 16 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false mLteAttachResultType = 0 mLteAttachExtraInfo = 0 LteVopsSupportInfo :  mVopsSupport = 1 mEmcBearerSupport = 1 } nrState=**** rRplmn= isUsingCarrierAggregation=false}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=, mOperatorAlphaShortRaw=, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}Changed=
+04-09 05:19:43.867  2893  2893 I PdnController<0>: notifyDataConnectionState
+04-09 05:19:43.867  2665  6860 I EPDG -- SIM0 [NetController]: onNetworkStatusChanged: disable Epdg
+04-09 05:19:43.867  2893  2893 I PdnController<0>: notifyDataConnectionState: needNotify=false networkType=0 isEpdgConnected=false dataNetType=0=>0 dataRegState=1=>1
+04-09 05:19:43.867  2893  2893 I TelephonyCallbackForPdnController<0>: notifySnapshotState: snapshotState=0 old=0
+04-09 05:19:43.867  2893  3216 I VolteServiceModule: onServiceStateChanged({mVoiceRegState=1(OUT_OF_SERVICE), mDataRegState=1(OUT_OF_SERVICE), mChannelNumber=2147483647, duplexMode()=0, mCellBandwidths=[], mOperatorAlphaLong=, mOperatorAlphaShort=, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=16(GSM), getRilDataRadioTechnology=0(Unknown), mCssIndicator=unsupported, mNetworkId=*1, mSystemId=*1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, VoiceRegType=0, Snap=0, PsOnly=false, FemtocellInd=0, SprDisplayRoam=false, OptRadioTech=0, MsimSubmode=0, IsVoiceCallAvailable=false, mIsEmergencyOnly=true, isUsingCarrierAggregation=false, mArfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=PS transportType=WLAN registrationState=UNKNOWN networkRegistrationState=UNKNOWN roamingType=NOT_ROAMING accessNetworkTechnology=IWLAN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=null nrState=**** rRplmn= isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=NOT_REG_SEARCHING networkRegistrationState=NOT_REG_SEARCHING roamingType=NOT_ROAMING accessNetworkTechnology=GSM rejectCause=0 emergencyEnabled=true availableServices=[EMERGENCY] cellIdentity=CellIdentityGsm:{ mLac=**6 mCid=5**5 mArfcn=2147483647 mBsic=0x7fffffff mMcc=410 mMnc=04 mAlphaLong=Zong mAlphaShort=Zong mAdditionalPlmns={}} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=0 mSystemIsInPrl=0 mDefaultRoamingIndicator=0} dataSpecificInfo=null nrState=**** rRplmn=41004 isUsingCarrierAggregation=false}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=DENIED networkRegistrationState=DENIED roamingType=NOT_ROAMING accessNetworkTechnology=UNKNOWN rejectCause=0 emergencyEnabled=false availableServices=[] cellIdentity=null voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 16 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false mLteAttachResultType = 0 mLteAttachExtraInfo = 0 LteVopsSupportInfo :  mVopsSupport = 1 mEmcBearerSupport = 1 } nrState=**** rRplmn= isUsingCarrierAggregation=false}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=, mOperatorAlphaShortRaw=, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false})
+04-09 05:19:43.867  2893  3216 I VolteServiceModule: mIsLteEpsOnlyAttached(0):false
+04-09 05:19:43.868  1368  2697 D SLocation: CellLocationManager - onServiceStateChanged 1
+04-09 05:19:43.869  2893  3142 I RegiGvnRcs: isReadyToRegister: User don't try RCS service yet
+04-09 05:19:43.869  2893  3142 I RegiMgr<0>: [Global GC RCS|IDLE] checkForTryRegister: isReadyToRegister = false
+04-09 05:19:43.869  2893  3142 I GeolocationCon: handleMessage : what = SERVICE_STATE_CHANGED
+04-09 05:19:43.869  2893  3142 I GeolocationCon: matchTimingReqLocation ,match=0, timing=4
+04-09 05:19:43.869  2893  3142 I GeolocationCon: profile is null
+04-09 05:19:43.869  2893  3142 I GeolocationCon<0>: getLastAccessedNetworkCountryIso: Not accessed yet
+04-09 05:19:43.869  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 10070, callingPid: 24810, resultForFine: DENIED_HARD
+04-09 05:19:43.869  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 10070, callingPid: 24810, resultForCoarse: DENIED_HARD
+04-09 05:19:43.870  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 10152, callingPid: 24401, resultForFine: DENIED_HARD
+04-09 05:19:43.870  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 10152, callingPid: 24401, resultForCoarse: DENIED_HARD
+04-09 05:19:43.870  1368  2295 V SemWifiBackOff.5G: checkAndSetup nrFrequencyRange=0 / prevNrFrequencyRange=0
+04-09 05:19:43.870  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 9510152, callingPid: 24395, resultForFine: DENIED_HARD
+04-09 05:19:43.870  1368  2295 V SemWifiBackOff.5G: restore back off mode, current: [NONE]
+04-09 05:19:43.870  1368  2588 I LocationAccessPolicy: checkLocationPermission - callingUid: 9510152, callingPid: 24395, resultForCoarse: DENIED_HARD
+04-09 05:19:43.870  1368  2588 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1331 android.content.Context.sendBroadcastMultiplePermissions:2480 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3657 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 
+04-09 05:19:43.872  1368  2588 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1364 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3662 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 android.os.Binder.execTransactInternal:1380 
+04-09 05:19:43.873  1368  2588 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1364 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3671 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 android.os.Binder.execTransactInternal:1380 
+04-09 05:19:43.874  1368  1368 D SemWifiService: received: android.intent.action.SERVICE_STATE
+04-09 05:19:43.875  1368  2588 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcastMultiplePermissions:1364 com.android.server.TelephonyRegistry.broadcastServiceStateChanged:3677 com.android.server.TelephonyRegistry.notifyServiceStateForPhoneId:1753 com.android.internal.telephony.ITelephonyRegistry$Stub.onTransact:542 android.os.Binder.execTransactInternal:1380 
+04-09 05:19:43.877  2448  2448 D MultiSIMController: onReceive() - action = android.intent.action.SERVICE_STATE
+04-09 05:19:43.877  2448  2448 D CarrierTextController: carrierTextForSimState(7)-(order: 0) : Emergency calls only
+04-09 05:19:43.878  2448  2448 D CarrierTextController: carrierTextForSimState(1)-(order: 1) : ZONG
+04-09 05:19:43.878  2448  2448 D CarrierTextController: setText : Emergency calls only • ZONG
+04-09 05:19:43.878  2448  2448 D CarrierTextController: carrierTextForSimState(7)-(order: 0) : Emergency calls only
+04-09 05:19:43.878  2448  2448 D CarrierTextController: carrierTextForSimState(1)-(order: 1) : ZONG
+04-09 05:19:43.878  2448  2448 D CarrierTextController: setText : Emergency calls only • ZONG
+04-09 05:19:43.878  2448  2448 D CarrierTextController: carrierTextForSimState(7)-(order: 0) : Emergency calls only
+04-09 05:19:43.878  2448  2448 D CarrierTextController: carrierTextForSimState(1)-(order: 1) : ZONG
+04-09 05:19:43.878  2448  2448 D CarrierTextController: setText : Emergency calls only • ZONG
+04-09 05:19:43.878  2448  2448 D FaceWidgetPagesController: onRefreshCarrierInfo()
+04-09 05:19:43.878  2426  2426 D ServiceStateProvider: subId=7
+04-09 05:19:43.878  2448  2448 D FaceWidgetClockRoamManager: isNetworkRoamingState id=7
+04-09 05:19:43.878  2448  2448 D FaceWidgetClockRoamManager: isNetworkRoamingState false
+04-09 05:19:43.878  2448  2448 D FaceWidgetClockRoamManager: onRefreshCarrierInfo(pre, now): false, false
+04-09 05:19:43.879  2448  2448 D FaceWidgetClockPage: onRefreshCarrierInfo : isChanged false mIsRoaming false
+04-09 05:19:43.879  1368  2653 I Telecom:SamsungTelecomServiceImpl: isInCall - callingPackage : com.android.systemui / callingUser : UserHandle{0} / hasCrossUserAccess : true
+04-09 05:19:43.879 31434 31434 D CellBroadcastReceiver: onReceive Intent { act=android.intent.action.SERVICE_STATE flg=0x1000010 cmp=com.google.android.cellbroadcastreceiver/com.android.cellbroadcastreceiver.CellBroadcastReceiver (has extras) }
+04-09 05:19:43.880  2448  2448 D MultiSIMController: MESSAGE_UPDATE_SERVICE_STATE
+04-09 05:19:43.880  1368  2697 D SLocation: CellLocationManager - onCellLocationChanged 7 / 0
+04-09 05:19:43.880 31434 31434 D CellBroadcastReceiver: onServiceStateChanged, ss: 1
+04-09 05:19:43.880 31434 31434 D CellBroadcastReceiver: networkOperator: 41004
+04-09 05:19:43.881 31434 31434 D CellBroadcastReceiver: update supported roaming operator as 
+04-09 05:19:43.883  2426  2426 I Telephony: TelecomAccountRegistry$TelecomAccountTelephonyCallback: onServiceStateChanged: newState=1, mServiceState=1
+04-09 05:19:43.884  2448  2448 D ShadeCarrierGroup: handleUpdateCarrierInfo [Emergency calls only • ZONG] isLatin=false
+04-09 05:19:43.884  2426  2426 I Telephony: TelecomAccountRegistry$AccountEntry: isRttCurrentlySupported -- regular acct,, hasVoiceAvailability: false, isRttSupported: false, alwaysAllowWhileRoaming: false, isRoaming: false, isOnWfc: false
+04-09 05:19:43.885  2426  2426 I Telephony: TelecomAccountRegistry$AccountEntry: isRttCurrentlySupported -- regular acct,, hasVoiceAvailability: true, isRttSupported: false, alwaysAllowWhileRoaming: false, isRoaming: false, isOnWfc: false
+04-09 05:19:43.885  2426  2426 V PhoneGlobals: handleServiceStateChanged
+04-09 05:19:43.885  2426  2426 D NotificationMgr: updateNetworkSelection, Use Samsung codes instead of AOSP codes
+04-09 05:19:43.885  2426  2426 V PhoneGlobals: subId=7, mDefaultDataSubId=1, ss roaming=false
+04-09 05:19:43.891  2448  2448 W View    : requestLayout() improperly called by android.widget.FrameLayout{fb82b5b V.E...... ......ID 0,146-1080,2361 #7f0a0846 app:id/qs_frame} during layout: running second layout pass
+04-09 05:19:44.380  1368  3573 D FreecessController: com.whatsapp(state: Freezeable -> Frozen, Reason: JOB_ADD)
+04-09 05:19:44.381  1368  3573 D FreecessController: FZ : com.whatsapp(3976)
+04-09 05:19:44.383  1368  3573 D FreecessController: FZ : com.whatsapp(0), reason: Bg
+04-09 05:19:44.386  1368  3573 I PowerManagerService: [PWL] SetWakeLockEnableDisable uid = 10410 , disable= true
+04-09 05:19:44.386  1368  3573 I PowerManagerService: [PWL] can not change uid =  10410
+04-09 05:19:44.387  1368  3573 W LocationManagerService: onFreezeStateChanged, uid[10410]=true
+04-09 05:19:44.492  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 46(46),als:249,green:71,ir:0,delta_avg:0,delta_max:184,stdev:2,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:45.060  1047  1047 I android.hardware.health@2.1-service-samsung: updateLrpSysfs: write: 370
+04-09 05:19:45.062  1368  1760 D BatteryService: Sending ACTION_BATTERY_CHANGED: level:100, status:2, health:2, remain:0, ac:false, usb:true, wireless:false, pogo:false, misc:0xf0000, charge_type:1, charger_type:1, voltage:4185, temperature:358, online:19, charging_status:0, cycle_count:0, current_avg:734, ps:false, hvc:true, capacity:280000, current_event:0x8000, current_now:617, mcc:0, mcv:0, cc:4500000, present:true, scale:100, technology:Li-ion
+04-09 05:19:45.073  1368  2346 I DeviceBatteryInfoService: action: android.intent.action.BATTERY_CHANGED
+04-09 05:19:45.073  1368  2346 I DeviceBatteryInfoService: phone battery level: 100
+04-09 05:19:45.073  1368  2346 I DeviceBatteryInfoService: phone battery status: 2
+04-09 05:19:45.075  2448  2448 I AODBatteryManager: updateBatteryData: ACTION_BATTERY_CHANGED
+04-09 05:19:45.075  2448  2448 I AODBatteryManager: saveBatteryData : AOD BatteryData [mBatteryLevel=100, mBatteryStatus=CHARGING, mBatteryPlugType=USB, mBatteryPlugged=true, mRemainingChargeTime=0, mBatteryChargingType=2, mBatteryChargerType=FAST, mBatteryOnline=NOT_DEFINED, mBatterySwellingMode=NONE, mBatteryProtectMode=false, mBatteryProtectModeType=2, mSleepChargingEvent=null, mSleepChargingEventFinishTime=null]
+04-09 05:19:45.076  2448  2448 D SamsungBatteryMeterDrawable: onBatteryLevelChanged isSomethingChanged: false
+04-09 05:19:45.076  2448  2448 D SamsungBatteryMeterDrawable: onBatteryLevelChanged isSomethingChanged: false
+04-09 05:19:45.076  2448  2448 D SamsungBatteryMeterDrawable: onBatteryLevelChanged isSomethingChanged: false
+04-09 05:19:45.076  2448  2448 I PowerUI : mBootCompleted = true |  mFullyConnected = true
+04-09 05:19:45.076  2448  2448 I PowerUI : BATTERY_HEALTH_CHECK extraHealth=2 mBatteryMiscEvent=983040
+04-09 05:19:45.076  2448  2448 W PowerUI : Plug reason
+04-09 05:19:45.076  2448  2448 W PowerUI : Skip charging animation - by plug status
+04-09 05:19:45.076  2448  2448 D PowerUI : priorPlugType = 2 mPlugType = 2 priorBatteryStatus = 2 mBatteryStatus = 2
+04-09 05:19:45.076  2448  2448 W PowerUI : Plug reason
+04-09 05:19:45.076  2448  2448 W PowerUI : Skip charging sound - by plug status
+04-09 05:19:45.076  2448  2448 I PowerUI : oldMisalign : false, curMisalign : false
+04-09 05:19:45.076  2448 22139 D SecPowerUI.Notification: dismissing low battery warning: level=100
+04-09 05:19:45.077  2448 22139 D SecPowerUI.Notification: updateNotification mWarning=false mPlaySound=false
+04-09 05:19:45.077  2448 22139 D SecPowerUI.Notification: SecBatteryStatsSnapshot{batteryLevel=100, currentBatteryMode=0, chargingTime=0, chargingType=11, batteryHealth=2, automaticTestMode=false, isHiccupState=false, optChargingFinishTime=}
+04-09 05:19:45.077  2426  2426 D SemBigDataInfoController: Intent: android.intent.action.BATTERY_CHANGED
+04-09 05:19:45.077  2426  2426 D SemBigDataInfoController: Intent: android.intent.action.BATTERY_CHANGED
+04-09 05:19:45.077  2448 22139 D SecPowerUI.Notification: 1. restoreScreenTimeOut - saved_value : :
+04-09 05:19:45.077  2448 22139 E SecPowerUI.Notification: no saved value, so we do nothing !!
+04-09 05:19:45.077  2448  2448 D SecPowerUI.Notification: showChargingNotice oldChargingType : 11 / currentChargingType : 11, oldChargingTime : 0 / mChargingTime : 0
+04-09 05:19:45.077  2448  2448 D SecPowerUI.Notification: showChargingNotice There is no change about charging status, so return!
+04-09 05:19:45.077  2448  2448 D PowerUI : Battery swelling mode - priorBatterySwellingMode = 0 mBatterySwellingMode = 0 mBatteryStatus = 2
+04-09 05:19:45.077  2448  2448 I PowerUI : mBatteryMiscEvent = 983040
+04-09 05:19:45.077  2448  2448 I PowerUI : checkBatteryProtectionNotification : 2, pb value : 3, plugType : 2, level : 100
+04-09 05:19:45.077  2448  2448 D SecPowerUI.Notification: SecBatteryStatsSnapshot{batteryLevel=100, currentBatteryMode=0, chargingTime=0, chargingType=11, batteryHealth=2, automaticTestMode=false, isHiccupState=false, optChargingFinishTime=}
+04-09 05:19:45.078  1368  2190 D MotionRecognitionService: [SAR]  onReceive : ACTION_BATTERY_CHANGED, Plugged: 2
+04-09 05:19:45.078  2448  2448 D KeyguardUpdateMonitor: handleBatteryUpdate
+04-09 05:19:45.079 15520 15520 I [SCPMV2][SystemMonitorReceiver]: onReceive: android.intent.action.BATTERY_CHANGED
+04-09 05:19:45.079  1368  1368 D AdaptiveBrightnessLongtermModelBuilder: Received android.intent.action.BATTERY_CHANGED
+04-09 05:19:45.451  1049 25625 I sensors-hal: handle_sns_std_sensor_event:231, [SSC_LIGHT] P: 45(46),als:249,green:71,ir:0,delta_avg:0,delta_max:185,stdev:1,stdev_per_4sample:3,magig_code or itime:384
+04-09 05:19:45.504  1368  3697 D SemWifiUsabilityStatsMonitor: onWifiUsabilityStats - seqNum 21875, isSameBssidAndFreq true
+04-09 05:19:45.708   702   702 D io_stats: !@   8,0 r 34200395 819017684 w 8865068 120364012 d 2888115 182853640 f 0 0 iot 15549272 0 th 0 0 0 pt 0 inp 0 0 143904.862
+04-09 05:19:45.708   702   702 D io_stats: !@ Read_top(KB): stagram.android(26172) 6472 android.hardwar(1047) 16 android.vending(2806) 8
+04-09 05:19:45.709   702   702 D io_stats: !@ Write_top(KB): kworker/u16:12(15987) 3676 .gms.persistent(548) 12 jbd2/sda9-8(691) 4
+04-09 05:19:45.901   708  4157 I keystore2: system/security/keystore2/src/watchdog.rs:319 - Watchdog thread idle -> terminating. Have a great day.
