@@ -12,7 +12,7 @@
  * a 401 response from any API call auto-logs the user out.
  */
 
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useMemo, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginWithEmail, registerUser, logoutSupabase, extractError, verifySignupOTP } from '../services/authService';
 import { registerLogoutHandler } from '../services/api';
@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
   // ─────────────────────────────────────────────────────────
   // Login
   // ─────────────────────────────────────────────────────────
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     try {
       setLoading(true);
       const { user: loggedInUser, token } = await loginWithEmail(email, password);
@@ -88,12 +88,9 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // ─────────────────────────────────────────────────────────
-  // Register
-  // ─────────────────────────────────────────────────────────
-  const register = async (userData) => {
+  const register = useCallback(async (userData) => {
     try {
       setLoading(true);
       const result = await registerUser(userData);
@@ -122,12 +119,9 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // ─────────────────────────────────────────────────────────
-  // Verify OTP
-  // ─────────────────────────────────────────────────────────
-  const verifyOTP = async (email, otp, userData) => {
+  const verifyOTP = useCallback(async (email, otp, userData) => {
     try {
       setLoading(true);
       const result = await verifySignupOTP(email, otp, userData);
@@ -146,12 +140,9 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // ─────────────────────────────────────────────────────────
-  // Logout
-  // ─────────────────────────────────────────────────────────
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       setLoading(true);
       await logoutSupabase();
@@ -166,10 +157,19 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    user,
+    loading,
+    login,
+    register,
+    verifyOTP,
+    logout
+  }), [user, loading, login, register, verifyOTP, logout]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, verifyOTP, logout }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

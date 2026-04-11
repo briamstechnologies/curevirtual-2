@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'https://curevirtual-2-production-ee33.up.railway.app';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace('/api', '') || 'https://curevirtual-2-production-ee33.up.railway.app';
 const SOCKET_URL = API_BASE_URL;
 
 class SocketService {
@@ -10,15 +10,24 @@ class SocketService {
   }
 
   async connect(userId, role, name) {
-    if (this.socket?.connected) return this.socket;
+    // If socket exists (even if connecting), don't start a new one
+    if (this.socket) {
+      if (this.socket.connected) return this.socket;
+      // If disconnected but instance exists, reconnect
+      if (this.socket.disconnected) this.socket.connect();
+      return this.socket;
+    }
 
     try {
       const token = await AsyncStorage.getItem('userToken');
       
+      console.log(`[Socket] Initializing connection to ${SOCKET_URL}...`);
       this.socket = io(SOCKET_URL, {
         auth: { token },
         transports: ['websocket'],
         reconnection: true,
+        reconnectionAttempts: 5,
+        timeout: 10000,
       });
 
       this.socket.on('connect', () => {
