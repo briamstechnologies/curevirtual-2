@@ -18,6 +18,10 @@ router.get("/:id", verifyToken, async (req, res) => {
         lastName: true,
         role: true,
         email: true,
+        phone: true,
+        dateOfBirth: true,
+        gender: true,
+        maritalStatus: true,
         createdAt: true,
       },
     });
@@ -28,11 +32,11 @@ router.get("/:id", verifyToken, async (req, res) => {
     return res.json({ data: user });
   } catch (e) {
     console.error("❌ user profile error:", e);
-    return res.status(500).json({ error: "Failed to load user intelligence" });
+    return res.status(500).json({ error: "Failed to load user" });
   }
 });
 
-// GET /api/users (Keep existing list functionality)
+// GET /api/users (List)
 router.get("/", verifyToken, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || "200", 10), 1000);
@@ -41,7 +45,8 @@ router.get("/", verifyToken, async (req, res) => {
     const where = q
       ? {
           OR: [
-            { name: { contains: q, mode: "insensitive" } },
+            { firstName: { contains: q, mode: "insensitive" } },
+            { lastName: { contains: q, mode: "insensitive" } },
             { email: { contains: q, mode: "insensitive" } },
           ],
         }
@@ -50,7 +55,7 @@ router.get("/", verifyToken, async (req, res) => {
     const users = await prisma.user.findMany({
       where,
       take: limit,
-      orderBy: { name: "asc" },
+      orderBy: { firstName: "asc" },
       select: {
         id: true,
         firstName: true,
@@ -64,6 +69,35 @@ router.get("/", verifyToken, async (req, res) => {
   } catch (e) {
     console.error("❌ users list error:", e);
     return res.status(500).json({ error: "Failed to load users" });
+  }
+});
+
+// PATCH /api/users/profile
+router.patch("/profile", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { firstName, lastName, phone, dateOfBirth, gender, maritalStatus } = req.body;
+
+    const data = {};
+    if (firstName !== undefined) data.firstName = firstName;
+    if (lastName !== undefined) data.lastName = lastName;
+    if (phone !== undefined) data.phone = phone;
+    if (gender !== undefined) data.gender = gender;
+    if (maritalStatus !== undefined) data.maritalStatus = maritalStatus;
+    if (dateOfBirth !== undefined) {
+      const d = new Date(dateOfBirth);
+      if (!isNaN(d.getTime())) data.dateOfBirth = d;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (e) {
+    console.error("❌ profile update error:", e);
+    return res.status(500).json({ error: "Failed to update profile" });
   }
 });
 

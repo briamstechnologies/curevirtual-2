@@ -166,7 +166,20 @@ router.get("/profile", async (req, res) => {
 
     let profile = await prisma.doctorProfile.findUnique({
       where: { userId },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            dateOfBirth: true,
+            gender: true,
+            maritalStatus: true,
+          },
+        },
+      },
     });
     if (!profile && user.role === "DOCTOR") {
       profile = await ensureDefaultProfile(user);
@@ -215,6 +228,7 @@ router.put("/profile", async (req, res) => {
       ...(middleName ? { middleName } : {}),
       ...(lastName ? { lastName } : {}),
       ...(phone ? { phone } : {}),
+      ...(maritalStatus ? { maritalStatus } : {}),
     };
 
     if (Object.keys(userData).length > 0) {

@@ -57,8 +57,10 @@ router.get("/profile", async (req, res) => {
             firstName: true,
             lastName: true,
             email: true,
+            phone: true,
             dateOfBirth: true,
             gender: true,
+            maritalStatus: true,
           },
         },
         appointments: true,
@@ -129,6 +131,8 @@ router.put("/profile", async (req, res) => {
       medicalRecordNumber,
       insuranceProvider,
       insuranceMemberId,
+      maritalStatus,
+      disabilityStatus,
     } = req.body;
 
     // Fallback: If no userId provided, use the logged-in user's ID
@@ -179,6 +183,7 @@ router.put("/profile", async (req, res) => {
         ...(phone !== undefined && { phone }),
         ...(validDob && { dateOfBirth: validDob }),
         ...(gender && { gender }),
+        ...(maritalStatus !== undefined && { maritalStatus }),
       },
     });
 
@@ -201,6 +206,7 @@ router.put("/profile", async (req, res) => {
         medicalRecordNumber: medicalRecordNumber || null,
         insuranceProvider: insuranceProvider || null,
         insuranceMemberId: insuranceMemberId || null,
+        disabilityStatus: disabilityStatus || "Normal",
       },
       create: {
         userId,
@@ -219,6 +225,7 @@ router.put("/profile", async (req, res) => {
         medicalRecordNumber: medicalRecordNumber || null,
         insuranceProvider: insuranceProvider || null,
         insuranceMemberId: insuranceMemberId || null,
+        disabilityStatus: disabilityStatus || "Normal",
       },
     });
 

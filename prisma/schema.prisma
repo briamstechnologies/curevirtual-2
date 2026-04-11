@@ -1,14 +1,12 @@
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
-  
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-  
 }
 
 // =========================================================
@@ -30,6 +28,14 @@ enum Gender {
   FEMALE
   OTHER
   PREFER_NOT_TO_SAY
+
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
 
 }
 
@@ -163,6 +169,7 @@ model User {
   role        UserRole @default(PATIENT)
   dateOfBirth DateTime
   gender      Gender
+  maritalStatus MaritalStatus?
 
   stripeCustomerId String? @unique
 
@@ -323,6 +330,7 @@ model PatientProfile {
   allergies      String?    @db.Text
   medications    String?    @db.Text
   medicalHistory String?    @db.Text
+  disabilityStatus String?   @default("Normal")
   address        String?
 
   medicalRecordNumber String? @unique

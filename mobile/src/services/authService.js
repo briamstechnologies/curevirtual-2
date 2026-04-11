@@ -155,21 +155,22 @@ export const verifySignupOTP = async (email, otp, userData) => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// Fetch Profile — Get full details (Email, Phone, DOB, Gender, Blood Type)
+// Fetch Profile — Get full details (Email, Phone, DOB, Gender, Marital Status)
 // ─────────────────────────────────────────────────────────────
 export const fetchUserProfile = async (userId, role) => {
   try {
     let endpoint = `/users/${userId}`;
 
-    // If patient, use the specific profile endpoint to get bloodGroup, etc.
     if (role === 'PATIENT') {
       endpoint = '/patient/profile';
+    } else if (role === 'DOCTOR') {
+      endpoint = '/doctor/profile';
     }
 
     const response = await api.get(endpoint);
 
-    // DEBUG: As requested by user
-    console.log('PROFILE API RESPONSE:', response.data);
+    // DEBUG: Logs the response for diagnostic purposes
+    console.log(`[Auth] Profile fetch (${role}) response:`, response.data);
 
     if (response.data?.success && response.data?.data) {
       return response.data.data;
@@ -178,6 +179,32 @@ export const fetchUserProfile = async (userId, role) => {
     return response.data?.data || response.data;
   } catch (error) {
     console.error('[Auth] Fetch profile failed:', extractError(error));
+    throw error;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// Update Profile — Unified update for any role
+// ─────────────────────────────────────────────────────────────
+export const updateUserProfile = async (userId, data, role) => {
+  try {
+    let endpoint = '/users/profile'; // General fallback
+    let method = 'patch';
+
+    if (role === 'PATIENT') {
+      endpoint = '/patient/profile';
+      method = 'put';
+    } else if (role === 'DOCTOR') {
+      endpoint = '/doctor/profile';
+      method = 'put';
+    }
+
+    const response = await api[method](endpoint, { ...data, userId });
+
+    console.log(`[Auth] Profile update (${role}) success:`, response.data);
+    return response.data;
+  } catch (error) {
+    console.error('[Auth] Update profile failed:', extractError(error));
     throw error;
   }
 };
