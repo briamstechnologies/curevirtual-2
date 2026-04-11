@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../../context/AuthContext';
-import { COLORS, SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../../../theme/designSystem';
+import { COLORS, SPACING, TYPOGRAPHY } from '../../../theme/designSystem';
 
 const logo = require('../../../assets/images/logo.png');
 
@@ -32,11 +32,16 @@ const ROLES = [
 
 export default function RegisterScreen({ navigation }) {
   const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('PATIENT');
+  const [dateOfBirth, setDateOfBirth] = useState(''); // Simple text fallback
+  const [gender, setGender] = useState('PREFER_NOT_TO_SAY');
+  const [maritalStatus, setMaritalStatus] = useState('SINGLE');
+
   const [showPassword, setShowPassword] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpToken, setOtpToken] = useState('');
@@ -44,27 +49,24 @@ export default function RegisterScreen({ navigation }) {
 
   const handleRegister = async () => {
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
-      Alert.alert('Missing Fields', 'Please fill in all fields.');
+      Alert.alert('Missing Fields', 'Please fill in all required fields.');
       return;
     }
     if (password !== confirmPassword) {
       Alert.alert('Password Mismatch', 'Your passwords do not match.');
       return;
     }
-    if (password.length < 6) {
-      Alert.alert('Weak Password', 'Password must be at least 6 characters.');
-      return;
-    }
 
     const result = await register({
       firstName: firstName.trim(),
+      middleName: middleName.trim() || null,
       lastName: lastName.trim(),
       email: email.trim().toLowerCase(),
       password,
       role,
-      dateOfBirth: new Date().toISOString(),
-      gender: 'PREFER_NOT_TO_SAY',
-      maritalStatus: 'SINGLE',
+      dateOfBirth: dateOfBirth || new Date().toISOString(),
+      gender,
+      maritalStatus,
     });
 
     if (!result.success) {
@@ -83,12 +85,13 @@ export default function RegisterScreen({ navigation }) {
 
     const userData = {
       firstName: firstName.trim(),
+      middleName: middleName.trim() || null,
       lastName: lastName.trim(),
       email: email.trim().toLowerCase(),
       role,
-      dateOfBirth: new Date().toISOString(),
-      gender: 'PREFER_NOT_TO_SAY',
-      maritalStatus: 'SINGLE',
+      dateOfBirth: dateOfBirth || new Date().toISOString(),
+      gender,
+      maritalStatus,
     };
 
     const result = await verifyOTP(email.trim().toLowerCase(), otpToken, userData);
@@ -102,9 +105,27 @@ export default function RegisterScreen({ navigation }) {
     }
   };
 
+  const renderChoiceChips = (label, current, options, setter) => (
+    <View style={styles.fieldGroup}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.chipRow}>
+        {options.map((opt) => (
+          <TouchableOpacity
+            key={opt.value}
+            style={[styles.chip, current === opt.value && styles.chipActive]}
+            onPress={() => setter(opt.value)}
+          >
+            <Text style={[styles.chipText, current === opt.value && styles.chipTextActive]}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Background orbs */}
       <View style={styles.orbTopRight} />
       <View style={styles.orbBottomLeft} />
 
@@ -123,8 +144,9 @@ export default function RegisterScreen({ navigation }) {
               <Image source={logo} style={styles.logo} resizeMode="contain" />
             </View>
             <Text style={styles.brandName}>
-              CURE<Text style={styles.brandNameBlue}>VIRTUAL</Text>
+              CREATE <Text style={styles.brandNameBlue}>ACCOUNT</Text>
             </Text>
+            <Text style={styles.subtitle}>Fill in your details to get started.</Text>
           </View>
 
           {/* ── Card ── */}
@@ -146,142 +168,160 @@ export default function RegisterScreen({ navigation }) {
                   />
                 </View>
                 <TouchableOpacity
-                  style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                  style={styles.primaryButton}
                   onPress={handleVerifyOtp}
                   disabled={loading}
-                  activeOpacity={0.85}
                 >
-                  {loading ? (
-                    <ActivityIndicator color={COLORS.white} />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>VERIFY ACCOUNT →</Text>
-                  )}
+                  {loading ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.primaryButtonText}>SUBMIT →</Text>}
                 </TouchableOpacity>
-                <View style={styles.loginRow}>
-                  <TouchableOpacity onPress={() => setShowOtp(false)}>
-                    <Text style={styles.loginLink}>Back to Registration</Text>
-                  </TouchableOpacity>
-                </View>
               </>
             ) : (
               <>
-                <Text style={styles.title}>Create Account</Text>
-                <Text style={styles.subtitle}>Join our healthcare platform</Text>
+                {/* Name Row (3 columns) */}
+                <View style={styles.triRow}>
+                  <View style={styles.flex1}>
+                    <Text style={styles.label}>FIRST NAME</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="First"
+                      value={firstName}
+                      onChangeText={setFirstName}
+                    />
+                  </View>
+                  <View style={[styles.flex1, { marginHorizontal: 8 }]}>
+                    <Text style={styles.label}>MIDDLE NAME</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="(Opt)"
+                      value={middleName}
+                      onChangeText={setMiddleName}
+                    />
+                  </View>
+                  <View style={styles.flex1}>
+                    <Text style={styles.label}>LAST NAME</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Last"
+                      value={lastName}
+                      onChangeText={setLastName}
+                    />
+                  </View>
+                </View>
 
-            {/* Role Selector */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>I AM A...</Text>
-              <View style={styles.roleTabs}>
-                {ROLES.map((r) => (
-                  <TouchableOpacity
-                    key={r.value}
-                    style={[styles.roleTab, role === r.value && styles.roleTabActive]}
-                    onPress={() => setRole(r.value)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.roleEmoji}>{r.emoji}</Text>
-                    <Text style={[styles.roleTabText, role === r.value && styles.roleTabTextActive]}>
-                      {r.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+                {/* DOB & Gender Row */}
+                <View style={styles.nameRow}>
+                  <View style={[styles.fieldGroup, { flex: 1.5, marginRight: 8 }]}>
+                    <Text style={styles.label}>DATE OF BIRTH</Text>
+                    <View style={styles.inputWithIcon}>
+                      <TextInput
+                        style={[styles.input, { flex: 1 }]}
+                        placeholder="dd/mm/yyyy"
+                        value={dateOfBirth}
+                        onChangeText={setDateOfBirth}
+                      />
+                      <Text style={styles.inputIcon}>📅</Text>
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>GENDER</Text>
+                    <TouchableOpacity onPress={() => Alert.alert("Select Gender", "", [
+                      { text: "Male", onPress: () => setGender("MALE") },
+                      { text: "Female", onPress: () => setGender("FEMALE") },
+                      { text: "Prefer not to say", onPress: () => setGender("PREFER_NOT_TO_SAY") },
+                    ])} style={styles.input}>
+                      <Text numberOfLines={1}>{gender === 'PREFER_NOT_TO_SAY' ? 'Prefer not to' : gender}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-            {/* Name Row */}
-            <View style={styles.nameRow}>
-              <View style={[styles.fieldGroup, { flex: 1, marginRight: SPACING.sm }]}>
-                <Text style={styles.label}>FIRST NAME</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="First"
-                  placeholderTextColor={COLORS.textPlaceholder}
-                  value={firstName}
-                  onChangeText={setFirstName}
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1, marginLeft: SPACING.sm }]}>
-                <Text style={styles.label}>LAST NAME</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Last"
-                  placeholderTextColor={COLORS.textPlaceholder}
-                  value={lastName}
-                  onChangeText={setLastName}
-                />
-              </View>
-            </View>
+                {/* Marital Status (Using Chips Row for better UX) */}
+                {renderChoiceChips('MARITAL STATUS', maritalStatus, [
+                  { label: 'Single', value: 'SINGLE' },
+                  { label: 'Married', value: 'MARRIED' },
+                  { label: 'Divorced', value: 'DIVORCED' },
+                ], setMaritalStatus)}
 
-            {/* Email */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>EMAIL ADDRESS</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor={COLORS.textPlaceholder}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoCorrect={false}
-              />
-            </View>
+                {/* Email Address */}
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>EMAIL ADDRESS</Text>
+                  <View style={styles.inputWithIcon}>
+                    <Text style={styles.inputIcon}>✉️</Text>
+                    <TextInput
+                      style={[styles.input, { flex: 1, borderLeftWidth: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }]}
+                      placeholder="address@meta"
+                      value={email}
+                      onChangeText={setEmail}
+                      autoCapitalize="none"
+                    />
+                  </View>
+                </View>
 
-            {/* Password */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>PASSWORD</Text>
-              <View style={styles.passwordWrapper}>
-                <TextInput
-                  style={[styles.input, styles.passwordInput]}
-                  placeholder="Create a strong password"
-                  placeholderTextColor={COLORS.textPlaceholder}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                />
+                {/* Password Row */}
+                <View style={styles.nameRow}>
+                   <View style={[styles.fieldGroup, { flex: 1, marginRight: 8 }]}>
+                      <Text style={styles.label}>PASSWORD</Text>
+                      <View style={styles.inputWithIcon}>
+                        <Text style={styles.inputIcon}>🔒</Text>
+                        <TextInput
+                          style={[styles.input, { flex: 1, borderLeftWidth: 0 }]}
+                          placeholder="........"
+                          value={password}
+                          onChangeText={setPassword}
+                          secureTextEntry={!showPassword}
+                        />
+                      </View>
+                   </View>
+                   <View style={{ flex: 1 }}>
+                      <Text style={styles.label}>CONFIRM PASSWORD</Text>
+                      <View style={styles.inputWithIcon}>
+                        <Text style={styles.inputIcon}>🔒</Text>
+                        <TextInput
+                          style={[styles.input, { flex: 1, borderLeftWidth: 0 }]}
+                          placeholder="........"
+                          value={confirmPassword}
+                          onChangeText={setConfirmPassword}
+                          secureTextEntry={!showPassword}
+                        />
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.passwordEye}>
+                           <Text>{showPassword ? '🙈' : '👁️'}</Text>
+                        </TouchableOpacity>
+                      </View>
+                   </View>
+                </View>
+
+                {/* Role Selection */}
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>I AM A...</Text>
+                  <View style={styles.roleSelectionRow}>
+                    {ROLES.map(r => (
+                      <TouchableOpacity
+                        key={r.value}
+                        style={[styles.roleSelectCard, role === r.value && styles.roleSelectActive]}
+                        onPress={() => setRole(r.value)}
+                      >
+                        <Text style={[styles.roleSelectText, role === r.value && styles.roleSelectTextActive]}>
+                          {r.value === 'PHARMACY' ? 'PHARMACIST' : r.label.toUpperCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Submit Button */}
                 <TouchableOpacity
-                  style={styles.eyeBtn}
-                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.primaryButton}
+                  onPress={handleRegister}
+                  disabled={loading}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+                  {loading ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.primaryButtonText}>SUBMIT →</Text>}
                 </TouchableOpacity>
-              </View>
-            </View>
 
-            {/* Confirm Password */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>CONFIRM PASSWORD</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Repeat your password"
-                placeholderTextColor={COLORS.textPlaceholder}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showPassword}
-              />
-            </View>
-
-            {/* Register Button */}
-            <TouchableOpacity
-              style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
-              onPress={handleRegister}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              {loading ? (
-                <ActivityIndicator color={COLORS.white} />
-              ) : (
-                <Text style={styles.primaryButtonText}>CREATE ACCOUNT →</Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Login Link */}
-            <View style={styles.loginRow}>
-              <Text style={styles.loginText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Text style={styles.loginLink}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.loginRow}>
+                  <Text style={styles.loginText}>ALREADY HAVE AN ACCOUNT? </Text>
+                  <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <Text style={styles.loginLink}>LOGIN</Text>
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </View>
@@ -294,8 +334,7 @@ export default function RegisterScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgMuted,
-    overflow: 'hidden',
+    backgroundColor: COLORS.white, // White background matching image
   },
   orbTopRight: {
     position: 'absolute',
@@ -323,35 +362,31 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xxxl,
   },
   brandContainer: {
-    alignItems: 'center',
+    paddingHorizontal: SPACING.sm,
     marginBottom: SPACING.xl,
     marginTop: SPACING.sm,
   },
   logoWrapper: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.md,
     marginBottom: SPACING.md,
-    ...SHADOWS.md,
   },
   logo: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
+    display: 'none', // Hide icon if text branding is preferred as in image
   },
   brandName: {
-    fontSize: TYPOGRAPHY.xl,
-    fontWeight: TYPOGRAPHY.black,
-    color: COLORS.textMain,
-    letterSpacing: 2,
+    fontSize: 42,
+    fontWeight: '900',
+    color: '#000',
+    letterSpacing: -1,
+    lineHeight: 48,
   },
   brandNameBlue: {
-    color: COLORS.brandBlue,
+    color: COLORS.brandGreen, // Using brand green as in image "ACCOUNT"
   },
   card: {
     backgroundColor: COLORS.white,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.xl,
-    ...SHADOWS.lg,
+    paddingHorizontal: SPACING.sm,
   },
   title: {
     fontSize: TYPOGRAPHY.xxxl,
@@ -360,108 +395,151 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   subtitle: {
-    fontSize: TYPOGRAPHY.base,
+    fontSize: 18,
     color: COLORS.textMuted,
-    marginBottom: SPACING.xl,
+    marginTop: 8,
+    fontWeight: '500',
   },
   fieldGroup: {
-    marginBottom: SPACING.base,
+    marginBottom: 20,
+  },
+  triRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  flex1: {
+    flex: 1,
   },
   label: {
-    fontSize: TYPOGRAPHY.xs,
-    fontWeight: TYPOGRAPHY.black,
+    fontSize: 12,
+    fontWeight: '900',
     color: COLORS.brandGreen,
-    letterSpacing: 1.5,
-    marginBottom: SPACING.sm,
+    letterSpacing: 1.2,
+    marginBottom: 8,
+    textTransform: 'uppercase',
   },
   nameRow: {
     flexDirection: 'row',
-  },
-  roleTabs: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.bgInput,
-    borderRadius: RADIUS.base,
-    padding: 4,
-  },
-  roleTab: {
-    flex: 1,
-    paddingVertical: SPACING.md,
-    alignItems: 'center',
-    borderRadius: RADIUS.md,
-  },
-  roleTabActive: {
-    backgroundColor: COLORS.white,
-    ...SHADOWS.sm,
-  },
-  roleEmoji: {
-    fontSize: 18,
-    marginBottom: 2,
-  },
-  roleTabText: {
-    fontSize: TYPOGRAPHY.xs,
-    color: COLORS.textMuted,
-    fontWeight: TYPOGRAPHY.semiBold,
-  },
-  roleTabTextActive: {
-    color: COLORS.brandGreen,
-    fontWeight: TYPOGRAPHY.black,
+    marginBottom: 10,
   },
   input: {
     backgroundColor: COLORS.bgInput,
     borderWidth: 1,
-    borderColor: COLORS.slate200,
-    borderRadius: RADIUS.base,
-    paddingHorizontal: SPACING.base,
-    paddingVertical: SPACING.md,
-    fontSize: TYPOGRAPHY.md,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
     color: COLORS.textMain,
+    fontWeight: '600',
   },
-  passwordWrapper: {
-    position: 'relative',
+  inputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.bgInput,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    paddingLeft: 16,
   },
-  passwordInput: {
-    paddingRight: SPACING.xxl + SPACING.base,
-  },
-  eyeBtn: {
-    position: 'absolute',
-    right: SPACING.base,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-  },
-  eyeIcon: {
+  inputIcon: {
     fontSize: 18,
+    marginRight: 10,
+    color: COLORS.textMuted,
+  },
+  passwordEye: {
+    paddingHorizontal: 16,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  chip: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  chipActive: {
+    backgroundColor: COLORS.white,
+    borderColor: COLORS.brandGreen,
+    borderWidth: 2,
+  },
+  chipText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+  chipTextActive: {
+    color: COLORS.brandGreen,
+    fontWeight: '900',
+  },
+  roleSelectionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  roleSelectCard: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+  },
+  roleSelectActive: {
+    backgroundColor: COLORS.white,
+    borderColor: '#F97316', // Orange highlight in image for selected role
+    borderWidth: 2,
+  },
+  roleSelectText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: COLORS.textMuted,
+  },
+  roleSelectTextActive: {
+    color: '#000',
   },
   primaryButton: {
-    backgroundColor: COLORS.brandGreen,
-    borderRadius: RADIUS.base,
-    paddingVertical: SPACING.base,
+    backgroundColor: '#0066FF', // Blue button as in image
+    borderRadius: 16,
+    paddingVertical: 18,
     alignItems: 'center',
-    marginTop: SPACING.md,
-    marginBottom: SPACING.xl,
-    ...SHADOWS.green,
-  },
-  primaryButtonDisabled: {
-    opacity: 0.7,
+    marginVertical: 24,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0066FF',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   primaryButtonText: {
     color: COLORS.white,
-    fontSize: TYPOGRAPHY.base,
-    fontWeight: TYPOGRAPHY.black,
-    letterSpacing: 1.5,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   loginRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 40,
   },
   loginText: {
-    color: COLORS.textMuted,
-    fontSize: TYPOGRAPHY.sm,
+    color: '#000',
+    fontSize: 14,
+    fontWeight: '900',
   },
   loginLink: {
-    color: COLORS.brandBlue,
-    fontSize: TYPOGRAPHY.sm,
-    fontWeight: TYPOGRAPHY.bold,
+    color: '#F97316', // Orange login link
+    fontSize: 14,
+    fontWeight: '900',
   },
 });

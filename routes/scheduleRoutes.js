@@ -280,7 +280,7 @@ router.post("/book", async (req, res) => {
         startTime: startDate,
         endTime: new Date(startDate.getTime() + 15 * 60000),
         reason,
-        status: "PENDING_PAYMENT",
+        status: "APPROVED",
       },
     });
 

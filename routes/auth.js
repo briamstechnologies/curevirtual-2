@@ -15,12 +15,14 @@ router.post("/register", async (req, res) => {
   try {
     const {
       firstName,
+      middleName,
       lastName,
       email,
       password,
       role,
       dateOfBirth,
       gender,
+      maritalStatus,
       specialization,
     } = req.body || {};
 
@@ -43,10 +45,12 @@ router.post("/register", async (req, res) => {
       email_confirm: true,
       user_metadata: {
         firstName,
+        middleName,
         lastName,
         role,
         dateOfBirth,
         gender,
+        maritalStatus,
         specialization,
       },
     });
@@ -65,11 +69,13 @@ router.post("/register", async (req, res) => {
         data: {
           id: supabaseId,
           firstName: firstName || "First",
+          middleName: middleName || null,
           lastName: lastName || "Last",
           email: normedEmail,
           role: role || "PATIENT",
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date(),
           gender: gender || "PREFER_NOT_TO_SAY",
+          maritalStatus: maritalStatus || "SINGLE",
         },
       });
     } catch (dbError) {
@@ -112,12 +118,14 @@ router.post("/register-success", async (req, res) => {
     const {
       supabaseId,
       firstName,
+      middleName,
       lastName,
       email,
       phone,
       role,
       dateOfBirth,
       gender,
+      maritalStatus,
       specialization,
     } = req.body || {};
 
@@ -141,6 +149,7 @@ router.post("/register-success", async (req, res) => {
           data: {
             id: supabaseId, // Use Supabase ID as primary key
             firstName: firstName || "First",
+            middleName: middleName || null,
             lastName: lastName || "Last",
             email: normedEmail,
             phone: phone || null,
@@ -148,6 +157,7 @@ router.post("/register-success", async (req, res) => {
             role: role || "PATIENT",
             dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date(),
             gender: gender || "PREFER_NOT_TO_SAY",
+            maritalStatus: maritalStatus || "SINGLE",
             // Organization can be created separately if needed
           },
         });

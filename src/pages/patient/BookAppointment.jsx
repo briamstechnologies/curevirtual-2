@@ -86,12 +86,14 @@ const BookAppointment = () => {
       });
       
       const appointmentId = res.data?.appointment?.id;
-      const fee = selectedDoctor?.consultationFee || 50; // Fallback to 50 if zero/undef
+      const fee = selectedDoctor?.consultationFee || 0; // Fallback to 0 for testing
 
       if (appointmentId) {
         setCheckoutData({ appointmentId, doctorFee: fee });
-        setBookingStep('payment');
-        toast.info("Slot reserved. Please complete payment.");
+        
+        // AUTO-SUCCESS FOR TESTING (Bypassing payment step)
+        handlePaymentSuccess();
+        toast.success("Appointment booked successfully (Test Mode)!");
       } else {
         throw new Error("Invalid booking response");
       }

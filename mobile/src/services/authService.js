@@ -87,15 +87,16 @@ export const loginWithEmail = async (email, password) => {
 // Register — Client calls Supabase natively to start OTP flow.
 // ─────────────────────────────────────────────────────────────
 export const registerUser = async (userData) => {
-  const { firstName, lastName, email, password, role, dateOfBirth, gender, specialization, maritalStatus } = userData;
+  const { firstName, middleName, lastName, email, password, role, dateOfBirth, gender, specialization, maritalStatus } = userData;
 
   // Uses Supabase email templating to send a 6-digit OTP code to the user.
-  const { data, error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signUp({
     email: email.trim().toLowerCase(),
     password,
     options: {
       data: {
         firstName,
+        middleName,
         lastName,
         role,
         dateOfBirth: dateOfBirth || new Date().toISOString(),

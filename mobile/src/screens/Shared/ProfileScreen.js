@@ -15,6 +15,7 @@ export default function ProfileScreen() {
   // Edit form state
   const [editForm, setEditForm] = useState({
     firstName: '',
+    middleName: '',
     lastName: '',
     phone: '',
     dateOfBirth: '',
@@ -37,6 +38,7 @@ export default function ProfileScreen() {
         // Initialize edit form with loaded data
         setEditForm({
           firstName: normalizedData.firstName || '',
+          middleName: normalizedData.middleName || '',
           lastName: normalizedData.lastName || '',
           phone: normalizedData.phone || '',
           dateOfBirth: normalizedData.dateOfBirth ? new Date(normalizedData.dateOfBirth).toISOString().split('T')[0] : '',
@@ -146,7 +148,7 @@ export default function ProfileScreen() {
   }
 
   const fullName = profile 
-    ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
+    ? [profile.firstName, profile.middleName, profile.lastName].filter(Boolean).join(' ')
     : authUser?.name || 'User Profile';
 
   return (
@@ -177,13 +179,19 @@ export default function ProfileScreen() {
                   style={[styles.fieldInput, { flex: 1, marginRight: 5 }]} 
                   value={editForm.firstName} 
                   onChangeText={(t) => setEditForm({...editForm, firstName: t})}
-                  placeholder="First Name"
+                  placeholder="First"
+                />
+                <TextInput 
+                  style={[styles.fieldInput, { flex: 0.8, marginRight: 5 }]} 
+                  value={editForm.middleName} 
+                  onChangeText={(t) => setEditForm({...editForm, middleName: t})}
+                  placeholder="Middle"
                 />
                 <TextInput 
                   style={[styles.fieldInput, { flex: 1 }]} 
                   value={editForm.lastName} 
                   onChangeText={(t) => setEditForm({...editForm, lastName: t})}
-                  placeholder="Last Name"
+                  placeholder="Last"
                 />
              </View>
           ) : (

@@ -55,9 +55,9 @@ router.post("/create-session-payment", verifyToken, async (req, res) => {
         userId: req.user.id,
         appointmentId,
         type: "APPOINTMENT_PAYMENT",
-        amount: 10,
+        amount: 0,
         currency: "usd",
-        status: "PENDING",
+        status: "SUCCESS",
         provider: "STRIPE",
         providerTxId: session.id,
         description: `Stripe checkout session created for appointment ${appointmentId}`

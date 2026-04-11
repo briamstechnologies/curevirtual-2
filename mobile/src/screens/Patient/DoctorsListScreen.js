@@ -33,7 +33,6 @@ const DoctorCard = ({ item, onBook }) => {
   const initials = `${firstName[0] || 'D'}${lastName[0] || ''}`.toUpperCase();
   const specialty = item.specialization || item.specialty || 'General Practitioner';
   const experience = item.yearsOfExperience;
-  const fee = item.consultationFee;
 
   return (
     <View style={styles.doctorCard}>
@@ -47,11 +46,6 @@ const DoctorCard = ({ item, onBook }) => {
           {experience > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{experience} yrs</Text>
-            </View>
-          )}
-          {fee > 0 && (
-            <View style={[styles.badge, { backgroundColor: `${COLORS.brandBlue}12` }]}>
-              <Text style={[styles.badgeText, { color: COLORS.brandBlue }]}>${fee}</Text>
             </View>
           )}
         </View>
