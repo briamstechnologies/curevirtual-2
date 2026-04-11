@@ -11,6 +11,7 @@
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
@@ -66,7 +67,8 @@ api.interceptors.response.use(
   (response) => {
     // Log successful API calls in dev
     if (__DEV__) {
-      console.log(`[API] ✅ ${response.config.method?.toUpperCase()} ${response.config.url} → ${response.status}`);
+      const fullUrl = `${response.config.baseURL || ''}${response.config.url}`;
+      console.log(`[API] ✅ ${response.config.method?.toUpperCase()} ${fullUrl} → ${response.status}`);
     }
     return response;
   },
@@ -77,7 +79,9 @@ api.interceptors.response.use(
 
     // Network error — no response at all
     if (!error.response) {
-      console.error(`[API] 🌐 Network error on ${method} ${url}:`, error.message);
+      const fullUrl = `${error.config?.baseURL || ''}${error.config?.url || 'unknown'}`;
+      console.error(`[API] 🌐 Network error on ${method} ${fullUrl}:`, error.message);
+      Alert.alert('Connection Error', 'Please check your internet connection and try again.');
       return Promise.reject({ message: 'Network error. Please check your connection.' });
     }
 
@@ -92,10 +96,17 @@ api.interceptors.response.use(
       } catch (e) {
         console.warn('[API] Failed to clear storage on 401:', e.message);
       }
+      
+      Alert.alert('Session Expired', 'Your session has expired. Please log in again.');
+      
       // Trigger registered logout handler (set by AuthContext)
       if (_logoutHandler) {
         _logoutHandler();
       }
+    } 
+    // 500 Backend error handling UX
+    else if (status >= 500) {
+      Alert.alert('Server Error', 'We are having trouble connecting to the server. Please try again later.');
     }
 
     return Promise.reject(error);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../../theme/designSystem';
+import { COLORS, SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../../../theme/designSystem';
 
 const DUMMY_PRESCRIPTIONS = [
   { id: '1', medicine: 'Amoxicillin 500mg', patient: 'James Carter', date: '2026-04-05', status: 'DISPENSED' },

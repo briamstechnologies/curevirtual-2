@@ -11,6 +11,9 @@ import HomeScreen from '../screens/Shared/HomeScreen';
 import ManageUsersScreen from '../screens/Admin/ManageUsersScreen';
 import ReportsScreen from '../screens/Admin/ReportsScreen';
 import SupportTicketsScreen from '../screens/Admin/SupportTicketsScreen';
+import ChatbotScreen from '../screens/Shared/ChatbotScreen';
+import MessagesScreen from '../screens/Shared/MessagesScreen';
+import ChatScreen from '../screens/Shared/ChatScreen';
 import SettingsScreen from '../screens/Shared/SettingsScreen';
 import { COLORS } from '../../theme/designSystem';
 
@@ -32,6 +35,7 @@ function HomeStack() {
     <Stack.Navigator>
       <Stack.Screen name="AdminHome" component={HomeScreen} options={{ title: 'Dashboard', headerShown: false }} />
       <Stack.Screen name="Users" component={ManageUsersScreen} options={{ title: 'User Management' }} />
+      <Stack.Screen name="Chatbot" component={ChatbotScreen} options={{ title: 'AI Health Assistant' }} />
     </Stack.Navigator>
   );
 }
@@ -44,10 +48,20 @@ function TicketsStack() {
   );
 }
 
+function MessagesStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="Inbox" component={MessagesScreen} options={{ title: 'Messages' }} />
+      <Stack.Screen name="Chat" component={ChatScreen} options={({ route }) => ({ title: route.params?.name || 'Chat' })} />
+    </Stack.Navigator>
+  );
+}
+
 const TAB_ICONS = {
   HomeTab: { focused: 'shield-checkmark', unfocused: 'shield-checkmark-outline' },
   UsersTab: { focused: 'people', unfocused: 'people-outline' },
   TicketsTab: { focused: 'help-buoy', unfocused: 'help-buoy-outline' },
+  MessagesTab: { focused: 'mail', unfocused: 'mail-outline' },
   ReportsTab: { focused: 'bar-chart', unfocused: 'bar-chart-outline' },
   SettingsTab: { focused: 'settings', unfocused: 'settings-outline' },
 };
@@ -55,9 +69,10 @@ const TAB_ICONS = {
 export default function AdminNavigator() {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={({ route, navigation }) => ({
         headerShown: true,
-        headerLeft: (props) => <DrawerButton {...props} />,
+        headerTitle: '',
+        headerLeft: (props) => <DrawerButton navigation={navigation} {...props} />,
         tabBarActiveTintColor: COLORS.brandGreen,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
@@ -74,9 +89,10 @@ export default function AdminNavigator() {
         },
       })}
     >
-      <Tab.Screen name="HomeTab" component={HomeStack} options={{ tabBarLabel: 'Home', title: 'Admin Panel' }} />
+      <Tab.Screen name="HomeTab" component={HomeStack} options={{ tabBarLabel: 'Home', title: 'Admin Panel', headerShown: false }} />
       <Tab.Screen name="UsersTab" component={ManageUsersScreen} options={{ tabBarLabel: 'Users', title: 'User Management' }} />
       <Tab.Screen name="TicketsTab" component={TicketsStack} options={{ tabBarLabel: 'Support', title: 'Tickets' }} />
+      <Tab.Screen name="MessagesTab" component={MessagesStack} options={{ tabBarLabel: 'Chat', title: 'Messages' }} />
       <Tab.Screen name="ReportsTab" component={ReportsScreen} options={{ tabBarLabel: 'Reports', title: 'Reports' }} />
       <Tab.Screen name="SettingsTab" component={SettingsScreen} options={{ tabBarLabel: 'Settings', title: 'Settings' }} />
     </Tab.Navigator>

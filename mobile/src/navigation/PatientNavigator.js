@@ -81,9 +81,10 @@ const TAB_ICONS = {
 export default function PatientNavigator() {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={({ route, navigation }) => ({
         headerShown: true,
-        headerLeft: (props) => <DrawerButton {...props} />, // Will be wired to Drawer
+        headerTitle: '',
+        headerLeft: (props) => <DrawerButton navigation={navigation} {...props} />, // Will be wired to Drawer
         tabBarActiveTintColor: COLORS.brandGreen,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
@@ -93,6 +94,7 @@ export default function PatientNavigator() {
           height: 60,
           paddingBottom: 8,
         },
+        tabBarHideOnKeyboard: true,
         tabBarIcon: ({ focused, color, size }) => {
           const icons = TAB_ICONS[route.name];
           const iconName = icons ? (focused ? icons.focused : icons.unfocused) : 'ellipse';
@@ -100,7 +102,7 @@ export default function PatientNavigator() {
         },
       })}
     >
-      <Tab.Screen name="HomeTab" component={HomeStack} options={{ tabBarLabel: 'Home', title: 'CureVirtual' }} />
+      <Tab.Screen name="HomeTab" component={HomeStack} options={{ tabBarLabel: 'Home', title: 'CureVirtual', headerShown: false }} />
       <Tab.Screen name="AppointmentsTab" component={AppointmentsStack} options={{ tabBarLabel: 'Bookings', title: 'Appointments' }} />
       <Tab.Screen name="MessagesTab" component={MessagesStack} options={{ tabBarLabel: 'Chat', title: 'Messages' }} />
       <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ tabBarLabel: 'Profile', title: 'My Profile' }} />

@@ -67,10 +67,16 @@ export default function ProfileScreen() {
   }
 
   // Display data (prefer profile, fallback to authUser)
-  const displayUser = profile || authUser;
   const fullName = profile 
-    ? `${profile.firstName} ${profile.lastName}`.trim() 
-    : authUser?.name || 'User Profile';
+    ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
+    : authUser?.name || authUser?.firstName || 'User Profile';
+
+  const displayEmail = profile?.user?.email || profile?.email || authUser?.email || 'Not available';
+  const displayPhone = profile?.user?.phone || profile?.phone || authUser?.phone || 'Not available';
+  const displayDob = profile?.user?.dateOfBirth || profile?.dateOfBirth || authUser?.dateOfBirth;
+  const displayGender = profile?.user?.gender || profile?.gender || authUser?.gender;
+  const displayMarital = profile?.user?.maritalStatus || profile?.maritalStatus || authUser?.maritalStatus;
+  const displayBlood = profile?.user?.bloodGroup || profile?.bloodGroup || authUser?.bloodGroup;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -82,26 +88,26 @@ export default function ProfileScreen() {
             <Text style={styles.avatarText}>👤</Text>
           </View>
           <Text style={styles.name}>{fullName}</Text>
-          <Text style={styles.email}>{displayUser?.email || 'Not available'}</Text>
+          <Text style={styles.email}>{displayEmail}</Text>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{displayUser?.role || 'User'}</Text>
+            <Text style={styles.badgeText}>{profile?.user?.role || profile?.role || authUser?.role || 'User'}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Information</Text>
-          {renderInfoRow('Email Address', displayUser?.email)}
-          {renderInfoRow('Phone Number', displayUser?.phone)}
+          {renderInfoRow('Email Address', displayEmail)}
+          {renderInfoRow('Phone Number', displayPhone)}
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Personal Details</Text>
-          {renderInfoRow('Date of Birth', formatDate(displayUser?.dateOfBirth))}
-          {renderInfoRow('Gender', displayUser?.gender)}
-          {renderInfoRow('Marital Status', displayUser?.maritalStatus)}
+          {renderInfoRow('Date of Birth', formatDate(displayDob))}
+          {renderInfoRow('Gender', displayGender)}
+          {renderInfoRow('Marital Status', displayMarital)}
           
           {/* Blood Type is usually only for patients */}
-          {authUser?.role === 'PATIENT' && renderInfoRow('Blood Type', displayUser?.bloodGroup)}
+          {authUser?.role === 'PATIENT' && renderInfoRow('Blood Type', displayBlood)}
         </View>
 
         <TouchableOpacity 

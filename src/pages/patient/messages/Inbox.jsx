@@ -74,9 +74,8 @@ export default function PatientInbox() {
     if (!userId) return;
     try {
       setLoading(true);
-      const res = await api.get(`/patient/messages/inbox`, {
-        params: { patientId: userId },
-      });
+      // Use unified messaging endpoint
+      const res = await api.get("/messages/inbox");
       const items = Array.isArray(res.data) ? res.data : res.data?.data || [];
       setMessages(items);
     } catch (err) {
@@ -91,8 +90,7 @@ export default function PatientInbox() {
     fetchInbox();
   }, [fetchInbox]);
 
-  // open viewer, mark as read immediately
-// open viewer, mark as read immediately (optimistic)
+  // open viewer, mark as read immediately (optimistic)
 const openMessage = async (msg) => {
   setSelectedMessage(msg);
 
@@ -104,10 +102,10 @@ const openMessage = async (msg) => {
     );
 
     try {
-      // If your backend expects userId, keep body; if it expects query, move it to { params: { userId } }
-      await api.patch(`/patient/messages/read/${msg.id}`, { userId });
+      // Use unified messaging endpoint
+      await api.patch(`/messages/${msg.id}/read`, { userId });
     } catch (err) {
-      // Roll back if the server rejects, though this is usually non-critical
+      // Roll back if the server rejects
       console.warn("Mark read failed:", err?.response?.data || err);
       setMessages((prev) =>
         prev.map((m) => (m.id === msg.id ? { ...m, readAt: null } : m))
@@ -121,9 +119,10 @@ const openMessage = async (msg) => {
     if (!replyContent.trim() || !selectedMessage) return;
     setSending(true);
     try {
-      await api.post("/patient/messages/send", {
-        senderId: userId, // PATIENT (current user)
-        receiverId: selectedMessage.sender?.id, // Doctor's User.id
+      // Use unified messaging endpoint
+      await api.post("/messages/send", {
+        senderId: userId,
+        receiverId: selectedMessage.contactId, // Use contactId from inbox response
         content: replyContent,
       });
       setReplyContent("");
@@ -154,8 +153,9 @@ const openMessage = async (msg) => {
     if (!pendingDeleteId) return;
     try {
       setConfirmLoading(true);
-      await api.delete(`/patient/messages/delete/${pendingDeleteId}`, {
-        params: { userId }, // used by backend auth
+      // Use unified messaging endpoint
+      await api.delete(`/messages/${pendingDeleteId}`, {
+        params: { userId }, 
       });
       setMessages((prev) => prev.filter((m) => m.id !== pendingDeleteId));
       if (selectedMessage?.id === pendingDeleteId) setSelectedMessage(null);
@@ -181,7 +181,7 @@ const openMessage = async (msg) => {
                     src="/images/logo/Asset3.png"
                     alt="CureVirtual"
                     style={{ width: 120, height: "auto" }}
-                    onError={(e) => { e.currentTarget.src = PLACEHOLDER_LOGO; }} // fallback if missing
+                    onError={(e) => { e.currentTarget.src = "/placeholder-logo.png"; }} // fallback if missing
                   />
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-[var(--text-main)]">Patient Inbox</h1>
@@ -216,13 +216,11 @@ const openMessage = async (msg) => {
                             onClick={() => openMessage(msg)}
                           >
                             <td className="p-3">
-                              {msg.sender?.firstName
-                                ? `${msg.sender.firstName} ${msg.sender.lastName || ""}`
-                                : msg.sender?.name || "Unknown"}
+                              {msg.contactName || "Unknown"}
                             </td>
                             <td className="p-3 truncate max-w-xs">{msg.content}</td>
                             <td className="p-3">{new Date(msg.createdAt).toLocaleString()}</td>
-
+ 
                             {/* Status */}
                             <td className="p-3 text-center">
                               {isRead ? (
@@ -231,7 +229,7 @@ const openMessage = async (msg) => {
                                 <FaEnvelope className="text-[var(--text-soft)] mx-auto" />
                               )}
                             </td>
-
+ 
                             {/* Actions (unchanged, but keep stopPropagation on trash) */}
                             <td className="p-3 text-center">
                               <button
@@ -248,7 +246,7 @@ const openMessage = async (msg) => {
                           </tr>
                         );
                       })}
-
+ 
                 </tbody>
               </table>
             </div>
@@ -262,7 +260,7 @@ const openMessage = async (msg) => {
                     src="/images/logo/Asset3.png"
                     alt="CureVirtual"
                     style={{ width: 120, height: "auto" }}
-                    onError={(e) => { e.currentTarget.src = PLACEHOLDER_LOGO; }} // fallback if missing
+                    onError={(e) => { e.currentTarget.src = "/placeholder-logo.png"; }} // fallback if missing
                   />
                 <button
                   onClick={() => setSelectedMessage(null)}
@@ -270,13 +268,11 @@ const openMessage = async (msg) => {
                 >
                   <FaTimes size={20} />
                 </button>
-
+ 
                 {/* Header with inline delete */}
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-bold text-[#190366]">
-                    From {selectedMessage.sender?.firstName
-                      ? `${selectedMessage.sender.firstName} ${selectedMessage.sender.lastName || ""}`
-                      : selectedMessage.sender?.name || "Unknown"}
+                    From {selectedMessage.contactName || "Unknown"}
                   </h2>
                   <button
                     title="Delete"

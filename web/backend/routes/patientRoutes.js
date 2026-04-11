@@ -52,15 +52,16 @@ router.get("/profile", async (req, res) => {
       where: { userId: String(userId) },
       include: {
         user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            dateOfBirth: true,
-            gender: true,
-            maritalStatus: true,
-          },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+              dateOfBirth: true,
+              gender: true,
+              maritalStatus: true,
+            },
         },
         appointments: true,
         prescriptions: true,
@@ -375,7 +376,15 @@ router.get("/all", async (req, res) => {
       prisma.patientProfile.findMany({
         include: {
           user: {
-            select: { id: true, firstName: true, lastName: true, email: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+              gender: true,
+              dateOfBirth: true,
+            },
           },
           _count: {
             select: {
@@ -439,7 +448,7 @@ router.get("/appointments", async (req, res) => {
       include: {
         doctor: {
           include: {
-            user: { select: { firstName: true, lastName: true, email: true } },
+            user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
           },
         },
       },
@@ -565,7 +574,7 @@ router.post("/appointments", async (req, res) => {
       include: {
         doctor: {
           include: {
-            user: { select: { firstName: true, lastName: true, email: true } },
+            user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
           },
         },
       },
@@ -660,6 +669,8 @@ router.get("/prescriptions", async (req, res) => {
                 firstName: true,
                 lastName: true,
                 email: true,
+                phone: true,
+                gender: true,
               },
             },
           },
@@ -701,6 +712,8 @@ router.get("/video-calls", async (req, res) => {
                 firstName: true,
                 lastName: true,
                 email: true,
+                phone: true,
+                gender: true,
               },
             },
           },

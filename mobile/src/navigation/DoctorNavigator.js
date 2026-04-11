@@ -12,6 +12,7 @@ import PatientHistoryScreen from '../screens/Doctor/PatientHistoryScreen';
 import MyPatientsScreen from '../screens/Doctor/MyPatientsScreen';
 import SchedulesScreen from '../screens/Doctor/SchedulesScreen';
 import VideoCallScreen from '../screens/Shared/VideoCallScreen';
+import ChatbotScreen from '../screens/Shared/ChatbotScreen';
 import PrescriptionsListScreen from '../screens/Shared/PrescriptionsListScreen';
 import MessagesScreen from '../screens/Shared/MessagesScreen';
 import ChatScreen from '../screens/Shared/ChatScreen';
@@ -40,6 +41,7 @@ function HomeStack() {
       <Stack.Screen name="Chat" component={ChatScreen} options={({ route }) => ({ title: route.params?.name || 'Chat' })} />
       <Stack.Screen name="Schedules" component={SchedulesScreen} options={{ title: 'Manage Schedule' }} />
       <Stack.Screen name="Prescriptions" component={PrescriptionsListScreen} options={{ title: 'Prescriptions' }} />
+      <Stack.Screen name="Chatbot" component={ChatbotScreen} options={{ title: 'AI Health Assistant' }} />
       <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ title: 'Instant Consultation' }} />
     </Stack.Navigator>
   );
@@ -74,9 +76,10 @@ const TAB_ICONS = {
 export default function DoctorNavigator() {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={({ route, navigation }) => ({
         headerShown: true,
-        headerLeft: (props) => <DrawerButton {...props} />,
+        headerTitle: '',
+        headerLeft: (props) => <DrawerButton navigation={navigation} {...props} />,
         tabBarActiveTintColor: COLORS.brandGreen,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
@@ -86,6 +89,7 @@ export default function DoctorNavigator() {
           height: 60,
           paddingBottom: 8,
         },
+        tabBarHideOnKeyboard: true,
         tabBarIcon: ({ focused, color, size }) => {
           const icons = TAB_ICONS[route.name];
           const iconName = icons ? (focused ? icons.focused : icons.unfocused) : 'ellipse';
@@ -93,7 +97,7 @@ export default function DoctorNavigator() {
         },
       })}
     >
-      <Tab.Screen name="HomeTab" component={HomeStack} options={{ tabBarLabel: 'Home', title: 'Doctor Console' }} />
+      <Tab.Screen name="HomeTab" component={HomeStack} options={{ tabBarLabel: 'Home', title: 'Doctor Console', headerShown: false }} />
       <Tab.Screen name="PatientsTab" component={PatientsStack} options={{ tabBarLabel: 'Patients', title: 'My Patients' }} />
       <Tab.Screen name="MessagesTab" component={MessagesStack} options={{ tabBarLabel: 'Chat', title: 'Messages' }} />
       <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ tabBarLabel: 'Profile', title: 'My Profile' }} />

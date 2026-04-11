@@ -72,9 +72,7 @@ export default function DoctorInbox() {
     if (!userId) return;
     try {
       setLoading(true);
-      const res = await api.get(`/doctor/messages/inbox`, {
-        params: { doctorId: userId },
-      });
+      const res = await api.get("/messages/inbox");
       const items = Array.isArray(res.data) ? res.data : res.data?.data || [];
       setMessages(items);
     } catch (err) {
@@ -100,7 +98,7 @@ export default function DoctorInbox() {
           );
 
           try {
-            await api.patch(`/doctor/messages/read/${msg.id}`, { userId });
+            await api.patch(`/messages/${msg.id}/read`, { userId });
           } catch (err) {
             console.warn("Mark read failed:", err?.response?.data || err);
             setMessages((prev) =>
@@ -115,9 +113,9 @@ export default function DoctorInbox() {
     if (!replyContent.trim() || !selectedMessage) return;
     setSending(true);
     try {
-      await api.post("/doctor/messages/send", {
-        senderId: userId, // DOCTOR (current user)
-        receiverId: selectedMessage.sender?.id, // Patient User.id
+      await api.post("/messages/send", {
+        senderId: userId,
+        receiverId: selectedMessage.contactId, // Use contactId from inbox response
         content: replyContent,
       });
       setReplyContent("");
@@ -148,8 +146,8 @@ export default function DoctorInbox() {
     if (!pendingDeleteId) return;
     try {
       setConfirmLoading(true);
-      await api.delete(`/doctor/messages/delete/${pendingDeleteId}`, {
-        params: { userId }, // used by backend auth
+      await api.delete(`/messages/${pendingDeleteId}`, {
+        params: { userId }, 
       });
       setMessages((prev) => prev.filter((m) => m.id !== pendingDeleteId));
       if (selectedMessage?.id === pendingDeleteId) setSelectedMessage(null);
@@ -171,7 +169,7 @@ export default function DoctorInbox() {
                     src="/images/logo/Asset3.png"
                     alt="CureVirtual"
                     style={{ width: 120, height: "auto" }}
-                    onError={(e) => { e.currentTarget.src = PLACEHOLDER_LOGO; }} // fallback if missing
+                    onError={(e) => { e.currentTarget.src = "/placeholder-logo.png"; }} // fallback if missing
                   />
         <h1 className="text-2xl font-bold mb-6 text-[var(--text-main)]">Dr Inbox</h1>
 
@@ -203,9 +201,7 @@ export default function DoctorInbox() {
                     onClick={() => openMessage(msg)}
                   >
                     <td className="p-3">
-                      {msg.sender?.firstName
-                        ? `${msg.sender.firstName} ${msg.sender.lastName || ""}`
-                        : msg.sender?.name || "Unknown"}
+                      {msg.contactName || "Unknown"}
                     </td>
                     <td className="p-3 truncate max-w-xs">{msg.content}</td>
                     <td className="p-3">{new Date(msg.createdAt).toLocaleString()}</td>
@@ -255,12 +251,10 @@ export default function DoctorInbox() {
                     src="/images/logo/Asset3.png"
                     alt="CureVirtual"
                     style={{ width: 120, height: "auto" }}
-                    onError={(e) => { e.currentTarget.src = PLACEHOLDER_LOGO; }} // fallback if missing
+                    onError={(e) => { e.currentTarget.src = "/placeholder-logo.png"; }} // fallback if missing
                   />
                 <h4 className="text-xl font-bold text-[#190366]">
-                  From {selectedMessage.sender?.firstName
-                    ? `${selectedMessage.sender.firstName} ${selectedMessage.sender.lastName || ""}`
-                    : selectedMessage.sender?.name || "Unknown"}
+                  From {selectedMessage.contactName || "Unknown"}
                 </h4>
                 <button
                   title="Delete"

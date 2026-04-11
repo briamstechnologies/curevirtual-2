@@ -338,6 +338,60 @@ module.exports = (io) => {
       io.in(roomId).socketsLeave(roomId);
     });
 
+    // 💬 Text Messaging Interface
+    socket.on("sendMessage", async (messageData) => {
+      console.log(`💬 Message from ${messageData.senderId} to ${messageData.receiverId}: ${messageData.content}`);
+
+      try {
+        const conversationId = [messageData.senderId, messageData.receiverId].sort().join(":");
+
+        // Save to database so they persist
+        const savedMsg = await prisma.message.create({
+          data: {
+            senderId: messageData.senderId,
+            receiverId: messageData.receiverId,
+            content: messageData.content,
+            conversationId,
+          },
+          include: {
+            sender: { select: { id: true, firstName: true, lastName: true, role: true } },
+            receiver: { select: { id: true, firstName: true, lastName: true, role: true } },
+          },
+        });
+
+        const formatted = {
+          ...savedMsg,
+          sender: {
+            ...savedMsg.sender,
+            name: `${savedMsg.sender.firstName} ${savedMsg.sender.lastName}`.trim(),
+          },
+          receiver: {
+            ...savedMsg.receiver,
+            name: `${savedMsg.receiver.firstName} ${savedMsg.receiver.lastName}`.trim(),
+          },
+          timestamp: savedMsg.createdAt,
+        };
+
+        // Notify Receiver
+        let receiverOnline = false;
+        for (const [sId, user] of activeUsers.entries()) {
+          if (user.userId === messageData.receiverId) {
+            io.to(sId).emit("receiveMessage", formatted);
+            receiverOnline = true;
+          }
+        }
+
+        // Notify Sender (for cross-device sync if same user logged in twice)
+        socket.emit("messageSent", formatted);
+
+        if (!receiverOnline) {
+          console.log(`📡 User ${messageData.receiverId} is offline. Message saved to DB.`);
+        }
+      } catch (err) {
+        console.error("❌ Error in sendMessage socket handler:", err);
+      }
+    });
+
     // Handle Disconnect
     socket.on("disconnect", () => {
       const user = activeUsers.get(socket.id);

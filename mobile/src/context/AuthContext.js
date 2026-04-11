@@ -12,16 +12,24 @@
  * a 401 response from any API call auto-logs the user out.
  */
 
-import React, { createContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginWithEmail, registerUser, logoutSupabase, extractError, verifySignupOTP } from '../services/authService';
 import { registerLogoutHandler } from '../services/api';
+import socketService from '../services/socket';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Helper to init socket
+  const initSocketFlow = (u) => {
+    if (u?.id && u?.role) {
+      socketService.connect(u.id, u.role, u.name || `${u.firstName} ${u.lastName}`);
+    }
+  };
 
   // ─────────────────────────────────────────────────────────
   // On mount: restore session from AsyncStorage
@@ -33,7 +41,9 @@ export const AuthProvider = ({ children }) => {
         const storedUser = await AsyncStorage.getItem('userData');
 
         if (storedToken && storedUser) {
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          initSocketFlow(parsedUser);
         }
       } catch (error) {
         console.error('[AuthContext] Failed to load stored session:', error);
@@ -47,12 +57,11 @@ export const AuthProvider = ({ children }) => {
 
   // ─────────────────────────────────────────────────────────
   // Register logout handler with API interceptor once
-  // (Allows 401 responses to auto-logout without prop drilling)
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     registerLogoutHandler(() => {
-      // Called by api.js on 401
       setUser(null);
+      socketService.disconnect();
       console.log('[AuthContext] Auto-logout triggered by 401 response');
     });
   }, []);
@@ -68,6 +77,7 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem('userToken', token);
       await AsyncStorage.setItem('userData', JSON.stringify(loggedInUser));
       setUser(loggedInUser);
+      initSocketFlow(loggedInUser);
 
       console.log('[AuthContext] Login successful:', loggedInUser.role);
       return { success: true };
@@ -88,11 +98,11 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const result = await registerUser(userData);
 
-      // If registration returned a token (auto-approved), log them in
       if (result.token && result.user) {
         await AsyncStorage.setItem('userToken', result.token);
         await AsyncStorage.setItem('userData', JSON.stringify(result.user));
         setUser(result.user);
+        initSocketFlow(result.user);
       }
 
       if (result.requiresVerification) {
@@ -122,11 +132,11 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const result = await verifySignupOTP(email, otp, userData);
       
-      // Verification successful, sync complete. Store session and log in.
       if (result.token && result.user) {
         await AsyncStorage.setItem('userToken', result.token);
         await AsyncStorage.setItem('userData', JSON.stringify(result.user));
         setUser(result.user);
+        initSocketFlow(result.user);
       }
       return { success: true };
     } catch (error) {
@@ -147,11 +157,12 @@ export const AuthProvider = ({ children }) => {
       await logoutSupabase();
       await AsyncStorage.multiRemove(['userToken', 'userData']);
       setUser(null);
+      socketService.disconnect();
       console.log('[AuthContext] Logout successful');
     } catch (error) {
       console.error('[AuthContext] Logout error:', error);
-      // Still clear local state even if Supabase signOut fails
       setUser(null);
+      socketService.disconnect();
     } finally {
       setLoading(false);
     }
@@ -163,3 +174,13 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+// Simple custom hook to use the AuthContext
+export const useAuth = () => {
+  const context = React.useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+

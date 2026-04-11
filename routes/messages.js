@@ -313,10 +313,13 @@ router.post("/send", verifyToken, async (req, res) => {
         ...msg.receiver,
         name: `${msg.receiver.firstName} ${msg.receiver.lastName}`.trim(),
       },
+      timestamp: msg.createdAt
     };
 
-    return res.json({ data: formattedMsg });
-  } catch (e) {
+    const { emitToUser } = require("../socket/socketHandler.cjs");
+    emitToUser(String(targetRecipient), "receiveMessage", formattedMsg);
+
+    return res.json({ data: formattedMsg });  } catch (e) {
     console.error("❌ send message error:", e);
     return res.status(500).json({ error: "Failed to send message" });
   }

@@ -11,6 +11,7 @@ import HomeScreen from '../screens/Shared/HomeScreen';
 import OrdersScreen from '../screens/Pharmacy/OrdersScreen';
 import InventoryScreen from '../screens/Pharmacy/InventoryScreen';
 import MedicinesScreen from '../screens/Pharmacy/MedicinesScreen';
+import ChatbotScreen from '../screens/Shared/ChatbotScreen';
 import MessagesScreen from '../screens/Shared/MessagesScreen';
 import ChatScreen from '../screens/Shared/ChatScreen';
 import ProfileScreen from '../screens/Shared/ProfileScreen';
@@ -35,6 +36,7 @@ function HomeStack() {
     <Stack.Navigator>
       <Stack.Screen name="PharmacyHome" component={HomeScreen} options={{ title: 'Dashboard', headerShown: false }} />
       <Stack.Screen name="Orders" component={OrdersScreen} options={{ title: 'Incoming Orders' }} />
+      <Stack.Screen name="Chatbot" component={ChatbotScreen} options={{ title: 'AI Health Assistant' }} />
     </Stack.Navigator>
   );
 }
@@ -68,9 +70,10 @@ const TAB_ICONS = {
 export default function PharmacyNavigator() {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={({ route, navigation }) => ({
         headerShown: true,
-        headerLeft: (props) => <DrawerButton {...props} />,
+        headerTitle: '',
+        headerLeft: (props) => <DrawerButton navigation={navigation} {...props} />,
         tabBarActiveTintColor: COLORS.brandGreen,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
@@ -87,7 +90,7 @@ export default function PharmacyNavigator() {
         },
       })}
     >
-      <Tab.Screen name="HomeTab" component={HomeStack} options={{ tabBarLabel: 'Home', title: 'Pharmacy Console' }} />
+      <Tab.Screen name="HomeTab" component={HomeStack} options={{ tabBarLabel: 'Home', title: 'Pharmacy Console', headerShown: false }} />
       <Tab.Screen name="InventoryTab" component={InventoryStack} options={{ tabBarLabel: 'Stock', title: 'Inventory' }} />
       <Tab.Screen name="MessagesTab" component={MessagesStack} options={{ tabBarLabel: 'Chat', title: 'Messages' }} />
       <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ tabBarLabel: 'Profile', title: 'My Profile' }} />

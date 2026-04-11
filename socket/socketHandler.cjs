@@ -6,7 +6,22 @@ const activeUsers = new Map(); // socketId -> { userId, role, name, rooms: Set }
 const roomUsers = new Map(); // roomId -> Set of socketIds
 const callTimeouts = new Map(); // appointmentId -> setTimeout ID
 
+let globalIo = null;
+
+const emitToUser = (userId, eventName, data) => {
+  if (!globalIo) return false;
+  let sent = false;
+  for (const [socketId, user] of activeUsers.entries()) {
+    if (user.userId === userId) {
+      globalIo.to(socketId).emit(eventName, data);
+      sent = true;
+    }
+  }
+  return sent;
+};
+
 module.exports = (io) => {
+  globalIo = io;
   io.on("connection", (socket) => {
     console.log(`✅ Socket connected: ${socket.id}`);
 
@@ -338,6 +353,37 @@ module.exports = (io) => {
       io.in(roomId).socketsLeave(roomId);
     });
 
+    // Text messaging interface
+    socket.on('sendMessage', async (messageData) => {
+      console.log(`💬 Message from ${messageData.senderId} to ${messageData.receiverId}: ${messageData.content}`);
+      
+      try {
+        // Save to database so they persist for the Web App and future Mobile App loads
+        await prisma.message.create({
+          data: {
+            senderId: messageData.senderId,
+            receiverId: messageData.receiverId,
+            content: messageData.content
+          }
+        });
+        
+        // Find if receiver is online and send it to them in real-time
+        let receiverOnline = false;
+        for (const [sId, user] of activeUsers.entries()) {
+          if (user.userId === messageData.receiverId) {
+            io.to(sId).emit('receiveMessage', messageData);
+            receiverOnline = true;
+          }
+        }
+        
+        if (!receiverOnline) {
+          console.log(`User ${messageData.receiverId} is not currently online to receive the message.`);
+        }
+      } catch (err) {
+        console.error("❌ Error processing sendMessage:", err);
+      }
+    });
+
     // Handle Disconnect
     socket.on("disconnect", () => {
       const user = activeUsers.get(socket.id);
@@ -363,3 +409,5 @@ module.exports = (io) => {
     });
   });
 };
+
+module.exports.emitToUser = emitToUser;

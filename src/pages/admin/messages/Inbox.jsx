@@ -21,10 +21,9 @@ export default function Inbox() {
   const fetchInbox = useCallback(async () => {
     if (!userId) return;
     try {
-      const res = await api.get(`/messages/inbox/1`, {
-        params: { userId, pageSize: 50 },
-      });
-      setMessages(res.data?.data || []);
+      // Use unified messaging endpoint
+      const res = await api.get("/messages/inbox");
+      setMessages(res.data || []);
     } catch (err) {
       console.error('Failed to fetch inbox:', err);
     } finally {
@@ -32,6 +31,7 @@ export default function Inbox() {
     }
 
     try {
+      // Use updated bulk read endpoint
       await api.post('/messages/mark-read', { userId, folder: 'inbox' });
       window.dispatchEvent(new CustomEvent('messages:read'));
     } catch (err) {
@@ -102,10 +102,10 @@ export default function Inbox() {
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="text-sm font-black text-[var(--text-main)]">
-                            {msg.sender?.name || 'ENCRYPTED_ID'}
+                            {msg.contactName || 'ENCRYPTED_ID'}
                           </span>
                           <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
-                            {msg.sender?.role || 'SYSTEM'}
+                            {msg.contactRole || 'SYSTEM'}
                           </span>
                         </div>
                       </td>

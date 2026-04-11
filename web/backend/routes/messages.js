@@ -228,9 +228,97 @@ router.patch("/:id/read", verifyToken, async (req, res) => {
   }
 });
 
-// List messages (two explicit routes to avoid optional param "?")
-router.get("/:folder", verifyToken, listMessages); // e.g. /api/messages/inbox?userId=U&page=1
-router.get("/:folder/:page", verifyToken, listMessages); // e.g. /api/messages/inbox/1?userId=U
+// ✅ Unified Inbox: GET /api/messages/inbox
+router.get("/inbox", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get the latest message for each distinct conversation the user is part of
+    const messages = await prisma.message.findMany({
+      where: {
+        OR: [{ senderId: userId }, { receiverId: userId }],
+      },
+      orderBy: { createdAt: "desc" },
+      // Use distinct on conversationId to get only the latest for each thread
+      distinct: ["conversationId"],
+      include: {
+        sender: {
+          select: { id: true, firstName: true, lastName: true, role: true, email: true },
+        },
+        receiver: {
+          select: { id: true, firstName: true, lastName: true, role: true, email: true },
+        },
+      },
+    });
+
+    const formatted = messages.map((m) => {
+      const currentUserId = String(userId);
+      const sId = String(m.senderId);
+      const rId = String(m.receiverId);
+
+      let otherUser = (sId === currentUserId) ? m.receiver : m.sender;
+
+      // Fallback if the logic above failed for some reason (e.g. data anomaly)
+      if (!otherUser && sId !== currentUserId) otherUser = m.sender;
+      if (!otherUser && rId !== currentUserId) otherUser = m.receiver;
+
+      let name = "Unknown User";
+      if (otherUser) {
+        if (otherUser.firstName || otherUser.lastName) {
+          name = `${otherUser.firstName || ""} ${otherUser.lastName || ""}`.trim();
+        } else if (otherUser.email) {
+          name = otherUser.email.split("@")[0];
+        }
+      }
+
+      return {
+        id: m.id,
+        conversationId: m.conversationId,
+        content: m.content,
+        createdAt: m.createdAt,
+        readAt: m.readAt,
+        contactId: otherUser?.id,
+        contactName: name,
+        contactRole: otherUser?.role,
+        isOutgoing: sId === currentUserId,
+      };
+    });
+
+    return res.json({ data: formatted });
+  } catch (err) {
+    console.error("❌ Inbox error:", err);
+    return res.status(500).json({ error: "Failed to load inbox" });
+  }
+});
+
+// ✅ Chat History: GET /api/messages/:targetId
+router.get("/history/:targetId", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { targetId } = req.params;
+
+    const conversationId = [userId, targetId].sort().join(":");
+
+    const messages = await prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: "asc" },
+      include: {
+        sender: {
+          select: { id: true, firstName: true, lastName: true, role: true },
+        },
+      },
+    });
+
+    return res.json({ data: messages });
+  } catch (err) {
+    console.error("❌ History error:", err);
+    return res.status(500).json({ error: "Failed to load chat history" });
+  }
+});
+
+// List messages (deprecated/legacy folder-based)
+router.get("/folder/:folder", verifyToken, listMessages);
+router.get("/folder/:folder/:page", verifyToken, listMessages);
 
 // Send a message: POST /api/messages/send
 /**
@@ -287,11 +375,14 @@ router.post("/send", verifyToken, async (req, res) => {
     if (!targetRecipient)
       return res.status(400).json({ error: "Receiver is required" });
 
+    const conversationId = [actualSenderId, targetRecipient].sort().join(":");
+
     const msg = await prisma.message.create({
       data: {
         senderId: actualSenderId,
         receiverId: targetRecipient,
         content: actualContent,
+        conversationId,
       },
       include: {
         sender: {
@@ -313,7 +404,16 @@ router.post("/send", verifyToken, async (req, res) => {
         ...msg.receiver,
         name: `${msg.receiver.firstName} ${msg.receiver.lastName}`.trim(),
       },
+      timestamp: msg.createdAt,
     };
+
+    // Socket emission
+    try {
+      const { emitToUser } = require("../socket/socketHandler.cjs");
+      emitToUser(String(targetRecipient), "receiveMessage", formattedMsg);
+    } catch (socketErr) {
+      console.warn("⚠️ Socket emission failed (receiver might be offline):", socketErr.message);
+    }
 
     return res.json({ data: formattedMsg });
   } catch (e) {

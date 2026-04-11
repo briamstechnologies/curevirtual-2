@@ -1,9 +1,3 @@
-/**
- * LoginScreen.js — CureVirtual Mobile
- * Premium UI matching the web app's Login.jsx design.
- * Features: Logo, brand colors, gradient bg orbs, KeyboardAvoidingView
- */
-
 import React, { useState, useContext } from 'react';
 import {
   View,
@@ -21,6 +15,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../../context/AuthContext';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../../../theme/designSystem';
+import FloatingChatbotButton from '../../components/FloatingChatbotButton';
+import { Ionicons } from '@expo/vector-icons';
 
 const logo = require('../../../assets/images/logo.png');
 
@@ -40,16 +36,10 @@ export default function LoginScreen({ navigation }) {
     if (!result.success) {
       Alert.alert('Login Failed', result.error || 'Please check your credentials and try again.');
     }
-    // On success, AppNavigator reacts to context user change automatically
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Decorative background orbs */}
-      <View style={styles.orbTopLeft} />
-      <View style={styles.orbBottomRight} />
-      <View style={styles.orbCenter} />
-
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -59,38 +49,44 @@ export default function LoginScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Logo & Brand Name ── */}
-          <View style={styles.brandContainer}>
-            <View style={styles.logoWrapper}>
-              <Image source={logo} style={styles.logo} resizeMode="contain" />
-            </View>
-            <Text style={styles.brandName}>
-              CURE<Text style={styles.brandNameBlue}>VIRTUAL</Text>
-            </Text>
-            <View style={styles.secureBadge}>
-              <View style={styles.secureDot} />
-              <Text style={styles.secureBadgeText}>SECURE LOGIN</Text>
-            </View>
-          </View>
-
           {/* ── Card ── */}
           <View style={styles.card}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to access your dashboard</Text>
+            {/* Logo and SECURE badge matching the ref Image */}
+            <View style={styles.brandRow}>
+              <View style={styles.logoTextWrapper}>
+                <Image source={logo} style={styles.logo} resizeMode="contain" />
+                <Text style={styles.brandName}>
+                  CURE<Text style={styles.brandNameBlue}>VIRTUAL</Text>
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.secureBadgeWrapper}>
+              <View style={styles.secureBadge}>
+                <Ionicons name="lock-closed-outline" size={14} color={COLORS.brandGreen} style={{ marginRight: 4 }} />
+                <Text style={styles.secureBadgeText}>SECURE</Text>
+              </View>
+            </View>
+
+            <Text style={styles.title}>LOGIN</Text>
+            <Text style={styles.subtitle}>Enter your credentials to access your dashboard.</Text>
 
             {/* Email */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>EMAIL ADDRESS</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor={COLORS.textPlaceholder}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoCorrect={false}
-              />
+              <View style={styles.inputWrapper}>
+                <Ionicons name="mail-outline" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.inputWithIcon}
+                  placeholder="operator@curevirtual.io"
+                  placeholderTextColor={COLORS.textPlaceholder}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoCorrect={false}
+                />
+              </View>
             </View>
 
             {/* Password */}
@@ -98,13 +94,14 @@ export default function LoginScreen({ navigation }) {
               <View style={styles.labelRow}>
                 <Text style={styles.label}>PASSWORD</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-                  <Text style={styles.forgotLink}>Forgot password?</Text>
+                  <Text style={styles.forgotLink}>FORGOT PASSWORD?</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.passwordWrapper}>
+                <Ionicons name="lock-closed-outline" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
                 <TextInput
-                  style={[styles.input, styles.passwordInput]}
-                  placeholder="Enter your password"
+                  style={[styles.inputWithIcon, styles.passwordInput]}
+                  placeholder="••••••••"
                   placeholderTextColor={COLORS.textPlaceholder}
                   value={password}
                   onChangeText={setPassword}
@@ -114,7 +111,7 @@ export default function LoginScreen({ navigation }) {
                   style={styles.eyeBtn}
                   onPress={() => setShowPassword(!showPassword)}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={COLORS.textMuted} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -129,20 +126,29 @@ export default function LoginScreen({ navigation }) {
               {loading ? (
                 <ActivityIndicator color={COLORS.white} />
               ) : (
-                <Text style={styles.primaryButtonText}>SIGN IN →</Text>
+                <Text style={styles.primaryButtonText}>SUBMIT →</Text>
               )}
             </TouchableOpacity>
 
+            {/* OTP Link */}
+            <TouchableOpacity style={styles.otpRow} onPress={() => {}}>
+              <Text style={styles.otpLink}>LOGIN WITH OTP INSTEAD?</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.divider} />
+
             {/* Register Link */}
             <View style={styles.registerRow}>
-              <Text style={styles.registerText}>Don't have an account? </Text>
+              <Text style={styles.registerText}>DON'T HAVE AN ACCOUNT? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.registerLink}>Register</Text>
+                <Text style={styles.registerLink}>REGISTER</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <FloatingChatbotButton />
     </SafeAreaView>
   );
 }
@@ -150,90 +156,57 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgMuted,
-    overflow: 'hidden',
+    backgroundColor: '#FAFAFA', // VERY light bg as in the mockup
   },
-
-  // ── Decorative Orbs ──
-  orbTopLeft: {
-    position: 'absolute',
-    top: -80,
-    left: -80,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: COLORS.brandGreen,
-    opacity: 0.08,
-  },
-  orbBottomRight: {
-    position: 'absolute',
-    bottom: -80,
-    right: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: COLORS.brandBlue,
-    opacity: 0.07,
-  },
-  orbCenter: {
-    position: 'absolute',
-    top: '30%',
-    right: -60,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: COLORS.brandOrange,
-    opacity: 0.05,
-  },
-
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: SPACING.xl,
   },
-
-  // ── Brand ──
-  brandContainer: {
-    alignItems: 'center',
-    marginBottom: SPACING.xxl,
-  },
-  logoWrapper: {
+  card: {
     backgroundColor: COLORS.white,
     borderRadius: RADIUS.xl,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
+    padding: SPACING.xxl,
     ...SHADOWS.md,
+    borderWidth: 1,
+    borderColor: COLORS.slate100,
+  },
+  // Brand Logo inside card
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  logoTextWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   logo: {
-    width: 56,
-    height: 56,
+    width: 32,
+    height: 32,
+    marginRight: SPACING.xs,
   },
   brandName: {
-    fontSize: TYPOGRAPHY.xl,
+    fontSize: TYPOGRAPHY.lg,
     fontWeight: TYPOGRAPHY.black,
     color: COLORS.textMain,
-    letterSpacing: 2,
-    marginBottom: SPACING.sm,
+    letterSpacing: 1,
   },
   brandNameBlue: {
     color: COLORS.brandBlue,
   },
+  secureBadgeWrapper: {
+    flexDirection: 'row',
+    marginBottom: SPACING.lg,
+  },
   secureBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${COLORS.brandGreen}15`,
     borderWidth: 1,
-    borderColor: `${COLORS.brandGreen}30`,
+    borderColor: `${COLORS.brandGreen}40`,
     borderRadius: RADIUS.full,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-  },
-  secureDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.brandOrange,
-    marginRight: SPACING.xs,
+    paddingVertical: 4,
   },
   secureBadgeText: {
     fontSize: TYPOGRAPHY.xs,
@@ -241,33 +214,23 @@ const styles = StyleSheet.create({
     color: COLORS.brandGreen,
     letterSpacing: 1.5,
   },
-
-  // ── Card ──
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.xl,
-    ...SHADOWS.lg,
-  },
   title: {
-    fontSize: TYPOGRAPHY.xxxl,
+    fontSize: 28,
     fontWeight: TYPOGRAPHY.black,
     color: COLORS.textMain,
     marginBottom: SPACING.xs,
   },
   subtitle: {
-    fontSize: TYPOGRAPHY.base,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.textMuted,
     marginBottom: SPACING.xxl,
   },
-
-  // ── Fields ──
   fieldGroup: {
-    marginBottom: SPACING.base,
+    marginBottom: SPACING.lg,
   },
   label: {
     fontSize: TYPOGRAPHY.xs,
-    fontWeight: TYPOGRAPHY.black,
+    fontWeight: TYPOGRAPHY.bold,
     color: COLORS.brandGreen,
     letterSpacing: 1.5,
     marginBottom: SPACING.sm,
@@ -280,70 +243,89 @@ const styles = StyleSheet.create({
   },
   forgotLink: {
     fontSize: TYPOGRAPHY.xs,
-    fontWeight: TYPOGRAPHY.black,
-    color: COLORS.brandOrange,
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.brandOrange, // Mockup has orange forgot password
     letterSpacing: 0.5,
   },
-  input: {
-    backgroundColor: COLORS.bgInput,
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: COLORS.slate200,
-    borderRadius: RADIUS.base,
-    paddingHorizontal: SPACING.base,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+  },
+  inputIcon: {
+    marginRight: SPACING.sm,
+  },
+  inputWithIcon: {
+    flex: 1,
     paddingVertical: SPACING.md,
     fontSize: TYPOGRAPHY.md,
     color: COLORS.textMain,
   },
   passwordWrapper: {
-    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
   },
   passwordInput: {
-    paddingRight: SPACING.xxl + SPACING.base,
+    paddingRight: SPACING.xxl, // space for eye icon
   },
   eyeBtn: {
-    position: 'absolute',
-    right: SPACING.base,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
+    padding: SPACING.sm,
   },
-  eyeIcon: {
-    fontSize: 18,
-  },
-
-  // ── Button ──
   primaryButton: {
     backgroundColor: COLORS.brandGreen,
-    borderRadius: RADIUS.base,
-    paddingVertical: SPACING.base,
+    borderRadius: RADIUS.lg,
+    paddingVertical: 18,
     alignItems: 'center',
     marginTop: SPACING.md,
     marginBottom: SPACING.xl,
-    ...SHADOWS.green,
+    ...SHADOWS.sm,
   },
   primaryButtonDisabled: {
     opacity: 0.7,
   },
   primaryButtonText: {
     color: COLORS.white,
-    fontSize: TYPOGRAPHY.base,
-    fontWeight: TYPOGRAPHY.black,
-    letterSpacing: 1.5,
+    fontSize: TYPOGRAPHY.md,
+    fontWeight: TYPOGRAPHY.bold,
+    letterSpacing: 1,
   },
-
-  // ── Register CTA ──
+  otpRow: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  otpLink: {
+    color: COLORS.brandBlue,
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.bold,
+    letterSpacing: 0.5,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.slate200,
+    marginBottom: SPACING.xl,
+  },
   registerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },
   registerText: {
-    color: COLORS.textMuted,
-    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.textMain,
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: TYPOGRAPHY.bold,
   },
   registerLink: {
     color: COLORS.brandBlue,
-    fontSize: TYPOGRAPHY.sm,
+    fontSize: TYPOGRAPHY.xs,
     fontWeight: TYPOGRAPHY.bold,
   },
 });

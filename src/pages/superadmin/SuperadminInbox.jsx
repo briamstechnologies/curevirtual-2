@@ -31,11 +31,10 @@ export default function SuperadminInbox() {
   const loadMessages = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/messages/inbox', {
-        params: { page },
-      });
-      setMessages(res.data?.data || []);
-      setTotal(res.data?.total || 0);
+      const res = await api.get('/messages/inbox');
+      const items = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setMessages(items);
+      setTotal(items.length);
     } catch (err) {
       toast.error(
         'Decryption Registry Failure: Could not load communication packets.'
@@ -63,6 +62,7 @@ export default function SuperadminInbox() {
     )
       return;
     try {
+      // Use unified delete endpoint
       await api.delete(`/messages/${id}`);
       setMessages((prev) => prev.filter((m) => m.id !== id));
       toast.info('Transmission Purged.');
@@ -87,7 +87,7 @@ export default function SuperadminInbox() {
           <div className="flex items-center gap-3 bg-[var(--bg-card)] px-5 py-3 rounded-2xl border border-[var(--border)] shadow-sm">
             <FaHistory className="text-[var(--brand-green)] animate-pulse" />
             <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-soft)]">
-              {total} Packets Received
+              {total} conversations detected
             </span>
           </div>
         </div>
@@ -114,11 +114,8 @@ export default function SuperadminInbox() {
         ) : (
           <div className="grid gap-4">
             {messages.map((msg) => {
-              const senderName =
-                msg.sender?.name ||
-                (msg.adminSenderId ? 'System Intel' : 'Unknown Identity');
-              const senderRole =
-                msg.sender?.role || (msg.adminSenderId ? 'ADMIN' : 'EXT');
+              const senderName = msg.contactName || 'Unknown Identity';
+              const senderRole = msg.contactRole || 'EXT';
 
               return (
                 <div

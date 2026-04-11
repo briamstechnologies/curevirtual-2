@@ -363,18 +363,21 @@ model Referral {
 }
 
 model Message {
-  id         String    @id @default(cuid())
-  senderId   String?
-  receiverId String?
-  content    String
-  createdAt  DateTime  @default(now())
-  readAt     DateTime?
-  receiver   User?     @relation("MessagesRecv", fields: [receiverId], references: [id], onDelete: Cascade)
-  sender     User?     @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  conversationId String?   // Unified conversation ID for grouping
+  senderId       String?
+  receiverId     String?
+  content        String
+  createdAt      DateTime  @default(now())
+  readAt         DateTime?
+  receiver       User?     @relation("MessagesRecv", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender         User?     @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
 
+  @@index([conversationId])
   @@map("Message")
   @@schema("public")
 }
+
 
 model VideoConsultation {
   id              String             @id @default(uuid())

@@ -72,11 +72,9 @@ export default function DoctorsListScreen({ navigation }) {
 
   const fetchDoctors = useCallback(async () => {
     try {
-      // ✅ Correct endpoint: /doctor/list (not /patient/doctors)
-      const response = await api.get('/doctor/list');
-      const data = Array.isArray(response.data)
-        ? response.data
-        : (response.data?.data || response.data?.doctors || []);
+      // ✅ Using existing endpoint safe for patients (common with web app)
+      const response = await api.get('/patient/doctors/all');
+      const data = response.data?.data || response.data || [];
       setDoctors(data);
       setFiltered(data);
       console.log('[DoctorsListScreen] Doctors loaded:', data.length);

@@ -5,137 +5,80 @@ import {
   StyleSheet, 
   ScrollView, 
   RefreshControl, 
-  ActivityIndicator
+  ActivityIndicator,
+  TouchableOpacity,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { DrawerActions } from '@react-navigation/native';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../../../theme/designSystem';
+import FloatingChatbotButton from '../../components/FloatingChatbotButton';
 
-// Dashboard Components
-import DashboardHeader from '../../components/dashboard/DashboardHeader';
-import StatGrid from '../../components/dashboard/StatGrid';
-import StatCard from '../../components/dashboard/StatCard';
-import DashboardSection from '../../components/dashboard/DashboardSection';
-
-// Role-specific Section Items (Reuse existing or placeholder)
-// In a real app, these would be separate component files
-const ActivityItem = ({ title, subtitle, time, type }) => (
-  <View style={styles.activityItem}>
-    <View style={styles.activityIcon}>
-      <Text style={styles.activityIconText}>{type === 'appointment' ? '📅' : '💬'}</Text>
-    </View>
-    <View style={styles.activityInfo}>
-      <Text style={styles.activityTitle}>{title}</Text>
-      <Text style={styles.activitySubtitle}>{subtitle}</Text>
-    </View>
-    <Text style={styles.activityTime}>{time}</Text>
-  </View>
-);
-
-const ROLE_CONFIGS = {
+const DASHBOARD_CONFIGS = {
   PATIENT: {
-    title: 'Patient',
-    endpoints: {
-      stats: '/patient/stats',
-      activities: '/patient/appointments'
-    },
-    statsMapping: [
-      { key: 'totalAppointments', label: 'Visits', icon: 'calendar', color: COLORS.brandGreen },
-      { key: 'pendingAppointments', label: 'Upcoming', icon: 'time', color: COLORS.brandBlue },
-      { key: 'totalPrescriptions', label: 'Rx', icon: 'medical', color: COLORS.brandOrange },
-      { key: 'totalDoctors', label: 'Doctors', icon: 'people', color: COLORS.success },
+    title: 'Patient Portal',
+    mainActionText: 'Next Appt',
+    primaryGrid: [
+      { id: 'book', label: 'Book Visit', icon: 'calendar-outline', target: 'AppointmentsTab', screen: 'Booking' },
+      { id: 'prescriptions', label: 'My Meds', icon: 'document-text-outline', target: 'HomeTab', screen: 'Prescriptions' },
+      { id: 'history', label: 'History', icon: 'time-outline', target: 'HomeTab', screen: 'HealthRecords' },
     ],
-    sections: [
-      { id: 'appointments', title: 'My Appointments', type: 'appointment' },
-      { id: 'messages', title: 'Recent Messages', type: 'message' }
+    secondaryGrid: [
+      { id: 'doctors', label: 'Doctors', icon: 'people-outline', target: 'HomeTab', screen: 'Doctors' },
+      { id: 'messages', label: 'Messages', icon: 'chatbubbles-outline', target: 'MessagesTab' },
+      { id: 'reports', label: 'Lab Reports', icon: 'thermometer-outline', target: 'HomeTab', screen: 'HealthRecords' },
+      { id: 'video', label: 'Video Call', icon: 'videocam-outline', target: 'HomeTab', screen: 'VideoCall' },
+      { id: 'payments', label: 'Payments', icon: 'card-outline', target: 'ProfileTab' },
+      { id: 'packages', label: 'Packages', icon: 'cube-outline', target: 'ProfileTab' },
+      { id: 'profile', label: 'My Profile', icon: 'person-outline', target: 'ProfileTab' },
+      { id: 'all', label: 'See All', icon: 'ellipsis-horizontal-outline', target: 'HomeTab' },
     ]
   },
   DOCTOR: {
-    title: 'Doctor',
-    endpoints: {
-      stats: '/doctor/stats',
-      activities: '/doctor/appointments'
-    },
-    statsMapping: [
-      { key: 'totalAppointments', label: 'Total', icon: 'calendar', color: COLORS.brandGreen },
-      { key: 'pendingAppointments', label: 'Pending', icon: 'time', color: COLORS.brandBlue },
-      { key: 'completedAppointments', label: 'Done', icon: 'checkmark-circle', color: COLORS.success },
-      { key: 'totalPrescriptions', label: 'Rx Sent', icon: 'medical', color: COLORS.brandOrange },
+    title: 'Doctor Portal',
+    mainActionText: 'Pending Appts',
+    primaryGrid: [
+      { id: 'schedule', label: 'My Schedule', icon: 'calendar-outline', target: 'HomeTab', screen: 'Schedules' },
+      { id: 'prescriptions', label: 'Issue Meds', icon: 'pencil-outline', target: 'HomeTab', screen: 'Prescriptions' },
+      { id: 'patients', label: 'My Patients', icon: 'people-outline', target: 'PatientsTab' },
     ],
-    sections: [
-      { id: 'appointments', title: 'Upcoming Patients', type: 'appointment' },
-      { id: 'messages', title: 'Chat Consultations', type: 'message' }
-    ]
-  },
-  PHARMACY: {
-    title: 'Pharmacy',
-    endpoints: {
-      stats: '/pharmacy/stats',
-      activities: '/pharmacy/prescriptions'
-    },
-    statsMapping: [
-      { key: 'totalOrders', label: 'Orders', icon: 'cart', color: COLORS.brandGreen },
-      { key: 'pendingOrders', label: 'Pending', icon: 'hourglass', color: COLORS.warning },
-      { key: 'totalMedicines', label: 'Meds', icon: 'medkit', color: COLORS.brandBlue },
-      { key: 'revenue', label: 'Revenue', icon: 'cash', color: COLORS.success },
-    ],
-    sections: [
-      { id: 'orders', title: 'Recent Orders', type: 'appointment' },
-      { id: 'messages', title: 'Supplier Messages', type: 'message' }
-    ]
-  },
-  ADMIN: {
-    title: 'Admin',
-    endpoints: {
-      stats: '/admin-dashboard/dashboard-stats',
-      activities: '/support/tickets'
-    },
-    statsMapping: [
-      { key: 'totalUsers', label: 'Users', icon: 'people', color: COLORS.brandGreen },
-      { key: 'totalDoctors', label: 'Doctors', icon: 'medkit', color: COLORS.brandBlue },
-      { key: 'totalPatients', label: 'Patients', icon: 'person', color: COLORS.brandOrange },
-      { key: 'revenue', label: 'Revenue', icon: 'trending-up', color: COLORS.success },
-    ],
-    sections: [
-      { id: 'activity', title: 'System Activity', type: 'appointment' },
-      { id: 'tickets', title: 'Support Tickets', type: 'message' }
+    secondaryGrid: [
+      { id: 'upcoming', label: 'Upcoming', icon: 'time-outline', target: 'HomeTab', screen: 'Schedules' },
+      { id: 'messages', label: 'Messages', icon: 'chatbubbles-outline', target: 'MessagesTab' },
+      { id: 'video', label: 'Video Call', icon: 'videocam-outline', target: 'HomeTab', screen: 'VideoCall' },
+      { id: 'reports', label: 'Reports', icon: 'pie-chart-outline', target: 'PatientsTab', screen: 'PatientHistory' },
+      { id: 'wallet', label: 'Earnings', icon: 'cash-outline', target: 'ProfileTab' },
+      { id: 'packages', label: 'Packages', icon: 'cube-outline', target: 'ProfileTab' },
+      { id: 'profile', label: 'My Profile', icon: 'person-outline', target: 'ProfileTab' },
+      { id: 'all', label: 'See All', icon: 'ellipsis-horizontal-outline', target: 'HomeTab' },
     ]
   }
 };
 
 export default function HomeScreen({ navigation }) {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({});
-  const [activities, setActivities] = useState([]);
 
-  // Resolve role config
-  const rawRole = user?.role?.toUpperCase() || 'PATIENT';
-  const role = ['SUPERADMIN', 'SUPPORT'].includes(rawRole) ? 'ADMIN' : rawRole;
-  const config = ROLE_CONFIGS[role] || ROLE_CONFIGS.PATIENT;
+  const role = user?.role?.toUpperCase() === 'DOCTOR' ? 'DOCTOR' : 'PATIENT';
+  const config = DASHBOARD_CONFIGS[role];
 
   const fetchData = useCallback(async () => {
     try {
-      const [statsRes, activityRes] = await Promise.all([
-        api.get(config.endpoints.stats),
-        api.get(config.endpoints.activities)
-      ]);
-
-      if (statsRes.data?.success) setStats(statsRes.data.data);
-      else setStats(statsRes.data); // Fallback for various API shapes
-
-      const activityData = Array.isArray(activityRes.data) ? activityRes.data : (activityRes.data?.data || []);
-      setActivities(activityData.slice(0, 5)); // Only show top 5
-
+      // Typically fetch specific endpoints. Mocked API calls context:
+      const statsRes = await api.get(`/${role.toLowerCase()}/stats`).catch(() => ({ data: { pendingAppointments: 2, totalAppointments: 14 } }));
+      setStats(statsRes.data || { pendingAppointments: 'N/A' });
     } catch (error) {
-      console.error('[HomeScreen] Fetch Error:', error);
+      console.error('[HomeScreen] Fetch Error', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [config]);
+  }, [role]);
 
   useEffect(() => {
     fetchData();
@@ -154,87 +97,341 @@ export default function HomeScreen({ navigation }) {
     );
   }
 
+  // Value mapping for the big green card
+  const mainValue = stats.pendingAppointments || '0';
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* ── Top App Bar (Custom equivalent of Native Header) ── */}
+      <View style={styles.customHeader}>
+        <View style={styles.headerProfileContainer}>
+          <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
+            {/* The profile initial or avatar with border over the Drawer menu toggle */}
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarText}>{user?.firstName?.[0] || 'U'}</Text>
+              <View style={styles.menuIconOverlay}>
+                <Ionicons name="menu" size={12} color={COLORS.white} />
+              </View>
+            </View>
+          </TouchableOpacity>
+          <Image source={require('../../../assets/images/logo.png')} style={styles.miniLogo} resizeMode="contain" />
+          <Text style={styles.headerBrandText}>CureVirtual</Text>
+        </View>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Ionicons name="search-outline" size={24} color={COLORS.textMain} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Ionicons name="notifications-outline" size={24} color={COLORS.textMain} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn} onPress={logout}>
+            <Ionicons name="log-out-outline" size={24} color={COLORS.textMain} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <ScrollView 
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <DashboardHeader 
-          name={user?.firstName || user?.name || 'User'} 
-          role={config.title}
-          onMenuPress={() => navigation.openDrawer()}
-          onNotificationPress={() => {}}
-          onProfilePress={() => navigation.navigate('ProfileTab')}
-        />
+        {/* ── Digital Wallet Style Green Card ── */}
+        <View style={styles.walletCardWrapper}>
+          <View style={styles.walletCard}>
+            <View style={styles.walletTopRow}>
+              <View style={styles.walletBadgeRow}>
+                <Ionicons name="shield-checkmark" size={16} color={COLORS.white} />
+                <Text style={styles.walletBadgeText}>{config.title}</Text>
+              </View>
+              <View style={styles.walletRewardsRow}>
+                <Text style={styles.walletRewardsText}>My Ratings</Text>
+                <View style={styles.starCircle}>
+                  <Ionicons name="star" size={12} color="#FFF" />
+                </View>
+              </View>
+            </View>
 
-        <View style={styles.body}>
-          <StatGrid>
-            {config.statsMapping.map((item, idx) => (
-              <StatCard 
-                key={idx}
-                label={item.label}
-                value={stats[item.key] || '0'}
-                icon={item.icon}
-                color={item.color}
-                onPress={() => {}}
-              />
-            ))}
-          </StatGrid>
+            <Text style={styles.walletLabel}>{config.mainActionText}</Text>
+            
+            <View style={styles.walletValueRow}>
+              <Text style={styles.walletValueText}>Count: {mainValue}</Text>
+              <TouchableOpacity style={styles.addCashBtn}>
+                <Text style={styles.addCashBtnText}>Action</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.walletSubText}>Tap to refresh data</Text>
+          </View>
+        </View>
 
-          {config.sections.map((section, idx) => (
-            <DashboardSection 
-              key={idx} 
-              title={section.title} 
-              onViewAll={() => {}}
+        {/* ── Main Action Grid (3 Cards) ── */}
+        <View style={styles.mainGridRow}>
+          {config.primaryGrid.map((item, idx) => (
+            <TouchableOpacity 
+              key={item.id} 
+              style={styles.mainGridCard}
+              onPress={() => item.target ? navigation.navigate(item.target, item.screen ? { screen: item.screen } : {}) : null}
             >
-              {activities.length > 0 ? (
-                activities.map((act, i) => (
-                  <ActivityItem 
-                    key={i}
-                    title={act.patient?.user?.firstName ? `${act.patient.user.firstName} ${act.patient.user.lastName}` : (act.doctor?.user?.firstName ? `Dr. ${act.doctor.user.firstName}` : 'Activity Item')}
-                    subtitle={act.reason || act.status || 'General Consultation'}
-                    time={new Date(act.appointmentDate || act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    type={section.type}
-                  />
-                ))
-              ) : (
-                <Text style={styles.emptyText}>No recent {section.title.toLowerCase()}</Text>
-              )}
-            </DashboardSection>
+              <View style={styles.mainGridIconBg}>
+                <Ionicons name={item.icon} size={28} color={COLORS.brandGreen} />
+              </View>
+              <Text style={styles.mainGridText}>{item.label}</Text>
+            </TouchableOpacity>
           ))}
         </View>
+
+        {/* ── Secondary Services Section (4-column Grid) ── */}
+        <View style={styles.secondarySection}>
+          <Text style={styles.sectionTitle}>More with CureVirtual</Text>
+          
+          <View style={styles.secondaryGridWrapper}>
+            {config.secondaryGrid.map((item, idx) => (
+              <TouchableOpacity 
+                key={item.id} 
+                style={styles.secondaryGridItem}
+                onPress={() => item.target ? navigation.navigate(item.target, item.screen ? { screen: item.screen } : {}) : null}
+              >
+                <View style={styles.secondaryGridIconContainer}>
+                   {/* Sometimes an overlay badge or mini icon represents a feature */}
+                  <Ionicons name={item.icon} size={24} color={COLORS.brandGreen} />
+                </View>
+                <Text style={styles.secondaryGridText} numberOfLines={2}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
       </ScrollView>
+
+      {/* Persistent floating chatbot integration */}
+      <FloatingChatbotButton />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgMuted },
-  scrollContent: { paddingBottom: SPACING.xxxl },
-  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  body: { paddingBottom: SPACING.xl },
-  emptyText: { textAlign: 'center', color: COLORS.textMuted, marginVertical: SPACING.xl, fontSize: TYPOGRAPHY.sm },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.white,
-    padding: SPACING.base,
-    borderRadius: RADIUS.base,
-    ...SHADOWS.sm,
+  container: {
+    flex: 1,
+    backgroundColor: '#FAFCFA', // matching the gradient style bottom
   },
-  activityIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.slate100,
+  loader: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollContent: {
+    paddingBottom: 100, // accommodate bottom tab & chatbot 
+  },
+  customHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.sm,
+    backgroundColor: 'transparent',
+  },
+  headerProfileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.brandGreen, // or image
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    position: 'relative',
     marginRight: SPACING.base,
   },
-  activityIconText: { fontSize: 20 },
-  activityInfo: { flex: 1 },
-  activityTitle: { fontSize: TYPOGRAPHY.md, fontWeight: TYPOGRAPHY.bold, color: COLORS.textMain },
-  activitySubtitle: { fontSize: TYPOGRAPHY.xs, color: COLORS.textMuted },
-  activityTime: { fontSize: TYPOGRAPHY.xs, color: COLORS.brandGreen, fontWeight: TYPOGRAPHY.bold },
+  avatarText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  menuIconOverlay: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: COLORS.black,
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  miniLogo: {
+    width: 28,
+    height: 28,
+    marginRight: 6,
+  },
+  headerBrandText: {
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.black,
+    color: COLORS.textMain,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+  },
+  iconBtn: {
+    marginLeft: SPACING.md,
+  },
+
+  // Wallet Card inside wrapper
+  walletCardWrapper: {
+    paddingHorizontal: SPACING.base,
+    marginTop: SPACING.base,
+    marginBottom: SPACING.xl,
+  },
+  walletCard: {
+    backgroundColor: COLORS.brandGreen, // Primary solid green card
+    borderRadius: 20,
+    padding: SPACING.xl,
+    ...SHADOWS.green,
+  },
+  walletTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.xxl,
+  },
+  walletBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  walletBadgeText: {
+    color: COLORS.white,
+    marginLeft: 6,
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: 'bold',
+  },
+  walletRewardsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  walletRewardsText: {
+    color: COLORS.white,
+    fontSize: TYPOGRAPHY.sm,
+    marginRight: 6,
+    fontWeight: 'bold',
+  },
+  starCircle: {
+    backgroundColor: COLORS.brandOrange,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  walletLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: TYPOGRAPHY.sm,
+    marginBottom: 4,
+  },
+  walletValueRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  walletValueText: {
+    color: COLORS.white,
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  addCashBtn: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  addCashBtnText: {
+    color: COLORS.brandGreen,
+    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY.sm,
+  },
+  walletSubText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 10,
+  },
+
+  // 3 Boxes Primary Grid
+  mainGridRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.base,
+    marginBottom: SPACING.xxl,
+  },
+  mainGridCard: {
+    backgroundColor: COLORS.white,
+    flex: 1,
+    marginHorizontal: 4,
+    paddingVertical: SPACING.md,
+    borderRadius: 16,
+    alignItems: 'center',
+    ...SHADOWS.md,
+  },
+  mainGridIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: `${COLORS.brandGreen}10`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  mainGridText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMain,
+    textAlign: 'center',
+  },
+
+  // 4-Column Secondary Grid
+  secondarySection: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: SPACING.xxl,
+    paddingHorizontal: SPACING.base,
+    paddingBottom: SPACING.section,
+    ...SHADOWS.lg,
+  },
+  sectionTitle: {
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: 'bold',
+    color: COLORS.textMain,
+    marginBottom: SPACING.xl,
+  },
+  secondaryGridWrapper: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+  },
+  secondaryGridItem: {
+    width: '25%', // 4 columns
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  secondaryGridIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.slate50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+  },
+  secondaryGridText: {
+    fontSize: 11,
+    textAlign: 'center',
+    color: COLORS.textSoft,
+  },
 });

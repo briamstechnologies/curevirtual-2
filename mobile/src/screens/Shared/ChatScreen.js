@@ -2,63 +2,73 @@ import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { io } from 'socket.io-client';
 import { AuthContext } from '../../context/AuthContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../../services/api';
+import socketService from '../../services/socket';
 
 export default function ChatScreen({ route, navigation }) {
-  // Pass the target user ID and Name in params
-  const { targetId, targetName } = route.params || { targetId: 'test', targetName: 'Dr. Smith' };
+  const { targetId, targetName } = route.params || { targetId: 'test', targetName: 'User' };
   const { user } = useContext(AuthContext);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    let newSocket;
-    const initSocket = async () => {
-      const token = await AsyncStorage.getItem('userToken');
-      // Connect to the backend socket
-      const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL.replace('/api', '');
-      newSocket = io(backendUrl, {
-        auth: { token }
-      });
+    const initChat = async () => {
+      // 1. Fetch History
+      try {
+        const res = await api.get(`/messages/history/${targetId}`);
+        const history = res.data?.data || res.data || [];
+        setMessages([...history].reverse());
+      } catch (err) {
+        console.error("Failed to fetch chat history:", err);
+      }
 
-      newSocket.on('connect', () => {
-        console.log('Socket connected');
-        // Join room logic typically goes here
-      });
+      // 2. Connect Socket
+      if (user) {
+        const socket = await socketService.connect(
+          user.id, 
+          user.role, 
+          `${user.firstName || ''} ${user.lastName || ''}`.trim()
+        );
 
-      newSocket.on('receiveMessage', (message) => {
-        setMessages((prev) => [...prev, message]);
-      });
-
-      setSocket(newSocket);
+        if (socket) {
+          socketService.on('receiveMessage', (message) => {
+            // Only add if it's from the person we're talking to or from us
+            if (message.senderId === targetId || message.senderId === user.id) {
+              setMessages((prev) => [message, ...prev]);
+            }
+          });
+        }
+      }
     };
 
-    initSocket();
+    initChat();
 
     return () => {
-      if (newSocket) newSocket.disconnect();
+      socketService.off('receiveMessage');
     };
-  }, []);
+  }, [user, targetId]);
 
-  const sendMessage = () => {
-    if (!input.trim() || !socket) return;
+  const sendMessage = async () => {
+    if (!input.trim()) return;
 
     const messageData = {
       content: input,
       receiverId: targetId,
       senderId: user?.id,
-      timestamp: new Date().toISOString()
     };
 
-    // Emit to backend
-    socket.emit('sendMessage', messageData);
-
-    // Optimistic UI update
-    setMessages((prev) => [...prev, messageData]);
-    setInput('');
+    try {
+      // Send via API (this will also trigger socket emission from backend)
+      const res = await api.post('/messages/send', messageData);
+      const sentMsg = res.data?.data || res.data;
+      
+      // Update UI optimistically if not already handled by socket
+      setMessages((prev) => [sentMsg, ...prev]);
+      setInput('');
+    } catch (err) {
+      console.error("Failed to send message:", err);
+    }
   };
 
   const renderItem = ({ item }) => {
@@ -86,13 +96,15 @@ export default function ChatScreen({ route, navigation }) {
 
       <KeyboardAvoidingView 
         style={styles.chatContainer} 
-        behavior={Platform.OS === 'ios' ? 'padding' : null}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 90}
       >
         <FlatList
           data={messages}
-          keyExtractor={(item, index) => index.toString()}
+          keyExtractor={(item, index) => item.id || index.toString()}
           renderItem={renderItem}
           contentContainerStyle={styles.listContainer}
+          inverted={true}
         />
 
         <View style={styles.inputContainer}>

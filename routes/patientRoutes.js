@@ -1080,6 +1080,12 @@ router.post("/messages/send", async (req, res) => {
       },
     });
 
+    const { emitToUser } = require("../socket/socketHandler.cjs");
+    emitToUser(String(receiverId), "receiveMessage", {
+      ...created,
+      timestamp: created.createdAt
+    });
+
     return res.status(201).json({ success: true, data: created });
   } catch (err) {
     console.error("❌ POST /patient/messages/send error:", err);

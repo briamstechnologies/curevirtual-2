@@ -32,7 +32,21 @@ router.get("/waiting-patients", async (req, res) => {
         status: { in: ["CHECKED_IN", "WAITING"] },
       },
       include: {
-        patient: { include: { user: true } },
+        patient: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                gender: true,
+                dateOfBirth: true,
+              },
+            },
+          },
+        },
       },
       orderBy: { appointmentDate: "asc" },
     });
@@ -381,6 +395,7 @@ router.get("/my-patients", async (req, res) => {
             firstName: true,
             lastName: true,
             email: true,
+            phone: true,
             dateOfBirth: true,
             gender: true,
           },
@@ -426,6 +441,9 @@ router.get("/patient/:id", async (req, res) => {
             firstName: true,
             lastName: true,
             email: true,
+            phone: true,
+            gender: true,
+            dateOfBirth: true,
             createdAt: true,
           },
         },
@@ -494,8 +512,8 @@ router.post("/appointments", async (req, res) => {
     const finalAppointment = await prisma.appointment.findUnique({
       where: { id: newAppointment.id },
       include: {
-        doctor: { include: { user: true } },
-        patient: { include: { user: true } },
+        doctor: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } } } },
+        patient: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, gender: true, dateOfBirth: true } } } },
       },
     });
 
@@ -532,8 +550,8 @@ router.patch("/appointments/:id", async (req, res) => {
         ...(status && { status }),
       },
       include: {
-        doctor: { include: { user: true } },
-        patient: { include: { user: true } },
+        doctor: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } } } },
+        patient: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, gender: true, dateOfBirth: true } } } },
       },
     });
 
@@ -581,8 +599,8 @@ router.get("/appointments", async (req, res) => {
     const appointments = await prisma.appointment.findMany({
       where: { doctorId: doctorProfile.id },
       include: {
-        doctor: { include: { user: true } },
-        patient: { include: { user: true } },
+        doctor: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } } } },
+        patient: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, gender: true, dateOfBirth: true } } } },
       },
       orderBy: { appointmentDate: "desc" },
     });

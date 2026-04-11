@@ -72,10 +72,8 @@ export default function PharmacyInbox() {
     if (!userId) return;
     try {
       setLoading(true);
-      // Use generic messages endpoint which is now secured by backend to return only own messages
-      const res = await api.get(`/messages/inbox`, {
-        params: { userId }, // Included for compatibility, though backend prefers token
-      });
+      // Use unified messaging endpoint
+      const res = await api.get("/messages/inbox");
       const items = Array.isArray(res.data) ? res.data : res.data?.data || [];
       setMessages(items);
     } catch (err) {
@@ -116,12 +114,10 @@ export default function PharmacyInbox() {
     if (!replyContent.trim() || !selectedMessage) return;
     setSending(true);
     try {
-      // Determine effective sender ID from message (could be senderId or adminSenderId)
-      const replyToId = selectedMessage.senderId || selectedMessage.adminSenderId;
-
+      // Use contactId from the inbox response
       await api.post("/messages/send", {
         senderId: userId, 
-        receiverId: replyToId, 
+        receiverId: selectedMessage.contactId, 
         content: replyContent,
       });
       setReplyContent("");
@@ -190,10 +186,6 @@ export default function PharmacyInbox() {
               <tbody>
                {messages.map((msg) => {
                 const isRead = !!msg.readAt;
-                // Calculate display name from sender logic
-                const senderName = msg.sender?.firstName
-                  ? `${msg.sender.firstName} ${msg.sender.lastName || ""}`
-                  : (msg.sender?.name || (msg.adminSenderId ? "Admin" : "Unknown"));
                 
                 return (
                   <tr
@@ -203,7 +195,9 @@ export default function PharmacyInbox() {
                     }`}
                     onClick={() => openMessage(msg)}
                   >
-                    <td className="p-3">{senderName}</td>
+                    <td className="p-3">
+                      {msg.contactName || "Unknown"}
+                    </td>
                     <td className="p-3 truncate max-w-xs">{msg.content}</td>
                     <td className="p-3">{new Date(msg.createdAt).toLocaleString()}</td>
                     <td className="p-3 text-center">
@@ -249,9 +243,7 @@ export default function PharmacyInbox() {
               {/* Header + inline delete */}
               <div className="flex items-center justify-between">
                 <h4 className="text-xl font-bold text-[#190366]">
-                  From {selectedMessage.sender?.firstName
-                    ? `${selectedMessage.sender.firstName} ${selectedMessage.sender.lastName || ""}`
-                    : (selectedMessage.sender?.name || (selectedMessage.adminSenderId ? "Admin" : "Unknown"))}
+                  From {selectedMessage.contactName || "Unknown"}
                 </h4>
                 <button
                   title="Delete"

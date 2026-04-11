@@ -95,10 +95,10 @@ export default function PatientHistoryScreen({ route, navigation }) {
 
           {/* Info Cards */}
           <InfoCard icon="📧" label="EMAIL" value={history.user?.email} />
-          <InfoCard icon="📞" label="PHONE" value={history.user?.phone || history.phone} />
-          <InfoCard icon="🎂" label="DATE OF BIRTH" value={history.dateOfBirth ? new Date(history.dateOfBirth).toLocaleDateString() : null} />
-          <InfoCard icon="⚧️" label="GENDER" value={history.gender} />
-          <InfoCard icon="🩸" label="BLOOD TYPE" value={history.bloodType} />
+          <InfoCard icon="📞" label="PHONE" value={history.user?.phone} />
+          <InfoCard icon="🎂" label="DATE OF BIRTH" value={history.user?.dateOfBirth ? new Date(history.user?.dateOfBirth).toLocaleDateString() : null} />
+          <InfoCard icon="⚧️" label="GENDER" value={history.user?.gender} />
+          <InfoCard icon="🩸" label="BLOOD TYPE" value={history.bloodGroup} />
           <InfoCard icon="⚕️" label="ALLERGIES" value={history.allergies} />
           <InfoCard
             icon="📋"
