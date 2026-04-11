@@ -134,8 +134,13 @@ router.post("/send", verifyToken, async (req, res) => {
     const actualSenderId = senderId || req.user.id;
     const targetRecipient = receiverId || recipient;
 
-    if (!targetRecipient || !content) {
-      return res.status(400).json({ error: "Recipient and content are required" });
+    if (!targetRecipient) {
+      console.error("❌ Send Error: Missing recipient", req.body);
+      return res.status(400).json({ error: "Recipient is required", debug: { body: req.body } });
+    }
+    if (!content) {
+      console.error("❌ Send Error: Missing content", req.body);
+      return res.status(400).json({ error: "Content is required", debug: { body: req.body } });
     }
 
     const conversationId = [String(actualSenderId), String(targetRecipient)].sort().join(":");
