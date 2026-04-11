@@ -27,8 +27,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../../../theme/designSystem';
@@ -50,7 +53,7 @@ const formatDate = (dateStr) => {
   }
 };
 
-const AppointmentCard = ({ item, onPress }) => {
+const AppointmentCard = ({ item, onPress, onEditStatus }) => {
   // ✅ Correct path: patient.user.firstName (NOT patient.firstName)
   const patientFirst = item.patient?.user?.firstName || '';
   const patientLast = item.patient?.user?.lastName || '';
@@ -67,11 +70,17 @@ const AppointmentCard = ({ item, onPress }) => {
           <Text style={styles.patientName}>{patientName}</Text>
           {/* ✅ Correct field: appointmentDate */}
           <Text style={styles.timeText}>{formatDate(item.appointmentDate)}</Text>
-          {item.status && (
-            <View style={[styles.typeBadge, { backgroundColor: `${COLORS.brandGreen}15` }]}>
-              <Text style={[styles.typeText, { color: COLORS.brandGreen }]}>{item.status}</Text>
-            </View>
-          )}
+          <View style={styles.detailRow}>
+            {item.status && (
+              <View style={[styles.typeBadge, { backgroundColor: `${COLORS.brandGreen}15` }]}>
+                <Text style={[styles.typeText, { color: COLORS.brandGreen }]}>{item.status}</Text>
+              </View>
+            )}
+            <TouchableOpacity style={styles.editBadge} onPress={() => onEditStatus(item)}>
+              <Ionicons name="create-outline" size={12} color={COLORS.brandBlue} />
+              <Text style={styles.editText}>Edit Status</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
       <TouchableOpacity style={styles.callBtn} activeOpacity={0.85}>
@@ -88,6 +97,11 @@ export default function DoctorDashboard({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Editing State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedAppt, setSelectedAppt] = useState(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
   const fetchData = useCallback(async () => {
     try {
       // Both requests in parallel for speed
@@ -100,13 +114,6 @@ export default function DoctorDashboard({ navigation }) {
         const data = apptRes.value.data;
         const list = Array.isArray(data) ? data : (data?.data || data?.appointments || []);
         setAppointments(list);
-        console.log('[DoctorDashboard] Appointments loaded:', list.length);
-        // Debug: log first item's structure
-        if (list[0]) {
-          console.log('[DoctorDashboard] First appointment keys:', Object.keys(list[0]));
-          console.log('[DoctorDashboard] patient.user:', list[0]?.patient?.user);
-          console.log('[DoctorDashboard] appointmentDate:', list[0]?.appointmentDate);
-        }
       } else {
         console.error('[DoctorDashboard] Appointments error:', apptRes.reason?.message);
       }
@@ -114,8 +121,8 @@ export default function DoctorDashboard({ navigation }) {
       if (statsRes.status === 'fulfilled') {
         setStats(statsRes.value.data);
       }
-    } catch (error) {
-      console.error('[DoctorDashboard] Unexpected error:', error.message || error);
+    } catch (_error) {
+      console.error('[DoctorDashboard] Unexpected error:', _error.message || _error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -126,87 +133,86 @@ export default function DoctorDashboard({ navigation }) {
 
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
-  // Use displayName from normalized user object (firstName set by authService)
-  const displayName = user?.firstName || user?.name || 'Doctor';
+  const handleUpdateStatus = async (newStatus) => {
+    if (!selectedAppt) return;
+    try {
+      setUpdatingStatus(true);
+      await api.patch(`/doctor/appointments/${selectedAppt.id}`, { status: newStatus });
+      setShowEditModal(false);
+      fetchData(); // Refresh list
+    } catch (_error) {
+      Alert.alert("Update Failed", "Could not update appointment status. Please try again.");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
-  // Stat values — prefer from API stats, fall back to counting locally
+  const openStatusModal = (appt) => {
+    setSelectedAppt(appt);
+    setShowEditModal(true);
+  };
+
+  // Use displayName from normalized user object
+  const firstName = user?.firstName || 'Doctor';
+  const lastName = user?.lastName || '';
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  // Stat values
   const total = stats?.totalAppointments ?? appointments.length;
   const pending = stats?.pendingAppointments ?? appointments.filter(a => a.status === 'PENDING').length;
   const completed = stats?.completedAppointments ?? appointments.filter(a => a.status === 'COMPLETED').length;
 
   const ListHeader = (
     <>
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.headerLeft} 
-          onPress={() => navigation.openDrawer()}
-          activeOpacity={0.7}
-        >
-          <View style={styles.logoWrapper}>
-            <Image source={logo} style={styles.logoSmall} resizeMode="contain" />
+      {/* ── Top Premium Card ── */}
+      <View style={styles.topCardWrapper}>
+        <View style={styles.topCard}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.brandRow}>
+              <View style={styles.miniLogoBg}>
+                <Image source={logo} style={styles.logoMini} resizeMode="contain" />
+              </View>
+              <Text style={styles.brandText}>CureVirtual</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.openDrawer()}>
+              <Ionicons name="menu-outline" size={28} color={COLORS.white} />
+            </TouchableOpacity>
           </View>
-          <View>
-            <Text style={styles.greeting}>Dr. {displayName}</Text>
-            <Text style={styles.subGreeting}>Your Schedule</Text>
+          
+          <View style={styles.userInfoRow}>
+            <View style={styles.userTextContainer}>
+              <Text style={styles.userNameText}>{fullName}</Text>
+              <View style={styles.statusRow}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusLabel}>Verified Doctor Portfolio</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.logoutMiniBtn} onPress={logout}>
+              <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={logout} style={styles.logoutBtn} activeOpacity={0.8}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+          
+          <Text style={styles.cardInfoText}>Managing {pending} pending consultations today</Text>
+        </View>
       </View>
 
       {/* ── Stat Cards ── */}
       <View style={styles.statsRow}>
-        <TouchableOpacity 
-          style={[styles.statCard, { borderTopColor: COLORS.brandGreen }]}
-          onPress={() => navigation.navigate('HomeTab')}
-        >
+        <TouchableOpacity style={[styles.statCard, { borderTopColor: COLORS.brandGreen }]}>
           <Text style={styles.statValue}>{total}</Text>
           <Text style={styles.statLabel}>Total</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.statCard, { borderTopColor: COLORS.brandBlue }]}
-          onPress={() => navigation.navigate('HomeTab')}
-        >
+        <TouchableOpacity style={[styles.statCard, { borderTopColor: COLORS.brandBlue }]}>
           <Text style={styles.statValue}>{pending}</Text>
           <Text style={styles.statLabel}>Pending</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.statCard, { borderTopColor: COLORS.success }]}
-          onPress={() => navigation.navigate('HomeTab')}
-        >
+        <TouchableOpacity style={[styles.statCard, { borderTopColor: COLORS.success }]}>
           <Text style={styles.statValue}>{completed}</Text>
           <Text style={styles.statLabel}>Completed</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ── Extra Stats ── */}
-      <View style={styles.statsRow}>
-        <TouchableOpacity 
-          style={[styles.statCard, { borderTopColor: COLORS.brandOrange }]}
-          onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab', params: { screen: 'Prescriptions' }})}
-        >
-          <Text style={styles.statValue}>{stats?.totalPrescriptions ?? 0}</Text>
-          <Text style={styles.statLabel}>Prescriptions</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.statCard, { borderTopColor: COLORS.brandBlue }]}
-          onPress={() => navigation.navigate('PatientsTab')}
-        >
-          <Text style={styles.statValue}>{stats?.activePatients ?? 0}</Text>
-          <Text style={styles.statLabel}>Patients</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.statCard, { borderTopColor: COLORS.slate400 }]}
-          onPress={() => navigation.navigate('MessagesTab')}
-        >
-          <Text style={styles.statValue}>{stats?.totalMessages ?? 0}</Text>
-          <Text style={styles.statLabel}>Messages</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.sectionTitle}>Appointments</Text>
+      <Text style={styles.sectionTitle}>Consultations</Text>
       {loading && <ActivityIndicator color={COLORS.brandGreen} style={{ marginBottom: SPACING.base }} />}
     </>
   );
@@ -219,6 +225,7 @@ export default function DoctorDashboard({ navigation }) {
         renderItem={({ item }) => (
           <AppointmentCard
             item={item}
+            onEditStatus={openStatusModal}
             onPress={() => navigation.navigate('PatientHistory', {
               patientId: item.patient?.id || item.patientId,
             })}
@@ -245,6 +252,49 @@ export default function DoctorDashboard({ navigation }) {
         }
         showsVerticalScrollIndicator={false}
       />
+
+      {/* ── Status Update Modal ── */}
+      <Modal
+        visible={showEditModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Update Appt Status</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <Ionicons name="close" size={24} color={COLORS.textMain} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              {['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].map((status) => (
+                <TouchableOpacity 
+                  key={status} 
+                  style={[
+                    styles.statusOption,
+                    selectedAppt?.status === status && styles.selectedOption
+                  ]}
+                  onPress={() => handleUpdateStatus(status)}
+                  disabled={updatingStatus}
+                >
+                  <Text style={[
+                    styles.statusOptionText,
+                    selectedAppt?.status === status && styles.selectedOptionText
+                  ]}>{status}</Text>
+                  {selectedAppt?.status === status && <Ionicons name="checkmark-circle" size={20} color={COLORS.brandGreen} />}
+                </TouchableOpacity>
+              ))}
+              
+              {updatingStatus && (
+                <ActivityIndicator size="small" color={COLORS.brandGreen} style={{ marginTop: 10 }} />
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -252,30 +302,49 @@ export default function DoctorDashboard({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bgMuted },
   listContent: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  
+  // ── Top Premium Card ──
+  topCardWrapper: { marginBottom: SPACING.xl },
+  topCard: {
+    backgroundColor: COLORS.brandGreen,
+    borderRadius: 24,
+    padding: SPACING.xl,
+    ...SHADOWS.green,
+  },
+  cardHeaderRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
     alignItems: 'center',
     marginBottom: SPACING.xl,
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
-  logoWrapper: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.base,
-    padding: SPACING.sm,
-    ...SHADOWS.sm,
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  miniLogoBg: {
+    padding: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
   },
-  logoSmall: { width: 32, height: 32 },
-  greeting: { fontSize: TYPOGRAPHY.lg, fontWeight: TYPOGRAPHY.bold, color: COLORS.textMain },
-  subGreeting: { fontSize: TYPOGRAPHY.sm, color: COLORS.textMuted, marginTop: 2 },
-  logoutBtn: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.dangerLight,
-    borderRadius: RADIUS.md,
+  logoMini: { width: 20, height: 20 },
+  brandText: { color: COLORS.white, fontWeight: TYPOGRAPHY.black, fontSize: 16 },
+  
+  userInfoRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  logoutText: { color: COLORS.danger, fontWeight: TYPOGRAPHY.bold, fontSize: TYPOGRAPHY.sm },
-  statsRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm },
+  userTextContainer: { flex: 1 },
+  userNameText: { color: COLORS.white, fontSize: 24, fontWeight: TYPOGRAPHY.bold },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ADE80' },
+  statusLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: TYPOGRAPHY.medium },
+  logoutMiniBtn: { 
+    backgroundColor: 'rgba(255,255,255,0.2)', 
+    padding: 10, 
+    borderRadius: 12 
+  },
+  cardInfoText: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
+
+  statsRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.xl },
   statCard: {
     flex: 1,
     backgroundColor: COLORS.white,
@@ -287,11 +356,11 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: TYPOGRAPHY.xl, fontWeight: TYPOGRAPHY.black, color: COLORS.textMain },
   statLabel: { fontSize: TYPOGRAPHY.xs, color: COLORS.textMuted, marginTop: 2, fontWeight: TYPOGRAPHY.medium },
+
   sectionTitle: {
     fontSize: TYPOGRAPHY.lg,
     fontWeight: TYPOGRAPHY.bold,
     color: COLORS.slate700,
-    marginTop: SPACING.md,
     marginBottom: SPACING.base,
   },
   appointmentCard: {
@@ -318,11 +387,15 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: TYPOGRAPHY.md, fontWeight: TYPOGRAPHY.black, color: COLORS.brandGreen },
   patientName: { fontSize: TYPOGRAPHY.md, fontWeight: TYPOGRAPHY.semiBold, color: COLORS.textMain },
   timeText: { fontSize: TYPOGRAPHY.sm, color: COLORS.textMuted, marginTop: 3 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 },
   typeBadge: {
-    marginTop: 4, borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.sm, paddingVertical: 2, alignSelf: 'flex-start',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm, paddingVertical: 2,
   },
-  typeText: { fontSize: TYPOGRAPHY.xs, fontWeight: TYPOGRAPHY.bold },
+  typeText: { fontSize: 10, fontWeight: TYPOGRAPHY.bold },
+  editBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  editText: { fontSize: 10, color: COLORS.brandBlue, fontWeight: TYPOGRAPHY.semiBold },
+
   callBtn: {
     backgroundColor: COLORS.brandGreen,
     paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
@@ -333,4 +406,42 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 40, marginBottom: SPACING.md },
   emptyText: { fontSize: TYPOGRAPHY.md, fontWeight: TYPOGRAPHY.semiBold, color: COLORS.textMuted },
   emptySubText: { fontSize: TYPOGRAPHY.sm, color: COLORS.textPlaceholder, marginTop: SPACING.xs, textAlign: 'center' },
+
+  // ── Modal Styles ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: SPACING.xl,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  modalTitle: { fontSize: 18, fontWeight: TYPOGRAPHY.bold, color: COLORS.textMain },
+  modalBody: { gap: 12 },
+  statusOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: COLORS.slate50,
+    borderWidth: 1,
+    borderColor: COLORS.slate100,
+  },
+  selectedOption: {
+    backgroundColor: `${COLORS.brandGreen}10`,
+    borderColor: COLORS.brandGreen,
+  },
+  statusOptionText: { fontSize: 16, fontWeight: TYPOGRAPHY.medium, color: COLORS.textMain },
+  selectedOptionText: { color: COLORS.brandGreen, fontWeight: TYPOGRAPHY.bold },
 });

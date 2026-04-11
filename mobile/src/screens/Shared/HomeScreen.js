@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { DrawerActions } from '@react-navigation/native';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
-import { COLORS, SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../../../theme/designSystem';
+import { COLORS, SPACING, TYPOGRAPHY, SHADOWS } from '../../../theme/designSystem';
 import FloatingChatbotButton from '../../components/FloatingChatbotButton';
 
 const DASHBOARD_CONFIGS = {
@@ -148,6 +148,14 @@ export default function HomeScreen({ navigation }) {
                 <View style={styles.starCircle}>
                   <Ionicons name="star" size={12} color="#FFF" />
                 </View>
+              </View>
+            </View>
+
+            <View style={styles.userInfoRowMain}>
+              <Text style={styles.walletUserName}>{user?.firstName} {user?.lastName}</Text>
+              <View style={styles.walletStatusRow}>
+                <View style={styles.walletStatusDot} />
+                <Text style={styles.walletStatusLabel}>Active Profile</Text>
               </View>
             </View>
 
@@ -327,6 +335,31 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  userInfoRowMain: {
+    marginTop: -SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  walletUserName: {
+    color: COLORS.white,
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  walletStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  walletStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4ADE80',
+    marginRight: 6,
+  },
+  walletStatusLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
   },
   walletLabel: {
     color: 'rgba(255,255,255,0.8)',
