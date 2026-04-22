@@ -25,11 +25,7 @@ export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div
-      className={`min-h-screen transition-all duration-300 ${
-        theme === "dark" ? "bg-[var(--bg-main)]" : "bg-[var(--bg-main)]"
-      }`}
-    >
+    <div className="min-h-screen transition-all duration-300 bg-transparent">
       {/* Refined Fixed Navbar */}
       <nav className="fixed w-full z-50 backdrop-blur-3xl border-b border-[var(--border)] px-4 md:px-6 py-3 bg-[var(--bg-glass)]/80 transition-all duration-300">
         <div className="page-container flex items-center justify-between h-16 md:h-20">
