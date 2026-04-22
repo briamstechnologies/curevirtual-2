@@ -124,7 +124,7 @@ export default function Chatbot() {
                       EMERGENCY WARNING
                     </div>
                   )}
-                  {msg.text}
+                  {typeof msg.text === 'object' ? JSON.stringify(msg.text) : msg.text}
                 </div>
               </div>
 
