@@ -36,7 +36,9 @@ api.interceptors.response.use(
   async (error) => {
     if (!error.response) {
       console.error("🌐 Network error — check backend connection");
-      alert("Network error. Please check your connection.");
+      // Intentionally not showing a global alert/toast here. 
+      // Background polling (like unread counts) can fail on network changes (ERR_NETWORK_CHANGED).
+      // Components should handle UI feedback in their own catch blocks.
       return Promise.reject(error);
     }
 
