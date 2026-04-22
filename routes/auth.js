@@ -7,7 +7,7 @@ const { supabaseAdmin } = require("../lib/supabaseAdmin");
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
-const REFRESH_SECRET = process.env.REFRESH_SECRET || (JWT_SECRET + "_refresh");
+const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || process.env.REFRESH_SECRET || (JWT_SECRET + "_refresh");
 
 const generateTokensAndSetCookies = (res, user) => {
   const token = jwt.sign(
@@ -386,9 +386,9 @@ router.post("/verify-otp-login", async (req, res) => {
 // -------------------------
 router.post("/refresh", async (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken || (req.body && req.body.refreshToken);
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
     if (!refreshToken) {
-      return res.status(401).json({ error: "No refresh token" });
+      return res.status(401).json({ error: "No refresh token provided" });
     }
 
     const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
@@ -407,10 +407,10 @@ router.post("/refresh", async (req, res) => {
       { expiresIn: "15m" }
     );
 
-    res.json({ token: newAccessToken });
+    res.json({ accessToken: newAccessToken });
   } catch (err) {
     console.error("Token Refresh Error:", err.message);
-    res.status(403).json({ error: "Refresh token expired or invalid" });
+    res.status(403).json({ error: "Refresh token expired or invalid. Please log in again." });
   }
 });
 

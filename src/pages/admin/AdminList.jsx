@@ -124,7 +124,7 @@ export default function AdminList() {
         {error && (
           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
             <p className="text-red-500 text-[10px] font-black uppercase tracking-widest">
-              {error}
+              {typeof error === 'object' ? error?.message || 'Error occurred' : error}
             </p>
           </div>
         )}

@@ -151,7 +151,7 @@ export default function SubscribersList({
           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3">
             <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
             <p className="text-red-500 text-[10px] font-black uppercase tracking-widest">
-              {err}
+              {typeof err === 'object' ? err?.message || 'Error occurred' : err}
             </p>
           </div>
         )}

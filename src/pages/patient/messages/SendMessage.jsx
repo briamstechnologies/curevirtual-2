@@ -122,7 +122,7 @@ export default function PatientSendMessage() {
             </div>
 
             {success && <p className="text-green-400 mb-2">{success}</p>}
-            {error && <p className="text-red-400 mb-2">{error}</p>}
+            {error && <p className="text-red-400 mb-2">{typeof error === 'object' ? error?.message || 'Error occurred' : error}</p>}
 
             <button
               type="submit"

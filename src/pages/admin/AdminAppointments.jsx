@@ -72,7 +72,7 @@ export default function AdminAppointments() {
         <Topbar userName={userName} />
         <h1 className="text-3xl font-bold mb-6">Appointments Management</h1>
 
-        {error && <p className="text-red-400 mb-4">{error}</p>}
+        {error && <p className="text-red-400 mb-4">{typeof error === 'object' ? error?.message || 'Error occurred' : error}</p>}
 
         {loading ? (
           <p>Loading appointments...</p>

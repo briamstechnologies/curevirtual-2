@@ -18,71 +18,11 @@ const api = axios.create({
    🔒 2. Attach JWT Token Automatically & Refresh if Expired
    ============================================================ */
 
-function isTokenExpired(token) {
-  try {
-    const { exp } = JSON.parse(atob(token.split(".")[1]));
-    // Add a small buffer (e.g., 10 seconds) before actual expiry
-    return Date.now() >= (exp * 1000) - 10000;
-  } catch {
-    return true;
-  }
-}
 
-let isRefreshing = false;
-let refreshSubscribers = [];
-
-const subscribeTokenRefresh = (cb) => {
-  refreshSubscribers.push(cb);
-};
-
-const onRefreshed = (token) => {
-  refreshSubscribers.forEach((cb) => cb(token));
-  refreshSubscribers = [];
-};
 
 api.interceptors.request.use(
-  async (config) => {
-    let token = localStorage.getItem("token");
-
-    if (token && isTokenExpired(token)) {
-      if (!isRefreshing) {
-        isRefreshing = true;
-        try {
-          const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001/api";
-          const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            credentials: "include" 
-          });
-
-          if (!response.ok) {
-            throw new Error("Refresh failed");
-          }
-
-          const data = await response.json();
-          token = data.token;
-          if (token) {
-            localStorage.setItem("token", token);
-          }
-          isRefreshing = false;
-          onRefreshed(token);
-        } catch (error) {
-          console.error("Token refresh failed in API interceptor", error);
-          isRefreshing = false;
-          // Optionally handle forced logout here
-        }
-      } else {
-        // Wait for the ongoing refresh to complete
-        token = await new Promise((resolve) => {
-          subscribeTokenRefresh((newToken) => {
-            resolve(newToken);
-          });
-        });
-      }
-    }
-
+  (config) => {
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -103,10 +43,45 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Handle expired tokens globally
-    if (error.response.status === 401) {
-      console.warn("🔒 Token expired — preserving auth data");
-      // Do not clear localStorage or redirect; allow app to handle it gracefully
+    const originalRequest = error.config;
+
+    // Only retry once, and only for 401 errors
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001/api";
+        const res = await axios.post(`${apiBaseUrl}/auth/refresh`, {}, { 
+          withCredentials: true // needed if using HttpOnly cookie
+        });
+        
+        const newToken = res.data.accessToken;
+        localStorage.setItem("token", newToken);
+        originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
+        
+        // update api instance defaults just in case
+        api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+
+        return api(originalRequest); // retry original request
+
+      } catch (refreshError) {
+        // Refresh failed — log out user cleanly
+        localStorage.removeItem("token");
+        localStorage.removeItem("userId");
+        localStorage.removeItem("role");
+        window.location.href = "/login";
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // For 404 on refresh itself — don't retry, just logout
+    if (error.response?.status === 404 && 
+        error.config.url.includes("/auth/refresh")) {
+      console.error("Refresh endpoint not found. Check backend routes.");
+      localStorage.removeItem("token");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("role");
+      window.location.href = "/login";
     }
 
     return Promise.reject(error);

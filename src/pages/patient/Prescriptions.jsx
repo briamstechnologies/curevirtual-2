@@ -139,7 +139,7 @@ export default function PatientPrescriptions() {
           <h1 className="text-3xl font-bold">My Prescriptions</h1>
         </div>
 
-        {error && <p className="text-red-400 mb-4">{error}</p>}
+        {error && <p className="text-red-400 mb-4">{typeof error === 'object' ? error?.message || 'Error occurred' : error}</p>}
 
         {loading ? (
           <p>Loading prescriptions...</p>

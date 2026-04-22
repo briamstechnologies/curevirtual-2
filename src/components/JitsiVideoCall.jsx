@@ -291,7 +291,7 @@ export default function JitsiVideoCall({
             maxWidth: 400,
           }}
         >
-          {error}
+          {typeof error === 'object' ? error?.message || 'Error occurred' : error}
         </p>
         <button
           onClick={() => window.location.reload()}

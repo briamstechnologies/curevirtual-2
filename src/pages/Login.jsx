@@ -299,7 +299,7 @@ export default function Login() {
               <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-3 animate-shake">
                 <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></div>
                 <p className="text-red-500 text-[10px] font-black uppercase tracking-wider">
-                  {error}
+                  {typeof error === 'object' ? error?.message || 'Error occurred' : error}
                 </p>
               </div>
             )}

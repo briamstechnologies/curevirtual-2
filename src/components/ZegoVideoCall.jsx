@@ -109,7 +109,7 @@ export default function ZegoVideoCall({ roomName, userId, userName = "User", onC
           ⚠️
         </div>
         <h2 className="text-xl font-bold mb-2">Connection Error</h2>
-        <p className="text-gray-400 text-center max-w-md mb-6">{error}</p>
+        <p className="text-gray-400 text-center max-w-md mb-6">{typeof error === 'object' ? error?.message || 'Error occurred' : error}</p>
         <button
           onClick={() => window.location.reload()}
           className="px-8 py-3 bg-green-500 text-black rounded-xl font-bold hover:bg-green-400 transition-colors"

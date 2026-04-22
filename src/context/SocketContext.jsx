@@ -3,16 +3,16 @@ import { io } from "socket.io-client";
 
 import { SocketContext } from "./useSocket";
 
+// Derive socket URL from API base URL (strip /api suffix)
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001/api";
+const backendUrl = apiBaseUrl.replace(/\/api\/?$/, "");
+
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionState, setConnectionState] = useState("disconnected"); // 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
-
-  // Derive socket URL from API base URL (strip /api suffix)
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001/api";
-  const backendUrl = apiBaseUrl.replace(/\/api\/?$/, "");
 
   useEffect(() => {
     // Get user info from localStorage
@@ -64,6 +64,7 @@ export const SocketProvider = ({ children }) => {
       if (error.message.includes("jwt expired") || error.message.includes("Authentication failed")) {
         console.warn("🔐 Socket Auth Failed: Token is likely expired or invalid. Attempting refresh.");
         newSocket.io.opts.reconnection = false; // stop auto reconnect
+        newSocket.disconnect(); // cleanly stop before refresh
         
         try {
           const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
@@ -79,7 +80,7 @@ export const SocketProvider = ({ children }) => {
           }
 
           const data = await response.json();
-          const newToken = data.token;
+          const newToken = data.accessToken || data.token; // Handle both
           
           if (newToken) {
             console.log("✅ Token successfully refreshed for socket reconnect.");
@@ -148,7 +149,7 @@ export const SocketProvider = ({ children }) => {
         newSocket.disconnect();
       }
     };
-  }, [backendUrl, apiBaseUrl]);
+  }, []);
 
   const contextValue = {
     socket,
