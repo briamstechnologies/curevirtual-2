@@ -5,12 +5,29 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  min-height: 100%;
+  background: linear-gradient(135deg, #B4DCFF 0%, #3DA1FF 50%, #1464C8 100%);
+  background-attachment: fixed;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    background: linear-gradient(135deg, #08193A 0%, #143C78 50%, #1E5AB4 100%);
+    background-attachment: fixed;
+  }
+}
+
+html.dark {
+  background: linear-gradient(135deg, #08193A 0%, #143C78 50%, #1E5AB4 100%);
+  background-attachment: fixed;
 }
 
 a {
@@ -27,7 +44,17 @@ body {
   display: flex;
   place-items: center;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100%;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  pointer-events: none;
+  z-index: -1;
 }
 
 h1 {
@@ -57,7 +84,10 @@ button:focus-visible {
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
-    background-color: #ffffff;
+  }
+  html:not(.dark) {
+    background: linear-gradient(135deg, #B4DCFF 0%, #3DA1FF 50%, #1464C8 100%);
+    background-attachment: fixed;
   }
   a:hover {
     color: #747bff;
