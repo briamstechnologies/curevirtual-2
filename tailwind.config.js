@@ -60,6 +60,9 @@ module.exports = {
         body: ["Inter", "sans-serif"],
         label: ["Inter", "sans-serif"],
       },
+      boxShadow: {
+        premium: "0 25px 50px -12px rgba(14, 165, 233, 0.15)",
+      },
     },
   },
   plugins: [],
