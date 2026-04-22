@@ -20,10 +20,14 @@ window.addEventListener("unhandledrejection", (event) => {
     window.location.reload();
   }
 });
+import { UserProvider } from "./context/UserContext.jsx";
+
 createRoot(document.getElementById("root")).render(
-  <SocketProvider>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
-  </SocketProvider>
+  <UserProvider>
+    <SocketProvider>
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    </SocketProvider>
+  </UserProvider>
 );

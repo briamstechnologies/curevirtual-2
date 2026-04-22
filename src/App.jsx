@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoadingSpinner from "./components/LoadingSpinner";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { UserProvider } from "./context/UserContext";
 
 /* ================================
    SUPERADMIN
@@ -151,7 +150,6 @@ export default function App() {
   return (
     <BrowserRouter>
       <StripeProvider>
-        <UserProvider>
           <ToastContainer position="top-right" autoClose={3000} />
           <Suspense fallback={<LoadingSpinner />}>
           <Routes>
@@ -772,7 +770,6 @@ export default function App() {
           </Routes>
         </Suspense>
         <Chatbot />
-      </UserProvider>
       </StripeProvider>
     </BrowserRouter>
   );

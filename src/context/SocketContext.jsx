@@ -5,7 +5,10 @@ import { SocketContext } from "./useSocket";
 import api from "../Lib/api";
 import { supabase } from "../Lib/supabase";
 
+import { useUser } from "./UserContext";
+
 export const SocketProvider = ({ children }) => {
+  const { user } = useUser();
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionState, setConnectionState] = useState("disconnected"); // 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
@@ -17,17 +20,20 @@ export const SocketProvider = ({ children }) => {
   const backendUrl = apiBaseUrl.replace(/\/api\/?$/, "");
 
   useEffect(() => {
-    // Get user info from localStorage
-    const userId = localStorage.getItem("userId");
-    const role = localStorage.getItem("role");
-    const name = localStorage.getItem("userName") || localStorage.getItem("name") || "User";
+    // Get user info from localStorage OR UserContext
+    const userId = user?.id || localStorage.getItem("userId");
+    const role = user?.role || localStorage.getItem("role");
+    const name = user?.name || localStorage.getItem("userName") || localStorage.getItem("name") || "User";
     const token = localStorage.getItem("token"); // JWT token for authentication
 
     if (!userId || !role || !token) {
-      console.warn("⚠️ No user credentials or token found. Socket connection delayed.");
+      console.log("ℹ️ Socket: Waiting for user authentication before connecting.");
+      setIsConnected(false);
+      setConnectionState("disconnected");
       return;
     }
 
+    console.log(`🔌 Socket: Initializing for user ${userId} (${role})...`);
     setConnectionState("connecting");
 
     // Initialize socket connection with JWT auth
@@ -172,7 +178,7 @@ export const SocketProvider = ({ children }) => {
         newSocket.disconnect();
       }
     };
-  }, [backendUrl]);
+  }, [backendUrl, user]);
 
   const contextValue = {
     socket,
