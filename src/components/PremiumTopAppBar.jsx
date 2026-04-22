@@ -1,6 +1,5 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { MaterialSymbol } from "react-material-symbols";
 
 export default function PremiumTopAppBar({ userName, userAvatar, role }) {
   return (
