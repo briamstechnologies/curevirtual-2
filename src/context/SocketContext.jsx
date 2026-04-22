@@ -58,30 +58,40 @@ export const SocketProvider = ({ children }) => {
       });
     });
 
+    const isRefreshing = { current: false };
+
     // Connection error
     newSocket.on("connect_error", async (error) => {
       console.error("❌ Socket connection error:", error.message);
 
-      // Handle JWT Expiration
-      if (error.message === "jwt expired" || error.message === "Authentication required") {
-        console.log("🔄 Socket token expired, attempting refresh...");
+      // Handle Authentication Issues (Expired, Invalid, or Missing)
+      const isAuthError =
+        error.message === "jwt expired" ||
+        error.message === "Authentication required" ||
+        error.message === "Invalid token";
+
+      if (isAuthError && !isRefreshing.current) {
+        isRefreshing.current = true;
+        console.log("🔄 Socket auth failed. Attempting token refresh...");
 
         try {
-          // 1. Get fresh Supabase session
+          // 1. Get fresh Supabase session (auto-refreshes if needed)
           const {
             data: { session },
             error: sessionError,
           } = await supabase.auth.getSession();
 
           if (sessionError || !session) {
-            console.error("❌ Supabase session lost. Redirecting to login.");
+            console.error("❌ Supabase session lost or invalid. Logging out.");
             localStorage.clear();
             window.location.href = "/login";
             return;
           }
 
-          // 2. Sync with backend to get a new legacy JWT
+          // 2. Sync with backend for new legacy JWT
           const userEmail = localStorage.getItem("email");
+          console.log(`📡 Syncing with backend for user: ${userEmail}`);
+          
           const res = await api.post("/auth/login-sync", {
             email: userEmail,
             supabaseId: session.user.id,
@@ -91,17 +101,22 @@ export const SocketProvider = ({ children }) => {
           const newToken = res.data.token;
 
           if (newToken) {
-            console.log("✅ Socket token refreshed successfully. Reconnecting...");
+            console.log("✅ Token refreshed. Updating socket and reconnecting...");
             localStorage.setItem("token", newToken);
 
-            // 3. Update socket auth and manually reconnect
+            // 3. Update socket auth and reconnect
             newSocket.auth.token = newToken;
             newSocket.connect();
-            return; // Exit to avoid setting state to reconnecting prematurely
+            
+            // Short delay before unlocking to avoid race conditions with quick retries
+            setTimeout(() => {
+              isRefreshing.current = false;
+            }, 2000);
+            return;
           }
         } catch (refreshErr) {
-          console.error("❌ Failed to refresh socket token:", refreshErr);
-          // If refresh fails, we might want to logout
+          console.error("❌ Critical failure during socket token refresh:", refreshErr);
+          isRefreshing.current = false;
         }
       }
 
