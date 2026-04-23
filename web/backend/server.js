@@ -30,7 +30,10 @@ const allowedOrigins = [
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  transports: ["websocket", "polling"], // Allow both, but 'websocket' is preferred for mobile
+  transports: ["polling", "websocket"], // Polling first for better compatibility, upgrade to websocket
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  allowEIO3: true,
   cors: {
     origin: (origin, callback) => {
       // allow requests with no origin (like mobile apps or curl requests)
@@ -117,18 +120,19 @@ app.use("/api/videocall", videocallRoutes);
 app.use("/api/otp", otpRoutes);
 
 // ----------------------------
-// ✅ SUPERADMIN ROUTES
+// ✅ SUPERADMIN / SHARED ADMIN ROUTES
 // ----------------------------
+const reportsRoutes = require("./routes/reports");
+app.use("/api/superadmin/reports", reportsRoutes);
+
 const superadminRoutes = require("./routes/superadmin");
 const settingsRoutes = require("./routes/settings");
-const reportsRoutes = require("./routes/reports");
 const logsRoutes = require("./routes/logs");
 const activityLogsRoutes = require("./routes/activityLogs");
 
 app.use("/api/superadmin", superadminRoutes);
 app.use("/api/superadmin/settings", settingsRoutes);
 app.use("/api/settings", settingsRoutes);
-app.use("/api/superadmin/reports", reportsRoutes);
 app.use("/api/superadmin/logs", logsRoutes);
 app.use("/api/superadmin/activity-logs", activityLogsRoutes);
 

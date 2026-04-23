@@ -2,7 +2,12 @@ const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 
 const prisma = require("../prisma/prismaClient");
+const { verifyToken, requireRole } = require("../middleware/rbac");
 const router = express.Router();
+
+// ✅ Apply shared access (ADMIN & SUPERADMIN)
+router.use(verifyToken);
+router.use(requireRole(["ADMIN", "SUPERADMIN"]));
 
 // ✅ System Reports Summary
 router.get("/summary", async (req, res) => {
