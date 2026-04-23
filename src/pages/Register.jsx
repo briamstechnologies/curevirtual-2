@@ -1,6 +1,6 @@
 // FILE: src/pages/Register.jsx
 import { useState } from "react";
-import { FiEye, FiEyeOff, FiMail, FiLock, FiArrowLeft, FiShield, FiUpload } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiMail, FiLock, FiArrowLeft, FiShield, FiUpload, FiX, FiCheckCircle } from "react-icons/fi";
 import { FaArrowRight, FaStethoscope } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
