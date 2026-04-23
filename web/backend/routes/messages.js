@@ -1,4 +1,4 @@
-// FILE: web/backend/routes/messages.js
+// FILE: routes/messages.js
 const prisma = require("../prisma/prismaClient");
 const express = require("express");
 const {
@@ -13,6 +13,7 @@ const router = express.Router();
 // Constants & helpers
 // ------------------------------------------------------------------
 const PAGE_SIZE_DEFAULT = 20;
+const VALID_FOLDERS = new Set(["inbox", "sent", "unread", "all"]);
 
 // Helper to derive a clean name from a user object
 function deriveName(user) {
@@ -73,9 +74,14 @@ router.patch("/:id/read", verifyToken, async (req, res) => {
 router.get("/inbox", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    // ⚠️ PostgreSQL Fix: Prisma `distinct` requires `orderBy` to match the distinct fields first.
+    // We fetch the latest message per conversationId, ordered by conversationId.
     const messages = await prisma.message.findMany({
       where: { OR: [{ senderId: userId }, { receiverId: userId }] },
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { conversationId: "asc" },
+        { createdAt: "desc" }
+      ],
       distinct: ["conversationId"],
       include: {
         sender: { select: { id: true, firstName: true, lastName: true, role: true, email: true } },
@@ -98,6 +104,9 @@ router.get("/inbox", verifyToken, async (req, res) => {
         isOutgoing,
       };
     });
+
+    // ✅ Sort by latest message globally (since distinct forced 'conversationId' sorting)
+    formatted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     return res.json({ data: formatted });
   } catch (err) {
@@ -133,8 +142,13 @@ router.post("/send", verifyToken, async (req, res) => {
     const actualSenderId = senderId || req.user.id;
     const targetRecipient = receiverId || recipient;
 
-    if (!targetRecipient || !content) {
-      return res.status(400).json({ error: "Recipient and content are required" });
+    if (!targetRecipient) {
+      console.error("❌ Send Error: Missing recipient", req.body);
+      return res.status(400).json({ error: "Recipient is required", debug: { body: req.body } });
+    }
+    if (!content) {
+      console.error("❌ Send Error: Missing content", req.body);
+      return res.status(400).json({ error: "Content is required", debug: { body: req.body } });
     }
 
     const conversationId = [String(actualSenderId), String(targetRecipient)].sort().join(":");
@@ -170,6 +184,50 @@ router.post("/send", verifyToken, async (req, res) => {
     console.error("❌ Universal Send Error:", e);
     return res.status(500).json({ error: "Failed to send message" });
   }
+});
+
+// POST /api/messages/mark-read
+// Marks messages as read by conversationId (bulk) or by specific messageIds.
+// Both fields are optional — if neither is provided the call is a no-op (200).
+router.post("/mark-read", verifyToken, async (req, res) => {
+  try {
+    const { conversationId, messageIds } = req.body;
+    const userId = req.user.id;
+
+    if (conversationId) {
+      // Mark all unread messages in this conversation where the current user is the receiver
+      await prisma.message.updateMany({
+        where: {
+          conversationId,
+          receiverId: userId,
+          readAt: null, // Only update truly unread messages (null = unread per schema)
+        },
+        data: { readAt: new Date() },
+      });
+    }
+
+    if (Array.isArray(messageIds) && messageIds.length > 0) {
+      // Mark specific messages as read — only if the current user is the receiver
+      await prisma.message.updateMany({
+        where: {
+          id: { in: messageIds },
+          receiverId: userId,
+          readAt: null,
+        },
+        data: { readAt: new Date() },
+      });
+    }
+
+    return res.json({ success: true, message: "Messages marked as read" });
+  } catch (err) {
+    console.error("❌ mark-read error:", err);
+    return res.status(500).json({ error: "Failed to mark messages as read" });
+  }
+});
+
+// Existing Folder-based routes (Legacy support)
+router.get("/folder/:folder", verifyToken, async (req, res) => {
+  return res.status(200).json({ data: [], message: "Use /inbox or /history for unified messaging" });
 });
 
 module.exports = router;
