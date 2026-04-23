@@ -252,7 +252,7 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
       prisma.registrationRequest.findMany({
         where,
         include: {
-          user: {
+          User: {
             select: {
               id: true,
               firstName: true,
@@ -297,7 +297,7 @@ router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
     const request = await prisma.registrationRequest.findUnique({
       where: { id: req.params.id },
       include: {
-        user: {
+        User: {
           select: {
             id: true,
             firstName: true,
@@ -345,7 +345,7 @@ router.patch('/:id/review', verifyToken, requireAdmin, async (req, res) => {
     const request = await prisma.registrationRequest.findUnique({
       where: { id: req.params.id },
       include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        User: { select: { id: true, firstName: true, lastName: true, email: true } },
       },
     });
 
@@ -378,9 +378,9 @@ router.patch('/:id/review', verifyToken, requireAdmin, async (req, res) => {
     });
 
     // ── Send email notification (non-blocking) ────────────────────────────────
-    const userName = `${request.user.firstName} ${request.user.lastName}`.trim();
+    const userName = `${request.User.firstName} ${request.User.lastName}`.trim();
     const emailParams = {
-      email: request.user.email,
+      email: request.User.email,
       name: userName,
       role: request.role,
     };
