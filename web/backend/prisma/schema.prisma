@@ -11,34 +11,36 @@ datasource db {
 }
 
 model User {
-  id                String           @id @default(uuid())
-  firstName         String
-  middleName        String?
-  lastName          String
-  email             String           @unique
-  phone             String?
-  password          String?
-  role              UserRole         @default(PATIENT)
-  dateOfBirth       DateTime
-  gender            Gender
-  maritalStatus     MaritalStatus?   @default(SINGLE)
-  subscriptionState SubStatus        @default(UNSUBSCRIBED)
-  organizationId    String?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  stripeCustomerId  String?          @unique
-  doctor            DoctorProfile?
-  recvMessages      Message[]        @relation("MessagesRecv")
-  sentMessages      Message[]        @relation("MessagesSent")
-  patient           PatientProfile?
-  pharmacy          PharmacyProfile?
-  subscriptions     Subscription[]
-  supportAgent      SupportAgent?
-  sentReplies       SupportReply[]
-  raisedTickets     SupportTicket[]  @relation("raisedBy")
-  organization      Organization?    @relation(fields: [organizationId], references: [id])
-  notifications     Notification[]
-  transactions      Transaction[]
+  id                  String               @id @default(uuid())
+  firstName           String
+  middleName          String?
+  lastName            String
+  email               String               @unique
+  phone               String?
+  password            String?
+  role                UserRole             @default(PATIENT)
+  dateOfBirth         DateTime
+  gender              Gender
+  subscriptionState   SubStatus            @default(UNSUBSCRIBED)
+  organizationId      String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  stripeCustomerId    String?              @unique
+  maritalStatus       MaritalStatus?       @default(SINGLE)
+  approvalStatus      String               @default("NOT_REQUIRED")
+  doctor              DoctorProfile?
+  recvMessages        Message[]            @relation("MessagesRecv")
+  sentMessages        Message[]            @relation("MessagesSent")
+  patient             PatientProfile?
+  pharmacy            PharmacyProfile?
+  RegistrationRequest RegistrationRequest?
+  subscriptions       Subscription[]
+  supportAgent        SupportAgent?
+  sentReplies         SupportReply[]
+  raisedTickets       SupportTicket[]      @relation("raisedBy")
+  organization        Organization?        @relation(fields: [organizationId], references: [id])
+  notifications       Notification[]
+  transactions        Transaction[]
 
   @@index([organizationId])
   @@map("User")
@@ -133,9 +135,9 @@ model PharmacyProfile {
   longitude          Float?
   openingHours       String?
   services           String?
-  timezone           String             @default("UTC")
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
+  timezone           String             @default("UTC")
   user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   prescriptions      Prescription[]
   selectedByPatients SelectedPharmacy[]
@@ -166,10 +168,10 @@ model PatientProfile {
   emergencyContactEmail String?
   riskLevel             String?
   chronicConditions     String?
-  disabilityStatus      String?
-  timezone              String              @default("UTC")
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
+  disabilityStatus      String?
+  timezone              String              @default("UTC")
   appointments          Appointment[]       @relation("PatientAppointments")
   encounters            ClinicalEncounter[]
   doctorLinks           DoctorPatient[]     @relation("DoctorPatient_Patient")
@@ -367,12 +369,12 @@ model Referral {
 
 model Message {
   id             String    @id @default(cuid())
-  conversationId String?   // Unified conversation ID for grouping
   senderId       String?
   receiverId     String?
   content        String
   createdAt      DateTime  @default(now())
   readAt         DateTime?
+  conversationId String?
   receiver       User?     @relation("MessagesRecv", fields: [receiverId], references: [id], onDelete: Cascade)
   sender         User?     @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
 
@@ -380,7 +382,6 @@ model Message {
   @@map("Message")
   @@schema("public")
 }
-
 
 model VideoConsultation {
   id              String             @id @default(uuid())
@@ -1339,6 +1340,28 @@ model weekly_battles {
   status         String?   @default("active")
   created_at     DateTime? @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model RegistrationRequest {
+  id              String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  userId          String    @unique
+  role            String
+  status          String    @default("PENDING")
+  rejectionReason String?
+  licenseImageUrl String
+  licenseFilePath String
+  submittedData   Json
+  reviewedBy      String?
+  reviewedAt      DateTime? @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @db.Timestamptz(6)
+  User            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([role])
+  @@index([status])
   @@schema("public")
 }
 
