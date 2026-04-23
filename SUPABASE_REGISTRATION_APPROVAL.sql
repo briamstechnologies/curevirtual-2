@@ -56,6 +56,7 @@ CREATE TRIGGER trg_registration_request_updated_at
 ALTER TABLE "RegistrationRequest" ENABLE ROW LEVEL SECURITY;
 
 -- Allow the service role (backend) full access
+DROP POLICY IF EXISTS "service_role_full_access" ON "RegistrationRequest";
 CREATE POLICY "service_role_full_access"
   ON "RegistrationRequest"
   FOR ALL
@@ -87,6 +88,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- This keeps documents completely private from public access
 
 -- Allow service_role to upload
+DROP POLICY IF EXISTS "service_role_upload" ON storage.objects;
 CREATE POLICY "service_role_upload"
   ON storage.objects
   FOR INSERT
@@ -94,6 +96,7 @@ CREATE POLICY "service_role_upload"
   WITH CHECK (bucket_id = 'license-documents');
 
 -- Allow service_role to read / generate signed URLs
+DROP POLICY IF EXISTS "service_role_read" ON storage.objects;
 CREATE POLICY "service_role_read"
   ON storage.objects
   FOR SELECT
@@ -101,6 +104,7 @@ CREATE POLICY "service_role_read"
   USING (bucket_id = 'license-documents');
 
 -- Allow service_role to overwrite (upsert)
+DROP POLICY IF EXISTS "service_role_update" ON storage.objects;
 CREATE POLICY "service_role_update"
   ON storage.objects
   FOR UPDATE
@@ -109,6 +113,7 @@ CREATE POLICY "service_role_update"
 
 -- Allow authenticated users to upload ONLY their own file path
 -- Path format: doctor/<userId>/license.ext  or  pharmacy/<userId>/license.ext
+DROP POLICY IF EXISTS "user_upload_own_license" ON storage.objects;
 CREATE POLICY "user_upload_own_license"
   ON storage.objects
   FOR INSERT
