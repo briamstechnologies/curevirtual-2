@@ -230,31 +230,6 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* License upload (Doctor/Pharmacy) */}
-              {needsApproval && (
-                <div className="space-y-3 animate-in fade-in slide-in-from-top-2 p-4 rounded-2xl border border-[var(--brand-blue)]/30 bg-[var(--brand-blue)]/5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-blue)]">
-                    License / Degree Certificate *
-                  </label>
-                  <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
-                    Upload a clear photo or scan of your medical/pharmacy license or degree certificate (JPG, PNG, PDF — max 10MB)
-                  </p>
-                  <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-dashed border-[var(--brand-blue)]/40 hover:border-[var(--brand-blue)] transition-all group">
-                    <FiUpload className="text-[var(--brand-blue)] text-lg group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-bold text-[var(--text-soft)]">
-                      {licenseFile ? licenseFile.name : "Click to choose file"}
-                    </span>
-                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleLicenseUpload} className="hidden" />
-                  </label>
-                  {licensePreview && (
-                    <img src={licensePreview} alt="License preview" className="w-full max-h-40 object-contain rounded-xl border border-[var(--border)]" />
-                  )}
-                  {licenseFile && !licensePreview && (
-                    <p className="text-[10px] text-[var(--brand-green)] font-bold">✓ PDF selected: {licenseFile.name}</p>
-                  )}
-                </div>
-              )}
-
               <button type="button" onClick={handleVerifyOtp} disabled={submitting || !otp || (needsApproval && !licenseFile)}
                 className="btn btn-secondary w-full !py-4.5 !rounded-2xl text-xs flex items-center justify-center gap-3 shadow-2xl disabled:opacity-70 mt-4 group">
                 {submitting ? (
@@ -370,11 +345,46 @@ export default function Register() {
                 </div>
               )}
 
+              {/* License upload (Doctor/Pharmacy) - MOVED TO FIRST PAGE */}
+              {needsApproval && (
+                <div className="space-y-3 animate-in fade-in slide-in-from-top-2 p-4 rounded-2xl border border-[var(--brand-blue)]/30 bg-[var(--brand-blue)]/5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-blue)]">
+                      License / Degree Certificate *
+                    </label>
+                    <FiShield className="text-[var(--brand-blue)]" />
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
+                    Upload a clear photo or scan of your medical/pharmacy license or degree certificate (JPG, PNG, PDF — max 10MB)
+                  </p>
+                  <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-dashed border-[var(--brand-blue)]/40 hover:border-[var(--brand-blue)] transition-all group bg-[var(--bg-main)] shadow-sm">
+                    <FiUpload className="text-[var(--brand-blue)] text-lg group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-bold text-[var(--text-soft)] truncate">
+                      {licenseFile ? licenseFile.name : "Click to choose file"}
+                    </span>
+                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleLicenseUpload} className="hidden" />
+                  </label>
+                  {licensePreview && (
+                    <div className="relative group mt-2">
+                      <img src={licensePreview} alt="License preview" className="w-full max-h-40 object-contain rounded-xl border border-[var(--border)] shadow-md" />
+                      <button type="button" onClick={() => { setLicenseFile(null); setLicensePreview(null); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg hover:scale-110 transition-transform">
+                        <FiX className="text-xs" />
+                      </button>
+                    </div>
+                  )}
+                  {licenseFile && !licensePreview && (
+                    <p className="text-[10px] text-[var(--brand-green)] font-bold flex items-center gap-1">
+                      <FiCheckCircle /> PDF selected: {licenseFile.name}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Approval notice for Doctor/Pharmacy */}
               {needsApproval && (
-                <div className="p-3 rounded-xl border border-[var(--brand-blue)]/30 bg-[var(--brand-blue)]/5">
-                  <p className="text-[10px] font-bold text-[var(--brand-blue)] uppercase tracking-widest">
-                    ⚠️ Account Review Required — You will need to upload your license/certificate on the next step and wait for admin approval before accessing the dashboard.
+                <div className="p-3 rounded-xl border border-[var(--brand-orange)]/30 bg-[var(--brand-orange)]/5">
+                  <p className="text-[9px] font-bold text-[var(--brand-orange)] uppercase tracking-widest leading-relaxed">
+                    ⚠️ Account Review Required — After submitting, you must verify your email. Your account will then be pending until an admin approves your documentation.
                   </p>
                 </div>
               )}
@@ -382,7 +392,7 @@ export default function Register() {
               <button type="submit" disabled={submitting}
                 className="btn btn-secondary w-full !py-4.5 !rounded-2xl text-xs flex items-center justify-center gap-3 shadow-2xl disabled:opacity-70 mt-4 group">
                 {submitting ? <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  : <> Submit <FaArrowRight className="group-hover:translate-x-1 transition-transform" /></>}
+                  : <> Submit Registration <FaArrowRight className="group-hover:translate-x-1 transition-transform" /></>}
               </button>
             </form>
           )}
