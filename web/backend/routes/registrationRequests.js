@@ -124,10 +124,11 @@ router.post(
         const { data: { user: sbUser }, error: sbErr } =
           await supabaseAdmin.auth.admin.getUserById(userId);
         if (sbErr || !sbUser) {
-          return res.status(401).json({ error: 'Supabase user not found.' });
+          console.error('❌ Registration Submit: Supabase user lookup failed:', sbErr);
+          return res.status(404).json({ error: 'Supabase account verification failed.', details: sbErr?.message });
         }
         if (!sbUser.email_confirmed_at) {
-          return res.status(403).json({ error: 'Email not verified yet.' });
+          return res.status(403).json({ error: 'Email not verified in Supabase yet.' });
         }
       }
 

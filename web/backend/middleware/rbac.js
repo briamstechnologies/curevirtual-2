@@ -18,12 +18,11 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const verifyToken = (req, res, next) => {
   if (!JWT_SECRET) {
     console.error("❌ JWT_SECRET is missing in environment variables!");
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal server error: Security configuration missing",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error: Security configuration missing",
+      debug: "JWT_SECRET missing"
+    });
   }
 
   let token;
@@ -62,13 +61,13 @@ const verifyToken = (req, res, next) => {
     );
     next();
   } catch (err) {
-    console.warn(`JWT verification failed: ${err.message}`);
-    return res
-      .status(401)
-      .json({
-        success: false,
-        message: "Unauthorized: Invalid or expired token",
-      });
+    console.warn(`[RBAC] JWT verification failed: ${err.message}`);
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized: Invalid or expired token",
+      error: err.message,
+      isExpired: err.name === "TokenExpiredError"
+    });
   }
 };
 
