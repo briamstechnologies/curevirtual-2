@@ -223,8 +223,12 @@ router.get('/stats', verifyToken, requireAdmin, async (req, res) => {
 
     return res.json({ pending, approvedToday, totalRejected, totalDoctors, totalPharmacies });
   } catch (err) {
-    console.error('❌ GET registration stats error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    console.error('❌ GET /api/registration-requests/stats error:', {
+      message: err.message,
+      stack: err.stack,
+      prismaError: err.code
+    });
+    return res.status(500).json({ error: 'Internal server error.', details: err.message });
   }
 });
 
@@ -283,8 +287,12 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('❌ GET registration requests error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    console.error('❌ GET /api/registration-requests error:', {
+      message: err.message,
+      stack: err.stack,
+      query: req.query
+    });
+    return res.status(500).json({ error: 'Internal server error.', details: err.message });
   }
 });
 
