@@ -79,54 +79,52 @@ export default function PendingApproval() {
           </p>
 
           {/* Submitted Info Summary */}
-          <div className="bg-[var(--bg-main)]/40 border border-[var(--border)] rounded-[2rem] p-6 mb-10 text-left space-y-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--brand-blue)] mb-2">Submission Summary</p>
-            
-            <div className="flex items-center gap-4 group">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[var(--brand-green)]/10 border border-[var(--brand-green)]/20 transition-all duration-300 group-hover:scale-110">
-                <FiCheckCircle className="text-[var(--brand-green)] text-lg" />
+          <div className="grid grid-cols-1 gap-3 mb-10">
+            <div className="flex items-center gap-4 p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border)] shadow-sm hover:shadow-md transition-all group text-left">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[var(--brand-green)]/10 border border-[var(--brand-green)]/20 transition-all duration-300 group-hover:scale-110 shadow-inner">
+                <FiCheckCircle className="text-[var(--brand-green)] text-xl" />
               </div>
               <div>
-                <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-widest font-black">Full Name</p>
-                <p className="text-sm font-black text-[var(--text-main)]">{userName}</p>
+                <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-[0.3em] font-black mb-0.5">Full Name</p>
+                <p className="text-sm font-black text-[var(--text-main)] truncate max-w-[200px]">{userName}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 group">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[var(--brand-purple)]/10 border border-[var(--brand-purple)]/20 transition-all duration-300 group-hover:scale-110">
-                <FiCheckCircle className="text-[var(--brand-purple)] text-lg" />
+            <div className="flex items-center gap-4 p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border)] shadow-sm hover:shadow-md transition-all group text-left">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[var(--brand-purple)]/10 border border-[var(--brand-purple)]/20 transition-all duration-300 group-hover:scale-110 shadow-inner">
+                <FiCheckCircle className="text-[var(--brand-purple)] text-xl" />
               </div>
               <div>
-                <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-widest font-black">Role</p>
+                <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-[0.3em] font-black mb-0.5">Assigned Role</p>
                 <p className="text-sm font-black text-[var(--text-main)]">{roleLabel}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 group">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[var(--brand-blue)]/10 border border-[var(--brand-blue)]/20 transition-all duration-300 group-hover:scale-110">
-                <FiCheckCircle className="text-[var(--brand-blue)] text-lg" />
+            <div className="flex items-center gap-4 p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border)] shadow-sm hover:shadow-md transition-all group text-left">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[var(--brand-blue)]/10 border border-[var(--brand-blue)]/20 transition-all duration-300 group-hover:scale-110 shadow-inner">
+                <FiShield className="text-[var(--brand-blue)] text-xl" />
               </div>
               <div>
-                <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-widest font-black">License Document</p>
-                <p className="text-sm font-black text-[var(--brand-green)]">✓ Uploaded & Secured</p>
+                <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-[0.3em] font-black mb-0.5">Credential Status</p>
+                <p className="text-sm font-black text-[var(--brand-green)] uppercase tracking-tighter">Verified & Secured</p>
               </div>
             </div>
 
             {email && (
-              <div className="flex items-center gap-4 group">
-                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-amber-400/10 border border-amber-400/20 transition-all duration-300 group-hover:scale-110">
-                  <FiMail className="text-amber-400 text-lg" />
+              <div className="flex items-center gap-4 p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border)] shadow-sm hover:shadow-md transition-all group text-left">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-400/10 border border-amber-400/20 transition-all duration-300 group-hover:scale-110 shadow-inner">
+                  <FiMail className="text-amber-400 text-xl" />
                 </div>
                 <div>
-                  <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-widest font-black">Notification Email</p>
-                  <p className="text-sm font-black text-[var(--text-main)]">{email}</p>
+                  <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-[0.3em] font-black mb-0.5">Contact Method</p>
+                  <p className="text-sm font-black text-[var(--text-main)] truncate max-w-[200px]">{email}</p>
                 </div>
               </div>
             )}
           </div>
 
-          <p className="text-[var(--text-muted)] text-[10px] mb-10 leading-relaxed font-bold uppercase tracking-widest">
-            We'll notify you at <span className="text-[var(--brand-blue)]">{email || "your email"}</span> once your account is reviewed.
+          <p className="text-[var(--text-muted)] text-[10px] mb-10 leading-relaxed font-black uppercase tracking-[0.3em] opacity-60">
+            Awaiting final verification by <span className="text-[var(--brand-blue)]">CureVirtual Admin</span>
           </p>
 
           <button onClick={handleLogout}

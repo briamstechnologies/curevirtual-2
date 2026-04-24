@@ -23,10 +23,19 @@ const allowedOrigins = [
   "https://curevirtual-2-production.up.railway.app",
   "https://curevirtual-2-production-ee33.up.railway.app",
   "https://curevirtual-2-production-6eaa.up.railway.app",
-  "https://bite-dash-railway-app.up.railway.app", // Added based on context if needed, but sticking to existing pattern
+  "https://bite-dash-railway-app.up.railway.app",
   process.env.FRONTEND_URL,
+  process.env.CORS_ORIGIN,
   process.env.RAILWAY_STATIC_URL,
 ].filter(Boolean);
+
+const isOriginAllowed = (origin) => {
+  if (!origin || origin === "null") return true;
+  if (allowedOrigins.includes(origin)) return true;
+  // Dynamic allow for Vercel and Railway subdomains
+  if (origin.endsWith(".vercel.app") || origin.endsWith(".up.railway.app")) return true;
+  return false;
+};
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -36,13 +45,7 @@ const io = new Server(server, {
   allowEIO3: true,
   cors: {
     origin: (origin, callback) => {
-      // allow requests with no origin (like mobile apps or curl requests)
-      // also allow literal "null" origin which is common in some mobile environments
-      if (!origin || origin === "null") return callback(null, true);
-      if (
-        allowedOrigins.indexOf(origin) !== -1 ||
-        allowedOrigins.some((o) => origin.startsWith(o))
-      ) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
         console.warn(`[Socket CORS] Origin blocked: ${origin}`);
@@ -71,12 +74,7 @@ registrationRequestsRoute.setIo(io);
 app.use(
   cors({
     origin: (origin, callback) => {
-      // allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      if (
-        allowedOrigins.indexOf(origin) !== -1 ||
-        allowedOrigins.some((o) => origin.startsWith(o))
-      ) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
         console.warn(`CORS blocked for origin: ${origin}`);

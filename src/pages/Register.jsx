@@ -239,125 +239,133 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-transparent)]">
-      <div className="absolute inset-0 overflow-hidden -z-10">
-        <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-[var(--brand-orange)] opacity-[0.05] blur-[150px] rounded-full"></div>
-        <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-[var(--brand-green)] opacity-[0.05] blur-[150px] rounded-full"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/3 h-1/3 bg-[var(--brand-blue)] opacity-[0.03] blur-[150px] rounded-full"></div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[var(--bg-main)]">
+      {/* Dynamic Background Elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] opacity-20 bg-[var(--brand-blue)] animate-pulse-soft" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] opacity-20 bg-[var(--brand-green)] animate-pulse-soft" style={{ animationDelay: '2s' }} />
+      <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full blur-[100px] opacity-10 bg-[var(--brand-purple)] animate-pulse-soft" style={{ animationDelay: '4s' }} />
 
-      <div className="w-full max-w-[1100px] flex flex-col md:flex-row glass overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 rounded-[3rem] border border-[var(--border)]">
+      <div className="w-full max-w-[1100px] flex flex-col md:flex-row glass-panel !p-0 overflow-hidden shadow-premium animate-in fade-in slide-in-from-bottom-8 duration-700 relative z-10">
         {/* Left Panel */}
-        <div className="hidden md:flex flex-col justify-between w-2/5 p-12 text-[var(--text-main)] relative overflow-hidden bg-gradient-to-tr from-[#a2beff] to-[#7da0d8]">
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_left,var(--brand-blue),transparent)]"></div>
-            <div className="absolute bottom-10 right-0 w-full h-full bg-[radial-gradient(circle_at_bottom_right,var(--brand-orange),transparent)]"></div>
+        <div className="hidden md:flex flex-col justify-between w-2/5 p-12 text-white relative overflow-hidden bg-gradient-to-tr from-[var(--brand-blue)] via-[var(--brand-purple)] to-[var(--brand-blue)] bg-[length:200%_200%] animate-gradient">
+          <div className="absolute inset-0 opacity-30">
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.4),transparent)]"></div>
+            <div className="absolute bottom-10 right-0 w-full h-full bg-[radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.2),transparent)]"></div>
           </div>
           <div className="z-10">
-            <Link to="/" className="inline-flex items-center gap-2 mb-12 text-emerald-300 hover:text-emerald-200 transition-all font-black text-[10px] uppercase tracking-widest group">
+            <Link to="/" className="inline-flex items-center gap-2 mb-12 text-white/80 hover:text-white transition-all font-black text-[10px] uppercase tracking-[0.3em] group">
               <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back to Home
             </Link>
-            <div className="flex items-center gap-3 bg-[var(--bg-glass)] p-3 rounded-2xl mb-8 border border-[var(--border)] shadow-2xl">
-              <img src="/images/logo/Asset3.png" alt="Logo" className="w-10 h-10" />
-              <span className="text-xl font-black tracking-tighter text-[var(--text-main)] uppercase">CURE<span className="text-[var(--brand-blue)]">VIRTUAL</span></span>
+            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-4 rounded-3xl mb-8 border border-white/20 shadow-2xl">
+              <img src="/images/logo/Asset3.png" alt="Logo" className="w-10 h-10 brightness-0 invert" />
+              <span className="text-xl font-black tracking-tighter text-white uppercase">CURE<span className="text-white/70">VIRTUAL</span></span>
             </div>
-            <h2 className="text-4xl lg:text-5xl font-black tracking-tighter mb-6 leading-[0.9] uppercase text-emerald-300">Create <br /><span className="text-emerald-300">Account</span></h2>
-            <p className="text-emerald-300 text-sm leading-relaxed max-w-xs font-bold uppercase tracking-widest italic text-justify">Sign up to access virtual care.</p>
+            <h2 className="text-5xl lg:text-6xl font-black tracking-tighter mb-6 leading-[0.85] uppercase">
+              Join the <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">Revolution</span>
+            </h2>
+            <p className="text-white/80 text-sm leading-relaxed max-w-xs font-bold uppercase tracking-widest italic">
+              Empowering healthcare through digital excellence.
+            </p>
           </div>
           <div className="z-10 space-y-4">
-            <div className="flex items-center gap-4 p-4 rounded-3xl bg-[var(--bg-glass)] border border-[var(--border)] backdrop-blur-xl">
-              <div className="h-10 w-10 rounded-2xl bg-[var(--brand-green)]/20 flex items-center justify-center text-[var(--brand-green)]"><FiShield className="text-xl" /></div>
+            <div className="flex items-center gap-4 p-5 rounded-[2rem] bg-white/10 border border-white/20 backdrop-blur-xl hover:bg-white/15 transition-all">
+              <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center text-white shadow-inner">
+                <FiShield className="text-2xl" />
+              </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-main)]">Secure Data</p>
-                <p className="text-[9px] font-bold text-[var(--text-main)]/40 uppercase tracking-widest">Medical Grade Security</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Medical Shield</p>
+                <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest">End-to-end encrypted</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right Panel */}
-        <div className="w-full md:w-3/5 bg-[var(--bg-card)] p-6 md:p-14 flex flex-col overflow-y-auto max-h-[90vh]">
-          <div className="mb-6 md:mb-8">
-            <div className="md:hidden flex items-center gap-2 mb-6 opacity-80">
-              <img src="/images/logo/Asset3.png" alt="Logo" className="w-6 h-6" />
-              <span className="text-sm font-black tracking-tighter text-[var(--text-main)] uppercase">CURE<span className="text-[var(--brand-blue)]">VIRTUAL</span></span>
+        <div className="w-full md:w-3/5 bg-[var(--bg-card)] p-8 md:p-14 flex flex-col overflow-y-auto max-h-[90vh]">
+          <div className="mb-10">
+            <div className="md:hidden flex items-center justify-center gap-2 mb-8">
+              <img src="/images/logo/Asset3.png" alt="Logo" className="w-8 h-8" />
+              <span className="text-lg font-black tracking-tighter text-[var(--text-main)] uppercase">CURE<span className="text-[var(--brand-blue)]">VIRTUAL</span></span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-2">
-              {isResubmitting ? "Resubmit" : "Create"}{" "}
-              <span className="text-[var(--brand-green)]">Account</span>
+            <h1 className="text-3xl md:text-5xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-3 leading-none">
+              {isResubmitting ? "Resubmit" : "Join"}{" "}
+              <span className="text-[var(--brand-green)]">Platform</span>
             </h1>
-            <p className="text-[var(--text-soft)] text-sm font-bold opacity-70">
-              {isResubmitting ? "Update your details and resubmit for review." : "Fill in your details to get started."}
+            <p className="text-[var(--text-soft)] text-xs font-black uppercase tracking-[0.3em] opacity-60">
+              {isResubmitting ? "Update your credentials for review" : "The future of virtual healthcare"}
             </p>
           </div>
 
           {showOtp ? (
-            <div className="space-y-6">
+            <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
               {/* OTP Step */}
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">Enter OTP sent to {form.email}</label>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--brand-green)] ml-1">Identity Verification</label>
                 <div className="relative group">
-                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all"><FiShield /></div>
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all text-xl"><FiShield /></div>
                   <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)}
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 pl-14 pr-6 text-sm font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner"
-                    placeholder="123456" required />
+                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-[2rem] py-5 pl-16 pr-6 text-sm font-black tracking-[0.5em] focus:border-[var(--brand-green)] outline-none transition-all shadow-inner text-center"
+                    placeholder="••••••" required />
                 </div>
+                <p className="text-[9px] text-[var(--text-muted)] font-black uppercase tracking-widest text-center">Code sent to: {form.email}</p>
               </div>
 
               <button type="button" onClick={handleVerifyOtp} disabled={submitting || !otp || (needsApproval && !licenseFile)}
-                className="btn btn-secondary w-full !py-4.5 !rounded-2xl text-xs flex items-center justify-center gap-3 shadow-2xl disabled:opacity-70 mt-4 group">
+                className="btn btn-primary w-full !rounded-[2rem] !py-5 text-[10px] shadow-premium">
                 {submitting ? (
                   <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>{isUploading ? "Uploading license..." : "Verifying..."}</span></>
+                  <span>{isUploading ? "UPLOADING DOCS..." : "VERIFYING..."}</span></>
                 ) : (
-                  <>Verify Account <FaArrowRight className="group-hover:translate-x-1 transition-transform" /></>
+                  <>VERIFY & COMPLETE <FaArrowRight /></>
                 )}
               </button>
-              <div className="flex flex-col gap-2">
+              
+              <div className="flex flex-col gap-4">
                 <button type="button" onClick={() => setShowOtp(false)}
-                  className="w-full text-[10px] font-black text-[var(--brand-blue)] uppercase tracking-widest hover:underline text-center mt-2">
-                  Back to Registration
+                  className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest hover:text-[var(--text-main)] transition-all">
+                  Go Back
                 </button>
-                <div className="text-center">
-                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Didn't receive code? </span>
+                <div className="text-center p-4 rounded-2xl bg-[var(--bg-main)]/50 border border-[var(--border)]">
+                  <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">Didn't receive code?</p>
                   <button 
                     type="button" 
                     onClick={handleResendOtp}
                     disabled={resendTimer > 0 || submitting}
-                    className={`text-[10px] font-black uppercase tracking-widest transition-all ${resendTimer > 0 ? "text-[var(--text-muted)] cursor-not-allowed" : "text-[var(--brand-orange)] hover:underline"}`}
+                    className={`text-[10px] font-black uppercase tracking-widest transition-all ${resendTimer > 0 ? "text-[var(--text-muted)] opacity-50 cursor-not-allowed" : "text-[var(--brand-orange)] hover:scale-105 active:scale-95"}`}
                   >
-                    {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend New Code"}
+                    {resendTimer > 0 ? `RESEND IN ${resendTimer}s` : "RESEND NEW CODE"}
                   </button>
                 </div>
               </div>
             </div>
           ) : (
-            <form onSubmit={handleRegister} className="space-y-4">
+            <form onSubmit={handleRegister} className="space-y-6">
               {/* Name fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-2">
-                {[["firstName", "First"], ["middleName", "(Opt)"], ["lastName", "Last"]].map(([name, ph]) => (
-                  <div key={name} className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">{name === "middleName" ? "Middle Name" : name === "firstName" ? "First Name" : "Last Name"}</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[["firstName", "First Name"], ["middleName", "Middle"], ["lastName", "Last Name"]].map(([name, ph]) => (
+                  <div key={name} className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">{ph}</label>
                     <input name={name} value={form[name]} onChange={handleChange} placeholder={ph} required={name !== "middleName"}
-                      className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none transition-all shadow-inner" />
+                      className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 px-6 text-xs font-black focus:border-[var(--brand-blue)] outline-none transition-all shadow-inner" />
                   </div>
                 ))}
               </div>
 
               {/* DOB + Gender + Marital */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">Date of Birth</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">Date of Birth</label>
                   <input type="date" name="dateOfBirth" value={form.dateOfBirth} onChange={handleChange} max={new Date().toISOString().split("T")[0]} required
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
+                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 px-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {[["gender", ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"], ["Male", "Female", "Other", "Prefer not to say"]],
+                <div className="grid grid-cols-2 gap-4">
+                  {[["gender", ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"], ["Male", "Female", "Other", "Prefer Not To Say"]],
                     ["maritalStatus", ["SINGLE", "MARRIED"], ["Single", "Married"]]].map(([field, vals, labels]) => (
-                    <div key={field} className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">{field === "gender" ? "Gender" : "Marital"}</label>
+                    <div key={field} className="space-y-2">
+                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">{field === "gender" ? "Gender" : "Marital"}</label>
                       <select name={field} value={form[field]} onChange={handleChange}
-                        className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner appearance-none">
+                        className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 px-5 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner appearance-none">
                         {vals.map((v, i) => <option key={v} value={v}>{labels[i]}</option>)}
                       </select>
                     </div>
@@ -366,27 +374,27 @@ export default function Register() {
               </div>
 
               {/* Email */}
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">Email Address</label>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">Email Identity</label>
                 <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all"><FiMail /></div>
-                  <input type="email" name="email" value={form.email} onChange={handleChange} placeholder=" " required disabled={isResubmitting}
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 pl-12 pr-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner disabled:opacity-60" />
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all text-lg"><FiMail /></div>
+                  <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="Email" required disabled={isResubmitting}
+                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 pl-14 pr-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner disabled:opacity-60" />
                 </div>
               </div>
 
               {/* Passwords */}
               {!isResubmitting && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {[["password", "••••••••"], ["confirmPassword", "••••••••"]].map(([field, ph]) => (
-                    <div key={field} className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">{field === "password" ? "Password" : "Confirm Password"}</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {[["password", "Security Code"], ["confirmPassword", "Confirm Code"]].map(([field, ph]) => (
+                    <div key={field} className="space-y-2">
+                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">{ph}</label>
                       <div className="relative group">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all"><FiLock /></div>
-                        <input type={showPassword ? "text" : "password"} name={field} value={form[field]} onChange={handleChange} placeholder={ph} required minLength={6}
-                          className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 pl-12 pr-12 text-xs font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
+                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all text-lg"><FiLock /></div>
+                        <input type={showPassword ? "text" : "password"} name={field} value={form[field]} onChange={handleChange} placeholder="••••••••" required minLength={8}
+                          className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 pl-14 pr-14 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
                         {field === "confirmPassword" && (
-                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">
                             {showPassword ? <FiEyeOff /> : <FiEye />}
                           </button>
                         )}
@@ -397,16 +405,17 @@ export default function Register() {
               )}
 
               {/* Role selector */}
-              <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">I am a...</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[{ id: "PATIENT", label: "PATIENT", color: "var(--brand-orange)" },
-                    { id: "DOCTOR", label: "DOCTOR", color: "var(--brand-green)" },
-                    { id: "PHARMACY", label: "PHARMACIST", color: "var(--brand-blue)" }].map((role) => (
+              <div className="space-y-3">
+                <label className="text-[9px] font-black uppercase tracking-[0.4em] text-[var(--text-muted)] ml-1">Define Your Role</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[{ id: "PATIENT", label: "Patient", color: "var(--brand-orange)" },
+                    { id: "DOCTOR", label: "Doctor", color: "var(--brand-green)" },
+                    { id: "PHARMACY", label: "Pharmacist", color: "var(--brand-blue)" }].map((role) => (
                     <button key={role.id} type="button" onClick={() => !isResubmitting && setForm((f) => ({ ...f, role: role.id }))}
-                      className={`py-3 rounded-2xl border-2 text-[9px] font-black uppercase tracking-widest transition-all ${form.role === role.id ? "bg-white text-black shadow-xl" : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-main)]"} ${isResubmitting && form.role !== role.id ? "opacity-30 grayscale cursor-not-allowed" : ""}`}
+                      className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden group ${form.role === role.id ? "bg-[var(--bg-main)] text-[var(--text-main)] shadow-lg" : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-soft)]"} ${isResubmitting && form.role !== role.id ? "opacity-30 grayscale cursor-not-allowed" : ""}`}
                       style={form.role === role.id ? { borderColor: role.color } : {}}>
                       {role.label}
+                      {form.role === role.id && <div className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: role.color }} />}
                     </button>
                   ))}
                 </div>
@@ -414,86 +423,81 @@ export default function Register() {
 
               {/* Doctor specialization */}
               {form.role === "DOCTOR" && (
-                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">Medical Specialization</label>
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">Expertise Field</label>
                   <div className="relative group">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--brand-green)]"><FaStethoscope /></div>
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--brand-green)] text-xl"><FaStethoscope /></div>
                     <select name="specialization" value={form.specialization} onChange={handleChange} required
-                      className="w-full bg-[var(--bg-main)] border border-[var(--brand-green)]/30 rounded-2xl py-3.5 pl-12 pr-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner appearance-none">
+                      className="w-full bg-[var(--bg-main)] border border-[var(--brand-green)]/30 rounded-2xl py-4 pl-16 pr-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner appearance-none">
                       <option value="">Select Specialization</option>
                       {["General Medicine","Cardiology","Dermatology","Neurology","Pediatrics","Psychiatry","Orthopedics","Gynecology","Ophthalmology","Dentistry","ENT","Urology","Oncology","Other"].map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   {form.specialization === "Other" && (
                     <div className="relative group mt-3 animate-in fade-in slide-in-from-top-1">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--brand-green)]"><FaStethoscope /></div>
-                      <input name="customProfession" value={form.customProfession || ""} onChange={handleChange} placeholder="Specify your profession..." required
-                        className="w-full bg-[var(--bg-main)] border border-[var(--brand-green)]/30 rounded-2xl py-3.5 pl-12 pr-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
+                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--brand-green)] text-xl"><FaStethoscope /></div>
+                      <input name="customProfession" value={form.customProfession || ""} onChange={handleChange} placeholder="Specify Field" required
+                        className="w-full bg-[var(--bg-main)] border border-[var(--brand-green)]/30 rounded-2xl py-4 pl-16 pr-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
                     </div>
                   )}
                 </div>
               )}
 
-              {/* License upload (Doctor/Pharmacy) - MOVED TO FIRST PAGE */}
+              {/* License upload */}
               {needsApproval && (
-                <div className="space-y-3 animate-in fade-in slide-in-from-top-2 p-4 rounded-2xl border border-[var(--brand-blue)]/30 bg-[var(--brand-blue)]/5">
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 p-6 rounded-3xl border-2 border-dashed border-[var(--brand-blue)]/20 bg-[var(--brand-blue)]/5">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-blue)]">
-                      License / Degree Certificate *
+                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--brand-blue)]">
+                      Credential Certificate
                     </label>
-                    <FiShield className="text-[var(--brand-blue)]" />
+                    <FiShield className="text-[var(--brand-blue)] text-xl" />
                   </div>
-                  <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
-                    Upload a clear photo or scan of your medical/pharmacy license or degree certificate (JPG, PNG, PDF — max 10MB)
-                  </p>
-                  <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-dashed border-[var(--brand-blue)]/40 hover:border-[var(--brand-blue)] transition-all group bg-[var(--bg-main)] shadow-sm">
-                    <FiUpload className="text-[var(--brand-blue)] text-lg group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-bold text-[var(--text-soft)] truncate">
-                      {licenseFile ? licenseFile.name : "Click to choose file"}
+                  <label className="flex flex-col items-center gap-4 cursor-pointer p-8 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--brand-blue)] transition-all group shadow-sm">
+                    <div className="w-12 h-12 rounded-full bg-[var(--brand-blue)]/10 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                      <FiUpload className="text-[var(--brand-blue)] text-xl" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] group-hover:text-[var(--brand-blue)] transition-all">
+                      {licenseFile ? licenseFile.name : "Choose License Image or PDF"}
                     </span>
                     <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleLicenseUpload} className="hidden" />
                   </label>
                   {licensePreview && (
-                    <div className="relative group mt-2">
-                      <img src={licensePreview} alt="License preview" className="w-full max-h-40 object-contain rounded-xl border border-[var(--border)] shadow-md" />
-                      <button type="button" onClick={() => { setLicenseFile(null); setLicensePreview(null); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg hover:scale-110 transition-transform">
+                    <div className="relative group mt-2 rounded-2xl overflow-hidden border border-[var(--border)] shadow-lg max-h-40">
+                      <img src={licensePreview} alt="License preview" className="w-full object-contain bg-black/5" />
+                      <button type="button" onClick={() => { setLicenseFile(null); setLicensePreview(null); }} className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-md text-white p-2 rounded-full shadow-lg hover:bg-red-500 transition-all">
                         <FiX className="text-xs" />
                       </button>
                     </div>
                   )}
-                  {licenseFile && !licensePreview && (
-                    <p className="text-[10px] text-[var(--brand-green)] font-bold flex items-center gap-1">
-                      <FiCheckCircle /> PDF selected: {licenseFile.name}
-                    </p>
-                  )}
                 </div>
               )}
 
-              {/* Approval notice for Doctor/Pharmacy */}
+              {/* Notice */}
               {needsApproval && (
-                <div className="p-3 rounded-xl border border-[var(--brand-orange)]/30 bg-[var(--brand-orange)]/5">
-                  <p className="text-[9px] font-bold text-[var(--brand-orange)] uppercase tracking-widest leading-relaxed">
-                    ⚠️ Account Review Required — After submitting, you must verify your email. Your account will then be pending until an admin approves your documentation.
+                <div className="p-4 rounded-2xl border border-[var(--brand-orange)]/30 bg-[var(--brand-orange)]/5 flex gap-4">
+                  <div className="mt-1"><FiClock className="text-[var(--brand-orange)] text-lg" /></div>
+                  <p className="text-[9px] font-black text-[var(--brand-orange)] uppercase tracking-widest leading-relaxed">
+                    Account Verification: Your credentials will be reviewed by our medical board. Approval typically takes 24 hours.
                   </p>
                 </div>
               )}
 
               <button type="submit" disabled={submitting}
-                className="btn btn-secondary w-full !py-4.5 !rounded-2xl text-xs flex items-center justify-center gap-3 shadow-2xl disabled:opacity-70 mt-4 group">
+                className="btn btn-primary w-full !rounded-[2rem] !py-5 text-[10px] shadow-premium">
                 {submitting ? (
                   <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>{isUploading ? "Uploading docs..." : "Processing..."}</span></>
+                  <span>{isUploading ? "UPLOADING..." : "PROCESSING..."}</span></>
                 ) : (
-                  <> {isResubmitting ? "Resubmit Application" : "Submit Registration"} <FaArrowRight className="group-hover:translate-x-1 transition-transform" /></>
+                  <> {isResubmitting ? "RESUBMIT FOR REVIEW" : "COMPLETE REGISTRATION"} <FaArrowRight /></>
                 )}
               </button>
             </form>
           )}
 
-          <footer className="mt-8 text-center border-t border-[var(--border)] pt-8">
-            <p className="text-xs font-bold text-[var(--text-soft)] uppercase tracking-widest">
-              Already have an account?{" "}
-              <Link to="/login" className="text-[var(--brand-orange)] font-black hover:underline ml-1">Login</Link>
+          <footer className="mt-12 text-center border-t border-[var(--border)] pt-8">
+            <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
+              Already a member?{" "}
+              <Link to="/login" className="text-[var(--brand-orange)] hover:text-[var(--brand-red)] transition-all ml-1">Access Account</Link>
             </p>
           </footer>
         </div>

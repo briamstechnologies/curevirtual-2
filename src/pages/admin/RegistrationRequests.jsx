@@ -352,9 +352,9 @@ export default function RegistrationRequests() {
               </button>
             </div>
 
-            <div className="grid md:grid-cols-2">
+            <div className="grid md:grid-cols-2 bg-slate-50">
               {/* Submission Data */}
-              <div className="p-8 space-y-6 border-r border-[var(--border)]">
+              <div className="p-8 space-y-6 border-r border-[var(--border)] bg-slate-50">
                 <SectionLabel label="Identity Information" />
                 <div className="grid grid-cols-2 gap-y-4">
                   <DataPoint
@@ -387,7 +387,7 @@ export default function RegistrationRequests() {
                 <SectionLabel label="License / Credential Document" />
                 {selected.licenseImageUrl ? (
                   <div className="space-y-4">
-                    <div className="rounded-2xl border border-[var(--border)] overflow-hidden bg-black/20 group relative">
+                    <div className="rounded-2xl border border-[var(--border)] overflow-hidden bg-white/20 group relative">
                       {isPdf ? (
                         <div className="h-48 flex flex-col items-center justify-center gap-3 text-[var(--text-muted)]">
                           <FiShield className="text-4xl text-[var(--brand-blue)]" />
@@ -402,7 +402,7 @@ export default function RegistrationRequests() {
                           className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-700"
                         />
                       )}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="absolute inset-0 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <a
                           href={selected.licenseImageUrl}
                           target="_blank"
