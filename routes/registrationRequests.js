@@ -156,8 +156,16 @@ router.post(
         });
 
       if (uploadError) {
-        console.error('❌ Supabase Storage upload error:', uploadError);
-        return res.status(500).json({ error: 'Failed to upload license document.' });
+        console.error('❌ Supabase Storage upload error:', {
+          message: uploadError.message,
+          error: uploadError.error,
+          statusCode: uploadError.statusCode,
+          details: uploadError.details
+        });
+        return res.status(500).json({ 
+          error: 'Failed to upload license document.', 
+          details: uploadError.message 
+        });
       }
 
       // ── 5. Generate 24h signed URL for admin preview ──────────────────────
