@@ -295,8 +295,14 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
       prisma.registrationRequest.count({ where }),
     ]);
 
+    // Map "User" (Prisma) to "user" (Frontend expectation)
+    const normalizedRequests = requests.map(r => {
+      const { User, ...rest } = r;
+      return { ...rest, user: User };
+    });
+
     // Refresh signed URLs (1h expiry) before serving to admin
-    const enriched = await Promise.all(requests.map(enrichWithFreshUrl));
+    const enriched = await Promise.all(normalizedRequests.map(enrichWithFreshUrl));
 
     return res.json({
       data: enriched,
@@ -308,11 +314,7 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('❌ GET /api/registration-requests error:', {
-      message: err.message,
-      stack: err.stack,
-      query: req.query
-    });
+    console.error('❌ GET /api/registration-requests error:', err);
     return res.status(500).json({ error: 'Internal server error.', details: err.message });
   }
 });
