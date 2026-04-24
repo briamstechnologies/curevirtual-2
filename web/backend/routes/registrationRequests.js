@@ -132,17 +132,13 @@ router.post(
         });
       }
 
-      // ── 3. Verify Supabase email is confirmed ─────────────────────────────
-      if (supabaseAdmin) {
-        const { data: { user: sbUser }, error: sbErr } =
-          await supabaseAdmin.auth.admin.getUserById(userId);
-        if (sbErr || !sbUser) {
-          console.error('❌ Registration Submit: Supabase user lookup failed:', sbErr);
-          return res.status(404).json({ error: 'Supabase account verification failed.', details: sbErr?.message });
-        }
-        if (!sbUser.email_confirmed_at) {
-          return res.status(403).json({ error: 'Email not verified in Supabase yet.' });
-        }
+      // ── 3. Verify user exists in local database ───────────────────────────
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!dbUser) {
+        console.error(`❌ Registration Submit: User ${userId} not found in database.`);
+        return res.status(404).json({ error: 'Database account verification failed. Please try logging in again.' });
       }
 
       // ── 4. Upload license document to Supabase Storage ────────────────────
