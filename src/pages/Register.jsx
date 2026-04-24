@@ -1,5 +1,5 @@
 // FILE: src/pages/Register.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiEye, FiEyeOff, FiMail, FiLock, FiArrowLeft, FiShield, FiUpload, FiX, FiCheckCircle } from "react-icons/fi";
 import { FaArrowRight, FaStethoscope } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
@@ -23,7 +23,19 @@ export default function Register() {
   const [submitting, setSubmitting] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState("");
+  const [resendTimer, setResendTimer] = useState(0);
   const { theme } = useTheme();
+
+  // Timer logic for Resend OTP
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   // License file state (Doctor/Pharmacy only)
   const [licenseFile, setLicenseFile] = useState(null);
@@ -168,6 +180,21 @@ export default function Register() {
     }
   };
 
+  const handleResendOtp = async () => {
+    if (resendTimer > 0 || submitting) return;
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: form.email.trim().toLowerCase(),
+      });
+      if (error) throw error;
+      toast.success("Verification code resent! Please check your inbox.");
+      setResendTimer(60); // 60s cooldown
+    } catch (err) {
+      toast.error(err.message || "Failed to resend verification code.");
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-transparent)]">
       <div className="absolute inset-0 overflow-hidden -z-10">
@@ -238,10 +265,23 @@ export default function Register() {
                   <>Verify Account <FaArrowRight className="group-hover:translate-x-1 transition-transform" /></>
                 )}
               </button>
-              <button type="button" onClick={() => setShowOtp(false)}
-                className="w-full text-[10px] font-black text-[var(--brand-blue)] uppercase tracking-widest hover:underline text-center mt-2">
-                Back to Registration
-              </button>
+              <div className="flex flex-col gap-2">
+                <button type="button" onClick={() => setShowOtp(false)}
+                  className="w-full text-[10px] font-black text-[var(--brand-blue)] uppercase tracking-widest hover:underline text-center mt-2">
+                  Back to Registration
+                </button>
+                <div className="text-center">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Didn't receive code? </span>
+                  <button 
+                    type="button" 
+                    onClick={handleResendOtp}
+                    disabled={resendTimer > 0 || submitting}
+                    className={`text-[10px] font-black uppercase tracking-widest transition-all ${resendTimer > 0 ? "text-[var(--text-muted)] cursor-not-allowed" : "text-[var(--brand-orange)] hover:underline"}`}
+                  >
+                    {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend New Code"}
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
