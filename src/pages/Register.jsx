@@ -191,7 +191,7 @@ export default function Register() {
       if (error) throw error;
 
       // Sync user to backend
-      await api.post("/auth/register-success", {
+      const syncRes = await api.post("/auth/register-success", {
         supabaseId: data.user.id,
         email: form.email.trim().toLowerCase(),
         firstName: toTitleCase(form.firstName.trim()),
@@ -202,9 +202,11 @@ export default function Register() {
         specialization: form.specialization === "Other" ? form.customProfession : form.specialization,
       });
 
+      const dbUser = syncRes.data.user || syncRes.data;
+
         // For DOCTOR/PHARMACY: submit approval request
         if (needsApproval && licenseFile) {
-          await submitRegistrationRequest(data.user.id);
+          await submitRegistrationRequest(dbUser.id);
         } else {
           toast.success("Verification successful! Redirecting to login...");
           setTimeout(() => { window.location.href = "/login"; }, 2000);

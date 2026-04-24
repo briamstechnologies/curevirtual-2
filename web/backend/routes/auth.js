@@ -153,23 +153,9 @@ router.post("/register-success", async (req, res) => {
             dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date(),
             gender: gender || "PREFER_NOT_TO_SAY",
             maritalStatus: maritalStatus || "SINGLE",
-            // Organization can be created separately if needed
           },
         });
-
         console.log("✅ User created successfully:", existingUser.id);
-
-        // Provision default profile
-        try {
-          await ensureDefaultProfile(existingUser, specialization);
-          console.log("✅ Default profile created for:", existingUser.role);
-        } catch (profileError) {
-          console.error(
-            "⚠️ Failed to provision default profile:",
-            profileError,
-          );
-          // Don't fail the entire signup if profile creation fails
-        }
       } catch (dbError) {
         console.error("❌ Database error creating user:", dbError);
         return res.status(500).json({
@@ -182,6 +168,26 @@ router.post("/register-success", async (req, res) => {
             process.env.NODE_ENV === "development" ? dbError : undefined,
         });
       }
+    } else if (existingUser.id !== supabaseId) {
+      // ⚠️ ID Mismatch: Update local user ID to match Supabase
+      console.warn(`🔄 Syncing ID for user ${normedEmail}: ${existingUser.id} -> ${supabaseId}`);
+      try {
+        existingUser = await prisma.user.update({
+          where: { email: normedEmail },
+          data: { id: supabaseId }
+        });
+      } catch (updateError) {
+        console.error("❌ Failed to sync ID:", updateError);
+        // We continue with existingUser as is, though login might fail later
+      }
+    }
+
+    // Provision default profile
+    try {
+      await ensureDefaultProfile(existingUser, specialization);
+      console.log("✅ Default profile created for:", existingUser.role);
+    } catch (profileError) {
+      console.error("⚠️ Failed to provision default profile:", profileError);
     }
 
     // Create legacy JWT for backend API
