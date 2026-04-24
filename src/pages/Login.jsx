@@ -90,8 +90,28 @@ export default function Login() {
       }
     } catch (err) {
       console.error("Login error:", err);
-      setError(err.response?.data?.error || err.message || "Login failed. Please try again.");
-      toast.error(err.response?.data?.error || err.message || "Login failed. Please try again.");
+      const serverError = err.response?.data;
+      
+      if (err.response?.status === 403) {
+        if (serverError.approvalStatus === "PENDING") {
+          setError("Your account is under review. You will receive an email once approved.");
+          toast.info("Account Pending Approval");
+          return;
+        }
+        if (serverError.approvalStatus === "REJECTED") {
+          // Store minimal info for Re-apply flow
+          localStorage.setItem("userId", serverError.userId);
+          localStorage.setItem("approvalStatus", "REJECTED");
+          localStorage.setItem("role", serverError.role);
+
+          setError(`Account Rejected: ${serverError.rejectionReason}`);
+          toast.error("Registration Rejected");
+          return;
+        }
+      }
+
+      setError(serverError?.error || err.message || "Login failed. Please try again.");
+      toast.error(serverError?.error || err.message || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }

@@ -399,7 +399,7 @@ export default function App() {
               path="/doctor/appointments"
               element={
                 <RequireRole role="DOCTOR">
-                  <DoctorAppointments />
+                  <RequireApproved><DoctorAppointments /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -407,7 +407,7 @@ export default function App() {
               path="/doctor/prescriptions"
               element={
                 <RequireRole role="DOCTOR">
-                  <DoctorPrescriptions />
+                  <RequireApproved><DoctorPrescriptions /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -415,7 +415,7 @@ export default function App() {
               path="/doctor/messages/inbox"
               element={
                 <RequireRole role="DOCTOR">
-                  <DoctorInbox />
+                  <RequireApproved><DoctorInbox /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -423,7 +423,7 @@ export default function App() {
               path="/doctor/messages/send"
               element={
                 <RequireRole role="DOCTOR">
-                  <DoctorSendMessage />
+                  <RequireApproved><DoctorSendMessage /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -431,7 +431,7 @@ export default function App() {
               path="/doctor/subscription"
               element={
                 <RequireRole role="DOCTOR">
-                  <DoctorSubscription />
+                  <RequireApproved><DoctorSubscription /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -439,7 +439,7 @@ export default function App() {
               path="/doctor/patients"
               element={
                 <RequireRole role="DOCTOR">
-                  <PatientList />
+                  <RequireApproved><PatientList /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -447,7 +447,7 @@ export default function App() {
               path="/doctor/view-profile"
               element={
                 <RequireRole role="DOCTOR">
-                  <DoctorViewProfile />
+                  <RequireApproved><DoctorViewProfile /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -455,7 +455,7 @@ export default function App() {
               path="/doctor/profile"
               element={
                 <RequireRole role="DOCTOR">
-                  <DoctorProfile />
+                  <RequireApproved><DoctorProfile /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -463,7 +463,7 @@ export default function App() {
               path="/doctor/my-patients"
               element={
                 <RequireRole role="DOCTOR">
-                  <MyPatientList />
+                  <RequireApproved><MyPatientList /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -471,7 +471,7 @@ export default function App() {
               path="/doctor/video-consultation"
               element={
                 <RequireRole role="DOCTOR">
-                  <DoctorVideoConsultation />
+                  <RequireApproved><DoctorVideoConsultation /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -479,7 +479,7 @@ export default function App() {
               path="/doctor/schedule"
               element={
                 <RequireRole role="DOCTOR">
-                  <DoctorSchedule />
+                  <RequireApproved><DoctorSchedule /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -620,7 +620,7 @@ export default function App() {
               path="/pharmacy/profile"
               element={
                 <RequireRole role="PHARMACY">
-                  <PharmacyProfile />
+                  <RequireApproved><PharmacyProfile /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -628,7 +628,7 @@ export default function App() {
               path="/pharmacy/prescriptions"
               element={
                 <RequireRole role="PHARMACY">
-                  <PharmacyPrescriptions />
+                  <RequireApproved><PharmacyPrescriptions /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -636,7 +636,7 @@ export default function App() {
               path="/pharmacy/view-profile"
               element={
                 <RequireRole role="PHARMACY">
-                  <PharmacyViewProfile />
+                  <RequireApproved><PharmacyViewProfile /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -673,8 +673,7 @@ export default function App() {
               path="/pharmacist/subscription"
               element={
                 <RequireRole role="PHARMACY">
-                  {" "}
-                  <PharmacySubscription />{" "}
+                  <RequireApproved><PharmacySubscription /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -682,7 +681,7 @@ export default function App() {
               path="/pharmacy/messages/inbox"
               element={
                 <RequireRole role="PHARMACY">
-                  <PharmacyInbox />
+                  <RequireApproved><PharmacyInbox /></RequireApproved>
                 </RequireRole>
               }
             />
@@ -690,7 +689,7 @@ export default function App() {
               path="/pharmacy/messages/send"
               element={
                 <RequireRole role="PHARMACY">
-                  <PharmacySendMessage />
+                  <RequireApproved><PharmacySendMessage /></RequireApproved>
                 </RequireRole>
               }
             />

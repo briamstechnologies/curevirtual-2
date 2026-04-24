@@ -248,6 +248,30 @@ router.post("/login-sync", async (req, res) => {
       });
     }
 
+    // ── 🔒 Approval Check ───────────────────────────────────────────────────
+    if (account.role === "DOCTOR" || account.role === "PHARMACY") {
+      if (account.approvalStatus === "PENDING") {
+        return res.status(403).json({
+          error: "Your account is currently pending admin approval.",
+          approvalStatus: "PENDING",
+        });
+      }
+      if (account.approvalStatus === "REJECTED") {
+        // Fetch rejection reason
+        const request = await prisma.registrationRequest.findUnique({
+          where: { userId: account.id },
+          select: { rejectionReason: true },
+        });
+        return res.status(403).json({
+          error: "Your registration request was rejected.",
+          approvalStatus: "REJECTED",
+          userId: account.id,
+          role: account.role,
+          rejectionReason: request?.rejectionReason || "Please contact support for details.",
+        });
+      }
+    }
+
     // Create Legacy JWT for backend API
     const token = jwt.sign(
       { id: account.id, role: account.role, type: "USER" },
@@ -350,6 +374,29 @@ router.post("/verify-otp-login", async (req, res) => {
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
+    }
+
+    // ── 🔒 Approval Check ───────────────────────────────────────────────────
+    if (user.role === "DOCTOR" || user.role === "PHARMACY") {
+      if (user.approvalStatus === "PENDING") {
+        return res.status(403).json({
+          error: "Your account is currently pending admin approval.",
+          approvalStatus: "PENDING",
+        });
+      }
+      if (user.approvalStatus === "REJECTED") {
+        const request = await prisma.registrationRequest.findUnique({
+          where: { userId: user.id },
+          select: { rejectionReason: true },
+        });
+        return res.status(403).json({
+          error: "Your registration request was rejected.",
+          approvalStatus: "REJECTED",
+          userId: user.id,
+          role: user.role,
+          rejectionReason: request?.rejectionReason || "Please contact support for details.",
+        });
+      }
     }
 
     // Create JWT

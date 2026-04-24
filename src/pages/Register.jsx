@@ -26,6 +26,9 @@ export default function Register() {
   const [resendTimer, setResendTimer] = useState(0);
   const { theme } = useTheme();
 
+  const isResubmitting = localStorage.getItem("approvalStatus") === "REJECTED";
+  const existingUserId = localStorage.getItem("userId");
+
   // Timer logic for Resend OTP
   useEffect(() => {
     let interval;
@@ -34,8 +37,24 @@ export default function Register() {
         setResendTimer((prev) => prev - 1);
       }, 1000);
     }
+
+    // If resubmitting, prefill email if possible
+    if (isResubmitting && existingUserId) {
+      const storedEmail = localStorage.getItem("email") || localStorage.getItem("userEmail");
+      if (storedEmail && !form.email) {
+        setForm(f => ({ ...f, email: storedEmail }));
+      }
+    }
+
     return () => clearInterval(interval);
-  }, [resendTimer]);
+  }, [resendTimer, isResubmitting, existingUserId, form.email]);
+
+  // If already PENDING, don't allow registration
+  useEffect(() => {
+    if (localStorage.getItem("approvalStatus") === "PENDING") {
+      navigate("/pending-approval");
+    }
+  }, [navigate]);
 
   // License file state (Doctor/Pharmacy only)
   const [licenseFile, setLicenseFile] = useState(null);
@@ -92,28 +111,66 @@ export default function Register() {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        options: {
-          data: {
-            firstName: toTitleCase(form.firstName.trim()),
-            middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
-            lastName: toTitleCase(form.lastName.trim()),
-            role: form.role, dateOfBirth: form.dateOfBirth,
-            gender: form.gender, maritalStatus: form.maritalStatus,
-            specialization: form.specialization === "Other" ? form.customProfession : form.specialization,
+      if (isResubmitting) {
+        // Skip Supabase signup, go straight to request submission
+        await submitRegistrationRequest(existingUserId);
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          options: {
+            data: {
+              firstName: toTitleCase(form.firstName.trim()),
+              middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
+              lastName: toTitleCase(form.lastName.trim()),
+              role: form.role, dateOfBirth: form.dateOfBirth,
+              gender: form.gender, maritalStatus: form.maritalStatus,
+              specialization: form.specialization === "Other" ? form.customProfession : form.specialization,
+            },
           },
-        },
-      });
-      if (error) throw error;
-      setShowOtp(true);
-      toast.success("OTP sent! Please check your email.");
+        });
+        if (error) throw error;
+        setShowOtp(true);
+        toast.success("OTP sent! Please check your email.");
+      }
     } catch (err) {
       toast.error(err.message || "Registration failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const submitRegistrationRequest = async (userId) => {
+    setIsUploading(true);
+    toast.info("Resubmitting your application...");
+
+    const formData = new FormData();
+    formData.append("userId", userId);
+    formData.append("role", form.role);
+    formData.append("submittedData", JSON.stringify({
+      firstName: toTitleCase(form.firstName.trim()),
+      middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
+      lastName: toTitleCase(form.lastName.trim()),
+      email: form.email.trim().toLowerCase(),
+      role: form.role, dateOfBirth: form.dateOfBirth,
+      gender: form.gender, maritalStatus: form.maritalStatus,
+      specialization: form.specialization === "Other" ? form.customProfession : form.specialization,
+    }));
+    formData.append("licenseFile", licenseFile);
+
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || "https://curevirtual-2-production-ee33.up.railway.app/api";
+    const response = await fetch(`${baseUrl}/registration-requests/submit`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || `Upload failed with status: ${response.status}`);
+    }
+
+    toast.success("Application resubmitted! Pending admin review.");
+    setTimeout(() => navigate("/pending-approval"), 1500);
   };
 
   const handleVerifyOtp = async (e) => {
@@ -141,45 +198,13 @@ export default function Register() {
         specialization: form.specialization === "Other" ? form.customProfession : form.specialization,
       });
 
-      // For DOCTOR/PHARMACY: submit approval request
-      if (needsApproval && licenseFile) {
-        setIsUploading(true);
-        toast.info("Setting up your account...");
-
-        const formData = new FormData();
-        // Append text fields FIRST so multer populates req.body before processing the file
-        formData.append("userId", data.user.id); 
-        formData.append("role", form.role);
-        formData.append("submittedData", JSON.stringify({
-          firstName: toTitleCase(form.firstName.trim()),
-          middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
-          lastName: toTitleCase(form.lastName.trim()),
-          email: form.email.trim().toLowerCase(),
-          role: form.role, dateOfBirth: form.dateOfBirth,
-          gender: form.gender, maritalStatus: form.maritalStatus,
-          specialization: form.specialization === "Other" ? form.customProfession : form.specialization,
-        }));
-        // Append file LAST
-        formData.append("licenseFile", licenseFile);
-
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || "https://curevirtual-2-production-ee33.up.railway.app/api";
-        const response = await fetch(`${baseUrl}/registration-requests/submit`, {
-          method: "POST",
-          body: formData,
-          // Native fetch automatically sets the correct Content-Type with boundary for FormData
-        });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error || `Upload failed with status: ${response.status}`);
+        // For DOCTOR/PHARMACY: submit approval request
+        if (needsApproval && licenseFile) {
+          await submitRegistrationRequest(data.user.id);
+        } else {
+          toast.success("Verification successful! Redirecting to login...");
+          setTimeout(() => { window.location.href = "/login"; }, 2000);
         }
-
-        toast.success("Account created! Pending admin review.");
-        setTimeout(() => navigate("/pending-approval"), 1500);
-      } else {
-        toast.success("Verification successful! Redirecting to login...");
-        setTimeout(() => { window.location.href = "/login"; }, 2000);
-      }
     } catch (err) {
       toast.error(err.response?.data?.error || err.message || "Verification failed.");
     } finally {
@@ -247,8 +272,13 @@ export default function Register() {
               <img src="/images/logo/Asset3.png" alt="Logo" className="w-6 h-6" />
               <span className="text-sm font-black tracking-tighter text-[var(--text-main)] uppercase">CURE<span className="text-[var(--brand-blue)]">VIRTUAL</span></span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-2">Create <span className="text-[var(--brand-green)]">Account</span></h1>
-            <p className="text-[var(--text-soft)] text-sm font-bold opacity-70">Fill in your details to get started.</p>
+            <h1 className="text-3xl md:text-4xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-2">
+              {isResubmitting ? "Resubmit" : "Create"}{" "}
+              <span className="text-[var(--brand-green)]">Account</span>
+            </h1>
+            <p className="text-[var(--text-soft)] text-sm font-bold opacity-70">
+              {isResubmitting ? "Update your details and resubmit for review." : "Fill in your details to get started."}
+            </p>
           </div>
 
           {showOtp ? (
@@ -330,29 +360,31 @@ export default function Register() {
                 <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">Email Address</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all"><FiMail /></div>
-                  <input type="email" name="email" value={form.email} onChange={handleChange} placeholder=" " required
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 pl-12 pr-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
+                  <input type="email" name="email" value={form.email} onChange={handleChange} placeholder=" " required disabled={isResubmitting}
+                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 pl-12 pr-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner disabled:opacity-60" />
                 </div>
               </div>
 
               {/* Passwords */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[["password", "••••••••"], ["confirmPassword", "••••••••"]].map(([field, ph]) => (
-                  <div key={field} className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">{field === "password" ? "Password" : "Confirm Password"}</label>
-                    <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all"><FiLock /></div>
-                      <input type={showPassword ? "text" : "password"} name={field} value={form[field]} onChange={handleChange} placeholder={ph} required minLength={6}
-                        className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 pl-12 pr-12 text-xs font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
-                      {field === "confirmPassword" && (
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-                          {showPassword ? <FiEyeOff /> : <FiEye />}
-                        </button>
-                      )}
+              {!isResubmitting && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[["password", "••••••••"], ["confirmPassword", "••••••••"]].map(([field, ph]) => (
+                    <div key={field} className="space-y-1.5">
+                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-green)] ml-1">{field === "password" ? "Password" : "Confirm Password"}</label>
+                      <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all"><FiLock /></div>
+                        <input type={showPassword ? "text" : "password"} name={field} value={form[field]} onChange={handleChange} placeholder={ph} required minLength={6}
+                          className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 pl-12 pr-12 text-xs font-bold focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
+                        {field === "confirmPassword" && (
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+                            {showPassword ? <FiEyeOff /> : <FiEye />}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               {/* Role selector */}
               <div className="space-y-2">
@@ -361,8 +393,8 @@ export default function Register() {
                   {[{ id: "PATIENT", label: "PATIENT", color: "var(--brand-orange)" },
                     { id: "DOCTOR", label: "DOCTOR", color: "var(--brand-green)" },
                     { id: "PHARMACY", label: "PHARMACIST", color: "var(--brand-blue)" }].map((role) => (
-                    <button key={role.id} type="button" onClick={() => setForm((f) => ({ ...f, role: role.id }))}
-                      className={`py-3 rounded-2xl border-2 text-[9px] font-black uppercase tracking-widest transition-all ${form.role === role.id ? "bg-white text-black shadow-xl" : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-main)]"}`}
+                    <button key={role.id} type="button" onClick={() => !isResubmitting && setForm((f) => ({ ...f, role: role.id }))}
+                      className={`py-3 rounded-2xl border-2 text-[9px] font-black uppercase tracking-widest transition-all ${form.role === role.id ? "bg-white text-black shadow-xl" : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-main)]"} ${isResubmitting && form.role !== role.id ? "opacity-30 grayscale cursor-not-allowed" : ""}`}
                       style={form.role === role.id ? { borderColor: role.color } : {}}>
                       {role.label}
                     </button>
@@ -438,8 +470,12 @@ export default function Register() {
 
               <button type="submit" disabled={submitting}
                 className="btn btn-secondary w-full !py-4.5 !rounded-2xl text-xs flex items-center justify-center gap-3 shadow-2xl disabled:opacity-70 mt-4 group">
-                {submitting ? <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  : <> Submit Registration <FaArrowRight className="group-hover:translate-x-1 transition-transform" /></>}
+                {submitting ? (
+                  <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>{isUploading ? "Uploading docs..." : "Processing..."}</span></>
+                ) : (
+                  <> {isResubmitting ? "Resubmit Application" : "Submit Registration"} <FaArrowRight className="group-hover:translate-x-1 transition-transform" /></>
+                )}
               </button>
             </form>
           )}

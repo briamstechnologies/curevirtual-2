@@ -125,7 +125,8 @@ router.post(
       const existing = await prisma.registrationRequest.findUnique({
         where: { userId },
       });
-      if (existing) {
+      
+      if (existing && existing.status !== 'REJECTED') {
         return res.status(409).json({
           error: 'A registration request already exists for this account.',
           status: existing.status,
@@ -167,15 +168,25 @@ router.post(
 
       const signedUrl = signedUrlData?.signedUrl ?? '';
 
-      // ── 6. Create RegistrationRequest in DB ───────────────────────────────
-      const registrationRequest = await prisma.registrationRequest.create({
-        data: {
+      // ── 6. Create or Update RegistrationRequest in DB ──────────────────────
+      const registrationRequest = await prisma.registrationRequest.upsert({
+        where: { userId },
+        create: {
           userId,
           role,
           status: 'PENDING',
           licenseImageUrl: signedUrl,
           licenseFilePath: storagePath,
           submittedData: parsedFormData,
+        },
+        update: {
+          role,
+          status: 'PENDING',
+          licenseImageUrl: signedUrl,
+          licenseFilePath: storagePath,
+          submittedData: parsedFormData,
+          updatedAt: new Date(),
+          rejectionReason: null, // Clear old reason
         },
       });
 
