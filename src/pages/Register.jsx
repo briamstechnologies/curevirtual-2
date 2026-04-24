@@ -142,35 +142,39 @@ export default function Register() {
 
   const submitRegistrationRequest = async (userId) => {
     setIsUploading(true);
-    toast.info("Resubmitting your application...");
+    toast.info("Submitting your application...");
 
-    const formData = new FormData();
-    formData.append("userId", userId);
-    formData.append("role", form.role);
-    formData.append("submittedData", JSON.stringify({
-      firstName: toTitleCase(form.firstName.trim()),
-      middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
-      lastName: toTitleCase(form.lastName.trim()),
-      email: form.email.trim().toLowerCase(),
-      role: form.role, dateOfBirth: form.dateOfBirth,
-      gender: form.gender, maritalStatus: form.maritalStatus,
-      specialization: form.specialization === "Other" ? form.customProfession : form.specialization,
-    }));
-    formData.append("licenseFile", licenseFile);
+    try {
+      const formData = new FormData();
+      formData.append("userId", userId);
+      formData.append("role", form.role);
+      formData.append("submittedData", JSON.stringify({
+        firstName: toTitleCase(form.firstName.trim()),
+        middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
+        lastName: toTitleCase(form.lastName.trim()),
+        email: form.email.trim().toLowerCase(),
+        role: form.role,
+        dateOfBirth: form.dateOfBirth,
+        gender: form.gender,
+        maritalStatus: form.maritalStatus,
+        specialization: form.specialization === "Other" ? form.customProfession : form.specialization,
+      }));
+      formData.append("licenseFile", licenseFile);
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || "https://curevirtual-2-production-ee33.up.railway.app/api";
-    const response = await fetch(`${baseUrl}/registration-requests/submit`, {
-      method: "POST",
-      body: formData,
-    });
+      await api.post("/registration-requests/submit", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `Upload failed with status: ${response.status}`);
+      toast.success("Application submitted! Pending admin review.");
+      setTimeout(() => navigate("/pending-approval"), 1500);
+    } catch (err) {
+      console.error("❌ Registration Request Submit Error:", err);
+      throw new Error(err.response?.data?.error || err.message || "Failed to submit request");
+    } finally {
+      setIsUploading(false);
     }
-
-    toast.success("Application resubmitted! Pending admin review.");
-    setTimeout(() => navigate("/pending-approval"), 1500);
   };
 
   const handleVerifyOtp = async (e) => {

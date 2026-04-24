@@ -133,12 +133,21 @@ router.post(
         });
       }
 
-      // ── 3. Verify user exists in local database ───────────────────────────
-      const dbUser = await prisma.user.findUnique({
+      // ── 3. Verify user exists in local database (with retry for sync) ──────
+      let dbUser = await prisma.user.findUnique({
         where: { id: userId },
       });
+
       if (!dbUser) {
-        console.error(`❌ Registration Submit: User ${userId} not found in database.`);
+        console.log(`⚠️ Registration Submit: User ${userId} not found, retrying once...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        dbUser = await prisma.user.findUnique({
+          where: { id: userId },
+        });
+      }
+
+      if (!dbUser) {
+        console.error(`❌ Registration Submit: User ${userId} not found after retry.`);
         return res.status(404).json({ error: 'Account verification failed. Please try logging in again.' });
       }
 
