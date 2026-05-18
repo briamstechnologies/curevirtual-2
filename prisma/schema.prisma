@@ -33,6 +33,7 @@ model User {
   sentMessages        Message[]            @relation("MessagesSent")
   patient             PatientProfile?
   pharmacy            PharmacyProfile?
+  laboratory              LaboratoryProfile?
   RegistrationRequest RegistrationRequest?
   subscriptions       Subscription[]
   supportAgent        SupportAgent?
@@ -236,6 +237,32 @@ model DoctorSchedule {
   @@schema("public")
 }
 
+model LaboratoryProfile {
+  id             String      @id @default(uuid())
+  userId         String      @unique
+  displayName    String?
+  licenseNumber  String?
+  phone          String?
+  address        String?
+  city           String?
+  state          String?
+  country        String?
+  postalCode     String?
+  latitude       Float?
+  longitude      Float?
+  openingHours   String?
+  services       String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  timezone       String      @default("UTC")
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  labOrders      LabOrder[]
+
+  @@map("LaboratoryProfile")
+  @@schema("public")
+}
+
+
 model SupportTicket {
   id        Int            @id @default(autoincrement())
   ticketNo  String         @unique @default(uuid())
@@ -334,6 +361,7 @@ model LabOrder {
   id          String             @id @default(uuid())
   doctorId    String
   patientId   String
+  laboratoryId    String?
   encounterId String?
   testName    String
   status      LabStatus          @default(ORDERED)
@@ -343,7 +371,7 @@ model LabOrder {
   doctor      DoctorProfile      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   encounter   ClinicalEncounter? @relation(fields: [encounterId], references: [id])
   patient     PatientProfile     @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
+  laboratory      LaboratoryProfile? @relation(fields: [laboratoryId], references: [id])
   @@map("LabOrder")
   @@schema("public")
 }
@@ -1372,7 +1400,7 @@ enum UserRole {
   SUPERADMIN
   ADMIN
   SUPPORT
-
+  LABORATORY
   @@schema("public")
 }
 

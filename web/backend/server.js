@@ -1,4 +1,3 @@
-// FILE: backend/server.js
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -21,21 +20,40 @@ const allowedOrigins = [
   "https://curevirtual.vercel.app",
   "https://cure-virtual-2-git-main-briamstechnologies.vercel.app",
   "https://curevirtual-2-production.up.railway.app",
+  "http://localhost:8081", // <-- YEH EXPO WEB KA PORT HAI
+  "http://localhost:19000", // <-- YEH EXPO GO APP KA PORT HAI
+  "http://localhost:19006", // <-- YEH BHI EXPO WEB KA PORT HAI
+
   "https://curevirtual-2-production-ee33.up.railway.app",
   "https://curevirtual-2-production-6eaa.up.railway.app",
   "https://bite-dash-railway-app.up.railway.app",
   process.env.FRONTEND_URL,
   process.env.CORS_ORIGIN,
   process.env.RAILWAY_STATIC_URL,
- ].filter(Boolean);
- 
- const isOriginAllowed = (origin) => {
-   if (!origin || origin === "null") return true;
-   if (allowedOrigins.includes(origin)) return true;
-   // Dynamic allow for Vercel and Railway subdomains
-   if (origin.endsWith(".vercel.app") || origin.endsWith(".up.railway.app")) return true;
-   return false;
- };
+].filter(Boolean);
+
+const isOriginAllowed = (origin) => {
+  if (!origin || origin === "null") return true; // Allow mobile apps/cURL/Postman
+
+  if (allowedOrigins.includes(origin)) return true;
+
+  // ✅ Relaxed check for Local Development (Mobile/Physical Devices)
+  if (process.env.NODE_ENV !== "production") {
+    if (
+      origin.startsWith("http://192.168.") ||
+      origin.startsWith("http://10.") ||
+      origin.startsWith("http://localhost:") ||
+      origin.startsWith("exp://")
+    ) {
+      return true;
+    }
+  }
+
+  // Dynamic allow for Vercel and Railway subdomains
+  if (origin.endsWith(".vercel.app") || origin.endsWith(".up.railway.app")) return true;
+
+  return false;
+};
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -251,13 +269,15 @@ app.use((err, req, res, _next) => {
       method: req.method,
       url: req.originalUrl,
       userId: req.user?.id,
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   });
 
   // Custom response for CORS or other well-known errors
   if (err.message === "Not allowed by CORS") {
-    return res.status(403).json({ success: false, message: "Security violation: Origin not allowed by CORS policy." });
+    return res
+      .status(403)
+      .json({ success: false, message: "Security violation: Origin not allowed by CORS policy." });
   }
 
   res.status(err.status || 500).json({
@@ -266,7 +286,7 @@ app.use((err, req, res, _next) => {
       process.env.NODE_ENV === "production"
         ? "An internal server error occurred"
         : err.message || "An unexpected error occurred",
-    errorId: Date.now() // Simple way to correlate client reports with server logs
+    errorId: Date.now(), // Simple way to correlate client reports with server logs
   });
 });
 

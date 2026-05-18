@@ -9,7 +9,7 @@ import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../Lib/supabase";
 import api from "../Lib/api";
 
-const ROLES_REQUIRING_APPROVAL = ["DOCTOR", "PHARMACY"];
+const ROLES_REQUIRING_APPROVAL = ["DOCTOR", "PHARMACY", "LABORATORY"];
 
 export default function Register() {
   const navigate = useNavigate();
@@ -56,7 +56,7 @@ export default function Register() {
     }
   }, [navigate]);
 
-  // License file state (Doctor/Pharmacy only)
+  // License file state (Doctor/Pharmacy/Laboratory only)
   const [licenseFile, setLicenseFile] = useState(null);
   const [licensePreview, setLicensePreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -208,7 +208,7 @@ export default function Register() {
 
       const dbUser = syncRes.data.user || syncRes.data;
 
-        // For DOCTOR/PHARMACY: submit approval request
+        // For DOCTOR/PHARMACY/LABORATORY: submit approval request
         if (needsApproval && licenseFile) {
           await submitRegistrationRequest(dbUser.id);
         } else {
@@ -407,10 +407,12 @@ export default function Register() {
               {/* Role selector */}
               <div className="space-y-3">
                 <label className="text-[9px] font-black uppercase tracking-[0.4em] text-[var(--text-muted)] ml-1">Define Your Role</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[{ id: "PATIENT", label: "Patient", color: "var(--brand-orange)" },
                     { id: "DOCTOR", label: "Doctor", color: "var(--brand-green)" },
-                    { id: "PHARMACY", label: "Pharmacist", color: "var(--brand-blue)" }].map((role) => (
+                    { id: "PHARMACY", label: "Pharmacist", color: "var(--brand-blue)" },
+                    { id: "LABORATORY", label: "Laboratory", color: "var(--brand-purple)" }
+                  ].map((role) => (
                     <button key={role.id} type="button" onClick={() => !isResubmitting && setForm((f) => ({ ...f, role: role.id }))}
                       className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden group ${form.role === role.id ? "bg-[var(--bg-main)] text-[var(--text-main)] shadow-lg" : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-soft)]"} ${isResubmitting && form.role !== role.id ? "opacity-30 grayscale cursor-not-allowed" : ""}`}
                       style={form.role === role.id ? { borderColor: role.color } : {}}>
@@ -456,7 +458,7 @@ export default function Register() {
                     <div className="w-12 h-12 rounded-full bg-[var(--brand-blue)]/10 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
                       <FiUpload className="text-[var(--brand-blue)] text-xl" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] group-hover:text-[var(--brand-blue)] transition-all">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] group-hover:text-[var(--brand-blue)] transition-all text-center">
                       {licenseFile ? licenseFile.name : "Choose License Image or PDF"}
                     </span>
                     <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleLicenseUpload} className="hidden" />

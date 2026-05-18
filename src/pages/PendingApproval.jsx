@@ -1,8 +1,8 @@
 // FILE: src/pages/PendingApproval.jsx
-// Shown to DOCTOR/PHARMACY users after OTP verification while awaiting admin review
+// Shown to DOCTOR/PHARMACY/LABORATORY users after OTP verification while awaiting admin review
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiClock, FiLogOut, FiCheckCircle, FiMail } from "react-icons/fi";
+import { FiClock, FiLogOut, FiCheckCircle, FiMail, FiShield } from "react-icons/fi";
 import { useSocket } from "../context/useSocket";
 
 export default function PendingApproval() {
@@ -32,7 +32,10 @@ export default function PendingApproval() {
     navigate("/login");
   };
 
-  const roleLabel = role === "DOCTOR" ? "Doctor" : "Pharmacy";
+  // Updated to handle LABORATORY as well
+  let roleLabel = "Doctor";
+  if (role === "PHARMACY") roleLabel = "Pharmacist";
+  else if (role === "LABORATORY") roleLabel = "Laboratory";
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[var(--bg-main)]">
@@ -134,6 +137,5 @@ export default function PendingApproval() {
         </div>
       </div>
     </div>
-
   );
 }
