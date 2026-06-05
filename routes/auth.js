@@ -255,63 +255,91 @@ router.post("/check-email", async (req, res) => {
 
     const normedEmail = String(email).trim().toLowerCase();
 
-    // 1. Check in our Prisma database
-    const prismaUser = await prisma.user.findUnique({
-      where: { email: normedEmail }
-    });
-
-    if (prismaUser) {
-      return res.json({
-        exists: true,
-        verified: true,
-        status: "ALREADY_REGISTERED",
-        message: "This email is already fully registered on our platform."
-      });
-    }
-
-    // 2. Check in Supabase Auth (using prisma.users which has access to the auth schema)
+    // 1. Check in Supabase Auth (auth.users)
     const authUser = await prisma.users.findFirst({
       where: { email: normedEmail }
     });
 
     if (authUser) {
-      // Stuck / Ghost account found! Automatically clean up to allow re-registration
-      let cleared = false;
-      if (supabaseAdmin) {
-        try {
-          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(authUser.id);
-          if (deleteError) {
-            console.error(`❌ Failed to delete stuck Supabase Auth user ${normedEmail} via API:`, deleteError.message);
-            // Fallback: Delete directly from auth.users database table
-            try {
-              await prisma.users.delete({
-                where: { id: authUser.id }
-              });
-              console.log(`✅ Auto-cleaned stuck Supabase Auth user via DB fallback: ${normedEmail} (ID: ${authUser.id})`);
-              cleared = true;
-            } catch (dbDeleteError) {
-              console.error(`❌ Failed DB delete fallback for ${normedEmail}:`, dbDeleteError.message);
-            }
-          } else {
-            console.log(`✅ Auto-cleaned stuck Supabase Auth user: ${normedEmail} (ID: ${authUser.id})`);
-            cleared = true;
-          }
-        } catch (cleanError) {
-          console.error(`❌ Unexpected error deleting stuck Supabase Auth user ${normedEmail}:`, cleanError);
-        }
+      if (authUser.email_confirmed_at !== null) {
+        // Confirmed auth user -> fully registered
+        return res.json({
+          exists: true,
+          verified: true,
+          status: "ALREADY_REGISTERED",
+          message: "This email is already fully registered on our platform."
+        });
       } else {
-        console.warn("⚠️ Supabase Admin client not configured. Cannot delete stuck user.");
-      }
+        // Unconfirmed auth user -> stuck / incomplete signup
+        console.log(`⚠️ Stuck unconfirmed auth user found for ${normedEmail}. Cleaning up...`);
+        let cleared = false;
+        
+        // Delete from public."User" first to avoid foreign key constraints (if any)
+        try {
+          await prisma.user.deleteMany({
+            where: { email: normedEmail }
+          });
+          console.log(`✅ Cleaned public.User record for unconfirmed user ${normedEmail}`);
+        } catch (dbUserError) {
+          console.error(`❌ Failed to delete public.User record for ${normedEmail}:`, dbUserError.message);
+        }
 
-      return res.json({
-        exists: true,
-        verified: false,
-        status: "PENDING_ACTIVATION",
-        cleared,
-        message: cleared 
-          ? "Account pending activation. Stuck session cleared successfully. You can now register again."
-          : "Account pending activation but stuck session could not be cleared automatically."
-      });
+        // Delete from auth.users via Supabase Admin API
+        if (supabaseAdmin) {
+          try {
+            const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+            if (deleteError) {
+              console.error(`❌ Failed to delete stuck Supabase Auth user ${normedEmail} via API:`, deleteError.message);
+            } else {
+              console.log(`✅ Auto-cleaned stuck Supabase Auth user via API: ${normedEmail}`);
+              cleared = true;
+            }
+          } catch (cleanError) {
+            console.error(`❌ Unexpected error deleting stuck Supabase Auth user ${normedEmail}:`, cleanError);
+          }
+        }
+
+        // DB Fallback delete if API delete failed or wasn't configured
+        if (!cleared) {
+          try {
+            await prisma.users.delete({
+              where: { id: authUser.id }
+            });
+            console.log(`✅ Auto-cleaned stuck Supabase Auth user via DB fallback: ${normedEmail} (ID: ${authUser.id})`);
+            cleared = true;
+          } catch (dbDeleteError) {
+            console.error(`❌ Failed DB delete fallback for ${normedEmail}:`, dbDeleteError.message);
+          }
+        }
+
+        return res.json({
+          exists: true,
+          verified: false,
+          status: "PENDING_ACTIVATION",
+          cleared,
+          message: cleared 
+            ? "Account pending activation. Stuck session cleared successfully. You can now register again."
+            : "Account pending activation but stuck session could not be cleared automatically."
+        });
+      }
+    }
+
+    // 2. Check in our Prisma database (if not found in auth.users)
+    const prismaUser = await prisma.user.findUnique({
+      where: { email: normedEmail }
+    });
+
+    if (prismaUser) {
+      // Exist in public.User but NOT in auth.users -> orphaned public User record!
+      console.log(`⚠️ Orphaned public.User record found for ${normedEmail} (no auth user). Cleaning up...`);
+      try {
+        await prisma.user.delete({
+          where: { id: prismaUser.id }
+        });
+        console.log(`✅ Cleaned orphaned public.User record for ${normedEmail}`);
+      } catch (dbUserError) {
+        console.error(`❌ Failed to delete orphaned public.User record for ${normedEmail}:`, dbUserError.message);
+      }
     }
 
     // 3. Completely fresh user
