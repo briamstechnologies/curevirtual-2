@@ -61,7 +61,7 @@ export default function Topbar({ userName: propUserName, isMobileMenuOpen, setIs
 
   const handleNotificationClick = () => {
     if (role === "PATIENT") navigate("/patient/messages");
-    else if (role === "DOCTOR") navigate("/doctor/messages/inbox");
+    else if (role === "DOCTOR" || role === "PHYSICIAN_ASSISTANT") navigate("/doctor/messages/inbox");
     else if (role === "ADMIN") navigate("/admin/messages/inbox");
   };
 
@@ -72,7 +72,7 @@ export default function Topbar({ userName: propUserName, isMobileMenuOpen, setIs
 
   const handleProfile = () => {
     if (role === "PATIENT") navigate("/patient/profile/view-profile");
-    else if (role === "DOCTOR") navigate("/doctor/view-profile");
+    else if (role === "DOCTOR" || role === "PHYSICIAN_ASSISTANT") navigate("/doctor/view-profile");
     else if (role === "PHARMACY") navigate("/pharmacy/view-profile");
     else if (role === "ADMIN") navigate("/admin/profile");
     else if (role === "SUPERADMIN") navigate("/superadmin/profile");

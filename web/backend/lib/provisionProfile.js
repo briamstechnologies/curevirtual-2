@@ -34,7 +34,7 @@ async function ensureDefaultProfile(user, specialization) {
     });
   }
 
-  if (user.role === 'DOCTOR') {
+  if (user.role === 'DOCTOR' || user.role === 'PHYSICIAN_ASSISTANT') {
     const existing = await prisma.doctorProfile.findUnique({
       where: { userId: user.id },
     });
@@ -46,7 +46,7 @@ async function ensureDefaultProfile(user, specialization) {
       data: {
         userId: user.id,
         specialization: specialization || 'General Medicine',
-        qualifications: 'MBBS',
+        qualifications: user.role === 'PHYSICIAN_ASSISTANT' ? 'PA-C' : 'MBBS',
         licenseNumber,
         hospitalAffiliation: '',
         yearsOfExperience: 0,
@@ -80,6 +80,30 @@ async function ensureDefaultProfile(user, specialization) {
       },
     });
   }
+
+  // ─── LABORATORY ✅ NAYA ADD KIYA ──────────────────────────────────────────
+  if (user.role === 'LABORATORY') {
+    const existing = await prisma.laboratoryProfile.findUnique({
+      where: { userId: user.id },
+    });
+    if (existing) return existing;
+
+    return prisma.laboratoryProfile.create({
+      data: {
+        userId: user.id,
+        displayName: `${user.firstName} ${user.lastName}`,
+        licenseNumber: `LAB-${user.id.slice(0, 8).toUpperCase()}`,
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        country: '',
+        postalCode: '',
+        timezone: 'UTC',
+      },
+    });
+  }
+
 
   return null;
 }

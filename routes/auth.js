@@ -137,55 +137,88 @@ router.post("/register-success", async (req, res) => {
 
     const normedEmail = String(email).trim().toLowerCase();
 
-    // Check if user already exists
-    let existingUser = await prisma.user.findUnique({
-      where: { email: normedEmail },
-    });
-
-    // If not, create them
-    if (!existingUser) {
-      try {
-        existingUser = await prisma.user.create({
-          data: {
-            id: supabaseId, // Use Supabase ID as primary key
-            firstName: firstName || "First",
-            middleName: middleName || null,
-            lastName: lastName || "Last",
-            email: normedEmail,
-            phone: phone || null,
-            password: null, // Supabase manages passwords
-            role: role || "PATIENT",
-            dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date(),
-            gender: gender || "PREFER_NOT_TO_SAY",
-            maritalStatus: maritalStatus || "SINGLE",
-            // Organization can be created separately if needed
-          },
-        });
-
-        console.log("✅ User created successfully:", existingUser.id);
-
-        // Provision default profile
-        try {
-          await ensureDefaultProfile(existingUser, specialization);
-          console.log("✅ Default profile created for:", existingUser.role);
-        } catch (profileError) {
-          console.error(
-            "⚠️ Failed to provision default profile:",
-            profileError,
-          );
-          // Don't fail the entire signup if profile creation fails
+    let existingUser;
+    
+    // Use upsert to handle concurrent duplicate requests gracefully
+    try {
+      existingUser = await prisma.user.upsert({
+        where: { email: normedEmail },
+        update: {
+          // If user exists, update fields that might have changed, or keep them
+          firstName: firstName || undefined,
+          lastName: lastName || undefined,
+          phone: phone || undefined,
+        },
+        create: {
+          id: supabaseId, // Use Supabase ID as primary key
+          firstName: firstName || "First",
+          middleName: middleName || null,
+          lastName: lastName || "Last",
+          email: normedEmail,
+          phone: phone || null,
+          password: null, // Supabase manages passwords
+          role: role || "PATIENT",
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date(),
+          gender: gender || "PREFER_NOT_TO_SAY",
+          maritalStatus: maritalStatus || "SINGLE",
+        },
+      });
+      console.log("✅ User upserted successfully in Prisma:", existingUser.id);
+    } catch (dbError) {
+      console.warn("⚠️ Prisma upsert failed. Attempting fallback lookup / retry...", dbError.message);
+      
+      // Fallback: Check if user exists by ID or email
+      existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { id: supabaseId },
+            { email: normedEmail }
+          ]
         }
-      } catch (dbError) {
-        console.error("❌ Database error creating user:", dbError);
-        return res.status(500).json({
-          error: "Database error saving new user",
-          details:
-            process.env.NODE_ENV === "development"
-              ? dbError.message || JSON.stringify(dbError)
-              : "Please contact support",
-          prismaError:
-            process.env.NODE_ENV === "development" ? dbError : undefined,
-        });
+      });
+
+      if (!existingUser) {
+        // Retry creating user one more time
+        try {
+          existingUser = await prisma.user.create({
+            data: {
+              id: supabaseId,
+              firstName: firstName || "First",
+              middleName: middleName || null,
+              lastName: lastName || "Last",
+              email: normedEmail,
+              phone: phone || null,
+              password: null,
+              role: role || "PATIENT",
+              dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date(),
+              gender: gender || "PREFER_NOT_TO_SAY",
+              maritalStatus: maritalStatus || "SINGLE",
+            }
+          });
+          console.log("✅ User created successfully on retry:", existingUser.id);
+        } catch (retryError) {
+          console.error("❌ Database create retry failed completely:", retryError);
+          // Gracefully return a 200 response with sync_pending status instead of 500
+          return res.status(200).json({
+            message: "User registered partially, database profile creation pending retry.",
+            syncPending: true,
+            supabaseId,
+            email: normedEmail
+          });
+        }
+      }
+    }
+
+    // Provision default profile (Idempotent call)
+    if (existingUser) {
+      try {
+        await ensureDefaultProfile(existingUser, specialization);
+        console.log("✅ Default profile ensured/created for:", existingUser.role);
+      } catch (profileError) {
+        console.error(
+          "⚠️ Failed to provision default profile (non-blocking):",
+          profileError,
+        );
       }
     }
 
@@ -209,6 +242,95 @@ router.post("/register-success", async (req, res) => {
     });
   }
 });
+
+// -------------------------
+// Check Email (Verify & Auto-Clean Stuck Supabase Accounts)
+// -------------------------
+router.post("/check-email", async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    const normedEmail = String(email).trim().toLowerCase();
+
+    // 1. Check in our Prisma database
+    const prismaUser = await prisma.user.findUnique({
+      where: { email: normedEmail }
+    });
+
+    if (prismaUser) {
+      return res.json({
+        exists: true,
+        verified: true,
+        status: "ALREADY_REGISTERED",
+        message: "This email is already fully registered on our platform."
+      });
+    }
+
+    // 2. Check in Supabase Auth (using prisma.users which has access to the auth schema)
+    const authUser = await prisma.users.findFirst({
+      where: { email: normedEmail }
+    });
+
+    if (authUser) {
+      // Stuck / Ghost account found! Automatically clean up to allow re-registration
+      let cleared = false;
+      if (supabaseAdmin) {
+        try {
+          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+          if (deleteError) {
+            console.error(`❌ Failed to delete stuck Supabase Auth user ${normedEmail} via API:`, deleteError.message);
+            // Fallback: Delete directly from auth.users database table
+            try {
+              await prisma.users.delete({
+                where: { id: authUser.id }
+              });
+              console.log(`✅ Auto-cleaned stuck Supabase Auth user via DB fallback: ${normedEmail} (ID: ${authUser.id})`);
+              cleared = true;
+            } catch (dbDeleteError) {
+              console.error(`❌ Failed DB delete fallback for ${normedEmail}:`, dbDeleteError.message);
+            }
+          } else {
+            console.log(`✅ Auto-cleaned stuck Supabase Auth user: ${normedEmail} (ID: ${authUser.id})`);
+            cleared = true;
+          }
+        } catch (cleanError) {
+          console.error(`❌ Unexpected error deleting stuck Supabase Auth user ${normedEmail}:`, cleanError);
+        }
+      } else {
+        console.warn("⚠️ Supabase Admin client not configured. Cannot delete stuck user.");
+      }
+
+      return res.json({
+        exists: true,
+        verified: false,
+        status: "PENDING_ACTIVATION",
+        cleared,
+        message: cleared 
+          ? "Account pending activation. Stuck session cleared successfully. You can now register again."
+          : "Account pending activation but stuck session could not be cleared automatically."
+      });
+    }
+
+    // 3. Completely fresh user
+    return res.json({
+      exists: false,
+      verified: false,
+      status: "NEW_USER",
+      message: "Email is available for registration."
+    });
+
+  } catch (err) {
+    console.error("Check email error:", err);
+    return res.status(500).json({
+      error: "Internal server error during email check",
+      details: process.env.NODE_ENV === "development" ? err.message : undefined
+    });
+  }
+});
+
 
 // -------------------------
 // Login Sync (Validate Supabase JWT & Sync)

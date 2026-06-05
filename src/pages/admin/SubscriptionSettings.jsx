@@ -17,31 +17,27 @@ const calcAnnual = (m) => {
 
 export default function SubscriptionSettings() {
   const role = "ADMIN";
-  const adminName =
-    localStorage.getItem("userName") ||
-    localStorage.getItem("name") ||
-    "Admin";
+  const adminName = localStorage.getItem("userName") || localStorage.getItem("name") || "Admin";
 
-  const [loading, setLoading] = useState(false); // no hard gate
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // USD prices for Doctor, Patient, Pharmacy
   const [doctorMonthlyUsd, setDoctorMonthlyUsd] = useState("");
   const [doctorYearlyUsd, setDoctorYearlyUsd] = useState("");
   const [patientMonthlyUsd, setPatientMonthlyUsd] = useState("");
   const [patientYearlyUsd, setPatientYearlyUsd] = useState("");
   const [pharmacyMonthlyUsd, setPharmacyMonthlyUsd] = useState("");
   const [pharmacyYearlyUsd, setPharmacyYearlyUsd] = useState("");
+  const [laboratoryMonthlyUsd, setLaboratoryMonthlyUsd] = useState("");
+  const [laboratoryYearlyUsd, setLaboratoryYearlyUsd] = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  // ---------- helpers ----------
   const toNumStr = (val) => {
     const n = Number(val);
     return Number.isFinite(n) ? String(n) : "";
   };
 
   const pickSettingsPayload = (raw) => {
-    // Supports {success:true, data:{...}} OR just {...}
     if (raw && typeof raw === "object") {
       if (raw.data && typeof raw.data === "object") return raw.data;
       return raw;
@@ -51,7 +47,6 @@ export default function SubscriptionSettings() {
 
   const getUpdatedAt = (payload) => payload?.updatedAt || null;
 
-  // ---------- fetch prices ----------
   const fetchPrices = useCallback(async () => {
     try {
       setLoading(true);
@@ -64,6 +59,8 @@ export default function SubscriptionSettings() {
       setPatientYearlyUsd(toNumStr(payload.patientYearlyUsd));
       setPharmacyMonthlyUsd(toNumStr(payload.pharmacyMonthlyUsd));
       setPharmacyYearlyUsd(toNumStr(payload.pharmacyYearlyUsd));
+      setLaboratoryMonthlyUsd(toNumStr(payload.laboratoryMonthlyUsd));
+      setLaboratoryYearlyUsd(toNumStr(payload.laboratoryYearlyUsd));
       setLastUpdated(getUpdatedAt(payload));
     } catch (err) {
       console.error("Failed to load subscription prices:", err);
@@ -74,7 +71,6 @@ export default function SubscriptionSettings() {
     }
   }, []);
 
-  // ✅ load immediately on mount (no lazy gate)
   useEffect(() => {
     fetchPrices();
   }, [fetchPrices]);
@@ -89,6 +85,8 @@ export default function SubscriptionSettings() {
       ["Patient yearly", patientYearlyUsd],
       ["Pharmacy monthly", pharmacyMonthlyUsd],
       ["Pharmacy yearly", pharmacyYearlyUsd],
+      ["Laboratory monthly", laboratoryMonthlyUsd],
+      ["Laboratory yearly", laboratoryYearlyUsd],
     ];
 
     for (const [label, v] of fields) {
@@ -108,6 +106,8 @@ export default function SubscriptionSettings() {
         patientYearlyUsd: Number(patientYearlyUsd),
         pharmacyMonthlyUsd: Number(pharmacyMonthlyUsd),
         pharmacyYearlyUsd: Number(pharmacyYearlyUsd),
+        laboratoryMonthlyUsd: Number(laboratoryMonthlyUsd),
+        laboratoryYearlyUsd: Number(laboratoryYearlyUsd),
       });
       toast.success("Subscription prices updated");
       await fetchPrices();
@@ -137,18 +137,14 @@ export default function SubscriptionSettings() {
                 e.currentTarget.src = PLACEHOLDER_LOGO;
               }}
             />
-            <h1 className="text-3xl font-bold text-[var(--text-main)]">
-              Subscription Settings
-            </h1>
+            <h1 className="text-3xl font-bold text-[var(--text-main)]">Subscription Settings</h1>
           </div>
 
-          {/* Current Prices (USD only) */}
+          {/* Current Prices Table */}
           <div className="bg-[var(--bg-glass)] backdrop-blur-md rounded-2xl p-6 shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Current Prices (USD)</h2>
-              {loading && (
-                <span className="text-xs text-[var(--text-soft)]">Syncing…</span>
-              )}
+              {loading && <span className="text-xs text-[var(--text-soft)]">Syncing…</span>}
             </div>
 
             <div className="overflow-x-auto">
@@ -217,11 +213,33 @@ export default function SubscriptionSettings() {
                       {lastUpdated ? new Date(lastUpdated).toLocaleString() : "—"}
                     </td>
                   </tr>
-                  <tr>
+                  <tr className="border-b border-[var(--border)]">
                     <td className="p-3">Pharmacy</td>
                     <td className="p-3">Yearly</td>
                     <td className="p-3">
                       {pharmacyYearlyUsd ? `$${Number(pharmacyYearlyUsd).toFixed(2)}` : "—"}
+                    </td>
+                    <td className="p-3">
+                      {lastUpdated ? new Date(lastUpdated).toLocaleString() : "—"}
+                    </td>
+                  </tr>
+
+                  {/* Laboratory */}
+                  <tr className="border-b border-[var(--border)]">
+                    <td className="p-3">Laboratory</td>
+                    <td className="p-3">Monthly</td>
+                    <td className="p-3">
+                      {laboratoryMonthlyUsd ? `$${Number(laboratoryMonthlyUsd).toFixed(2)}` : "—"}
+                    </td>
+                    <td className="p-3">
+                      {lastUpdated ? new Date(lastUpdated).toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-[var(--border)]">
+                    <td className="p-3">Laboratory</td>
+                    <td className="p-3">Yearly</td>
+                    <td className="p-3">
+                      {laboratoryYearlyUsd ? `$${Number(laboratoryYearlyUsd).toFixed(2)}` : "—"}
                     </td>
                     <td className="p-3">
                       {lastUpdated ? new Date(lastUpdated).toLocaleString() : "—"}
@@ -232,7 +250,7 @@ export default function SubscriptionSettings() {
             </div>
           </div>
 
-          {/* Update Form — USD only */}
+          {/* Update Form */}
           <div className="bg-[var(--bg-glass)] backdrop-blur-md rounded-2xl p-6 shadow-lg max-w-3xl">
             <h2 className="text-xl font-semibold mb-4">Update Prices (USD)</h2>
 
@@ -353,6 +371,46 @@ export default function SubscriptionSettings() {
                   className="w-full rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]"
                   value={pharmacyYearlyUsd}
                   onChange={(e) => setPharmacyYearlyUsd(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Laboratory */}
+              <div className="col-span-2 mt-2">
+                <h3 className="text-lg font-semibold mb-2 text-[var(--text-main)]">
+                  Laboratory{" "}
+                  <span className="text-xs text-[var(--text-soft)]">
+                    (Yearly auto-calculates at 10.5× monthly)
+                  </span>
+                </h3>
+              </div>
+              <div className="col-span-1">
+                <label className="block mb-1 text-[var(--text-soft)]">Monthly (USD)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="e.g. 30.00"
+                  className="w-full rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]"
+                  value={laboratoryMonthlyUsd}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setLaboratoryMonthlyUsd(v);
+                    setLaboratoryYearlyUsd(calcAnnual(v));
+                  }}
+                  required
+                />
+              </div>
+              <div className="col-span-1">
+                <label className="block mb-1 text-[var(--text-soft)]">Yearly (USD)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="auto"
+                  className="w-full rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]"
+                  value={laboratoryYearlyUsd}
+                  onChange={(e) => setLaboratoryYearlyUsd(e.target.value)}
                   required
                 />
               </div>

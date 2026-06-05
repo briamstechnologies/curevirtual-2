@@ -98,6 +98,7 @@ export default function UsersList() {
               <option value="DOCTOR">Doctor</option>
               <option value="PATIENT">Patient</option>
               <option value="PHARMACY">Pharmacy</option>
+              <option value="LABORATORY">Laboratory</option>
             </select>
           </div>
         </div>

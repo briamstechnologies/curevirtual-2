@@ -29,11 +29,12 @@ model User {
   maritalStatus       MaritalStatus?       @default(SINGLE)
   approvalStatus      String               @default("NOT_REQUIRED")
   doctor              DoctorProfile?
+  Laboratory          Laboratory?
+  laboratory          LaboratoryProfile?
   recvMessages        Message[]            @relation("MessagesRecv")
   sentMessages        Message[]            @relation("MessagesSent")
   patient             PatientProfile?
   pharmacy            PharmacyProfile?
-  laboratory              LaboratoryProfile?
   RegistrationRequest RegistrationRequest?
   subscriptions       Subscription[]
   supportAgent        SupportAgent?
@@ -150,18 +151,18 @@ model PharmacyProfile {
 }
 
 model PatientProfile {
-  id                    String              @id @default(uuid())
-  userId                String              @unique
+  id                    String               @id @default(uuid())
+  userId                String               @unique
   bloodGroup            BloodGroup
   height                Float?
-  heightUnit            String?             @default("cm")
+  heightUnit            String?              @default("cm")
   weight                Float?
-  weightUnit            String?             @default("kg")
+  weightUnit            String?              @default("kg")
   allergies             String?
   medications           String?
   medicalHistory        String?
   address               String?
-  medicalRecordNumber   String?             @unique
+  medicalRecordNumber   String?              @unique
   insuranceProvider     String?
   insuranceMemberId     String?
   emergencyContact      String?
@@ -169,19 +170,20 @@ model PatientProfile {
   emergencyContactEmail String?
   riskLevel             String?
   chronicConditions     String?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
   disabilityStatus      String?
-  timezone              String              @default("UTC")
-  appointments          Appointment[]       @relation("PatientAppointments")
+  timezone              String               @default("UTC")
+  appointments          Appointment[]        @relation("PatientAppointments")
   encounters            ClinicalEncounter[]
-  doctorLinks           DoctorPatient[]     @relation("DoctorPatient_Patient")
+  doctorLinks           DoctorPatient[]      @relation("DoctorPatient_Patient")
   labOrders             LabOrder[]
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   prescriptions         Prescription[]
   referrals             Referral[]
+  SelectedLaboratory    SelectedLaboratory[]
   selectedPharmacies    SelectedPharmacy[]
-  consultations         VideoConsultation[] @relation("PatientConsultations")
+  consultations         VideoConsultation[]  @relation("PatientConsultations")
   medicineOrders        MedicineOrder[]
 
   @@map("PatientProfile")
@@ -238,30 +240,30 @@ model DoctorSchedule {
 }
 
 model LaboratoryProfile {
-  id             String      @id @default(uuid())
-  userId         String      @unique
-  displayName    String?
-  licenseNumber  String?
-  phone          String?
-  address        String?
-  city           String?
-  state          String?
-  country        String?
-  postalCode     String?
-  latitude       Float?
-  longitude      Float?
-  openingHours   String?
-  services       String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  timezone       String      @default("UTC")
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  labOrders      LabOrder[]
+  id                 String               @id @default(dbgenerated("(gen_random_uuid())::text"))
+  userId             String               @unique
+  displayName        String?
+  licenseNumber      String?
+  phone              String?
+  address            String?
+  city               String?
+  state              String?
+  country            String?
+  postalCode         String?
+  latitude           Float?
+  longitude          Float?
+  openingHours       String?
+  services           String?
+  timezone           String               @default("UTC")
+  createdAt          DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime             @default(now()) @updatedAt @db.Timestamptz(6)
+  labOrders          LabOrder[]
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  SelectedLaboratory SelectedLaboratory[]
 
   @@map("LaboratoryProfile")
   @@schema("public")
 }
-
 
 model SupportTicket {
   id        Int            @id @default(autoincrement())
@@ -358,20 +360,26 @@ model ClinicalEncounter {
 }
 
 model LabOrder {
-  id          String             @id @default(uuid())
-  doctorId    String
-  patientId   String
-  laboratoryId    String?
-  encounterId String?
-  testName    String
-  status      LabStatus          @default(ORDERED)
-  results     String?
-  orderedAt   DateTime           @default(now())
-  completedAt DateTime?
-  doctor      DoctorProfile      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  encounter   ClinicalEncounter? @relation(fields: [encounterId], references: [id])
-  patient     PatientProfile     @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  laboratory      LaboratoryProfile? @relation(fields: [laboratoryId], references: [id])
+  id           String             @id @default(uuid())
+  doctorId     String
+  patientId    String
+  encounterId  String?
+  testName     String
+  status       LabStatus          @default(ORDERED)
+  results      String?
+  orderedAt    DateTime           @default(now())
+  completedAt  DateTime?
+  laboratoryId String?
+  notes        String?
+  priority     String             @default("ROUTINE")
+  resultUrl    String?
+  resultNotes  String?
+  doctor       DoctorProfile      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  encounter    ClinicalEncounter? @relation(fields: [encounterId], references: [id])
+  laboratory   LaboratoryProfile? @relation(fields: [laboratoryId], references: [id])
+  patient      PatientProfile     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([laboratoryId])
   @@map("LabOrder")
   @@schema("public")
 }
@@ -1393,6 +1401,39 @@ model RegistrationRequest {
   @@schema("public")
 }
 
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Laboratory {
+  id                 String   @id
+  userId             String   @unique
+  labName            String
+  registrationNumber String   @unique
+  address            String
+  certificateUrl     String
+  status             String   @default("PENDING")
+  rejectionReason    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime
+  User               User     @relation(fields: [userId], references: [id])
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SelectedLaboratory {
+  id                String            @id @default(dbgenerated("(gen_random_uuid())::text"))
+  patientId         String
+  laboratoryId      String
+  preferred         Boolean           @default(false)
+  createdAt         DateTime          @default(now()) @db.Timestamptz(6)
+  LaboratoryProfile LaboratoryProfile @relation(fields: [laboratoryId], references: [id], onDelete: Cascade)
+  PatientProfile    PatientProfile    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([patientId, laboratoryId])
+  @@index([laboratoryId])
+  @@index([patientId])
+  @@schema("public")
+}
+
 enum UserRole {
   DOCTOR
   PATIENT
@@ -1401,6 +1442,7 @@ enum UserRole {
   ADMIN
   SUPPORT
   LABORATORY
+
   @@schema("public")
 }
 
@@ -1525,6 +1567,8 @@ enum LabStatus {
   PENDING
   COMPLETED
   CANCELLED
+  SAMPLE_COLLECTED
+  IN_PROGRESS
 
   @@schema("public")
 }

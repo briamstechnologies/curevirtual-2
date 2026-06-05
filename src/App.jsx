@@ -24,6 +24,7 @@ const SuperSubscribersStats = lazy(() => import("./pages/superadmin/subscribers/
 const SuperSubscribedDoctors = lazy(() => import("./pages/superadmin/subscribers/Doctor"));
 const SuperSubscribedPatients = lazy(() => import("./pages/superadmin/subscribers/Patients"));
 const SuperadminSubscribedPharmacy = lazy(() => import("./pages/superadmin/subscribers/Pharmacy"));
+const SuperadminSubscribedLaboratory = lazy(() => import("./pages/superadmin/subscribers/Laboratory"));
 const SuperadminInbox = lazy(() => import("./pages/superadmin/SuperadminInbox"));
 const SuperadminSendMessage = lazy(() => import("./pages/superadmin/SuperadminSendMessage"));
 const SuperadminActivityLogs = lazy(() => import("./pages/superadmin/ActivityLogs"));
@@ -45,6 +46,7 @@ const AdminSubscribedDoctors = lazy(() => import("./pages/admin/subscribers/Doct
 const AdminSubscribedPatients = lazy(() => import("./pages/admin/subscribers/Patients"));
 const AdminSubscribedPharmacy = lazy(() => import("./pages/admin/subscribers/Pharmacy"));
 const AdminRegistrationRequests = lazy(() => import("./pages/admin/RegistrationRequests"));
+const AdminSubscribedLaboratory = lazy(() => import("./pages/admin/subscribers/Laboratory"));
 
 /* ================================
    DOCTOR
@@ -97,6 +99,64 @@ const PharmacyViewProfile = lazy(() => import("./pages/pharmacy/ViewProfile"));
 const PharmacyInbox = lazy(() => import("./pages/pharmacy/messages/Inbox"));
 const PharmacySendMessage = lazy(() => import("./pages/pharmacy/messages/SendMessage"));
 
+
+// ================================
+// LABORATORY IMPORTS (FIXED)
+// ================================
+const LaboratoryDashboard = lazy(() =>
+  import("./pages/laboratory/Dashboard")
+);
+
+const LaboratoryProfile = lazy(() =>
+  import("./pages/laboratory/Profile")
+);
+
+const LaboratoryTests = lazy(() =>
+  import("./pages/laboratory/Tests")
+);
+
+const LaboratoryReports = lazy(() =>
+  import("./pages/laboratory/Reports")
+);
+
+const LaboratoryUploadReport = lazy(() =>
+  import("./pages/laboratory/UploadReport")
+);
+
+const LaboratoryPatients = lazy(() =>
+  import("./pages/laboratory/Patients")
+);
+
+const LaboratorySubscription = lazy(() =>
+  import("./pages/laboratory/LaboratorySubscription")
+);
+
+const LaboratoryViewProfile = lazy(() =>
+  import("./pages/laboratory/ViewProfile")
+);
+
+const LaboratoryInbox = lazy(() =>
+  import("./pages/laboratory/messages/Inbox")
+);
+
+const LaboratorySendMessage = lazy(() =>
+  import("./pages/laboratory/messages/SendMessage")
+);
+
+// Patient side (already ok)
+const PatientSelectLaboratory = lazy(() =>
+  import("./pages/patient/SelectLaboratory")
+);
+
+const LaboratoryList = lazy(() =>
+  import("./pages/patient/laboratory/LaboratoryList")
+);
+
+const MyLaboratory = lazy(() =>
+  import("./pages/patient/laboratory/MyLaboratory")
+);
+
+
 /* ================================
    SUPPORT
 ================================ */
@@ -132,7 +192,8 @@ const CallPage = lazy(() => import("./pages/CallPage"));
 ================================ */
 const RequireRole = ({ role, children }) => {
   const currentRole = localStorage.getItem("role") || localStorage.getItem("userRole") || "";
-  if (!role || currentRole === role) return children;
+  const allowedRoles = Array.isArray(role) ? role : [role];
+  if (!role || allowedRoles.includes(currentRole)) return children;
   return <Navigate to="/" replace />;
 };
 
@@ -140,7 +201,7 @@ const RequireRole = ({ role, children }) => {
 const RequireApproved = ({ children }) => {
   const approvalStatus = localStorage.getItem("approvalStatus") || "NOT_REQUIRED";
   const role = localStorage.getItem("role") || "";
-  const requiresApproval = ["DOCTOR", "PHARMACY"].includes(role);
+  const requiresApproval = ["DOCTOR", "PHARMACY", "LABORATORY", "PHYSICIAN_ASSISTANT"].includes(role);
   if (requiresApproval && approvalStatus === "PENDING") return <Navigate to="/pending-approval" replace />;
   if (requiresApproval && approvalStatus === "REJECTED") return <Navigate to="/registration-rejected" replace />;
   return children;
@@ -260,6 +321,14 @@ export default function App() {
               element={
                 <RequireRole role="SUPERADMIN">
                   <SuperadminSubscribedPharmacy />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/superadmin/subscribers/laboratory"
+              element={
+                <RequireRole role="SUPERADMIN">
+                  <SuperadminSubscribedLaboratory />
                 </RequireRole>
               }
             />
@@ -386,6 +455,14 @@ export default function App() {
               element={
                 <RequireRole role="ADMIN">
                   <AdminSubscribedPharmacy />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/admin/subscribers/laboratory"
+            element={
+              <RequireRole role="ADMIN">
+                <AdminSubscribedLaboratory />
                 </RequireRole>
               }
             />
@@ -394,11 +471,11 @@ export default function App() {
             {/* Admin: Registration Requests */}
             <Route path="/admin/registration-requests" element={<RequireRole role="ADMIN"><AdminRegistrationRequests /></RequireRole>} />
             {/* ================= DOCTOR ================= */}
-            <Route path="/doctor/dashboard" element={<RequireRole role="DOCTOR"><RequireApproved><DoctorDashboard /></RequireApproved></RequireRole>} />
+            <Route path="/doctor/dashboard" element={<RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}><RequireApproved><DoctorDashboard /></RequireApproved></RequireRole>} />
             <Route
               path="/doctor/appointments"
               element={
-                <RequireRole role="DOCTOR">
+                <RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}>
                   <RequireApproved><DoctorAppointments /></RequireApproved>
                 </RequireRole>
               }
@@ -406,7 +483,7 @@ export default function App() {
             <Route
               path="/doctor/prescriptions"
               element={
-                <RequireRole role="DOCTOR">
+                <RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}>
                   <RequireApproved><DoctorPrescriptions /></RequireApproved>
                 </RequireRole>
               }
@@ -414,7 +491,7 @@ export default function App() {
             <Route
               path="/doctor/messages/inbox"
               element={
-                <RequireRole role="DOCTOR">
+                <RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}>
                   <RequireApproved><DoctorInbox /></RequireApproved>
                 </RequireRole>
               }
@@ -422,7 +499,7 @@ export default function App() {
             <Route
               path="/doctor/messages/send"
               element={
-                <RequireRole role="DOCTOR">
+                <RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}>
                   <RequireApproved><DoctorSendMessage /></RequireApproved>
                 </RequireRole>
               }
@@ -430,7 +507,7 @@ export default function App() {
             <Route
               path="/doctor/subscription"
               element={
-                <RequireRole role="DOCTOR">
+                <RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}>
                   <RequireApproved><DoctorSubscription /></RequireApproved>
                 </RequireRole>
               }
@@ -438,7 +515,7 @@ export default function App() {
             <Route
               path="/doctor/patients"
               element={
-                <RequireRole role="DOCTOR">
+                <RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}>
                   <RequireApproved><PatientList /></RequireApproved>
                 </RequireRole>
               }
@@ -446,7 +523,7 @@ export default function App() {
             <Route
               path="/doctor/view-profile"
               element={
-                <RequireRole role="DOCTOR">
+                <RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}>
                   <RequireApproved><DoctorViewProfile /></RequireApproved>
                 </RequireRole>
               }
@@ -454,7 +531,7 @@ export default function App() {
             <Route
               path="/doctor/profile"
               element={
-                <RequireRole role="DOCTOR">
+                <RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}>
                   <RequireApproved><DoctorProfile /></RequireApproved>
                 </RequireRole>
               }
@@ -462,7 +539,7 @@ export default function App() {
             <Route
               path="/doctor/my-patients"
               element={
-                <RequireRole role="DOCTOR">
+                <RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}>
                   <RequireApproved><MyPatientList /></RequireApproved>
                 </RequireRole>
               }
@@ -470,7 +547,7 @@ export default function App() {
             <Route
               path="/doctor/video-consultation"
               element={
-                <RequireRole role="DOCTOR">
+                <RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}>
                   <RequireApproved><DoctorVideoConsultation /></RequireApproved>
                 </RequireRole>
               }
@@ -478,7 +555,7 @@ export default function App() {
             <Route
               path="/doctor/schedule"
               element={
-                <RequireRole role="DOCTOR">
+                <RequireRole role={["DOCTOR", "PHYSICIAN_ASSISTANT"]}>
                   <RequireApproved><DoctorSchedule /></RequireApproved>
                 </RequireRole>
               }
@@ -690,6 +767,109 @@ export default function App() {
               element={
                 <RequireRole role="PHARMACY">
                   <RequireApproved><PharmacySendMessage /></RequireApproved>
+                </RequireRole>
+              }
+            />
+
+            {/*================== LABORATORY ==================*/}
+            <Route path="/laboratory/dashboard" element={<RequireRole role="LABORATORY"><RequireApproved><LaboratoryDashboard /></RequireApproved></RequireRole>} />
+            <Route
+              path="/laboratory/profile"
+              element={
+                <RequireRole role="LABORATORY">
+                  <RequireApproved><LaboratoryProfile /></RequireApproved>
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/laboratory/tests"
+              element={
+                <RequireRole role="LABORATORY">
+                  <RequireApproved><LaboratoryTests /></RequireApproved>
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/laboratory/reports"
+              element={
+                <RequireRole role="LABORATORY">
+                  <RequireApproved><LaboratoryReports /></RequireApproved>
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/laboratory/upload-report"
+              element={
+                <RequireRole role="LABORATORY">
+                  <RequireApproved><LaboratoryUploadReport /></RequireApproved>
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/laboratory/patients"
+              element={
+                <RequireRole role="LABORATORY">
+                  <RequireApproved><LaboratoryPatients /></RequireApproved>
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/laboratory/subscription"
+              element={
+                <RequireRole role="LABORATORY">
+                  <RequireApproved><LaboratorySubscription /></RequireApproved>
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/laboratory/view-profile"
+              element={
+                <RequireRole role="LABORATORY">
+                  <RequireApproved><LaboratoryViewProfile /></RequireApproved>
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/laboratory/messages/inbox"
+              element={
+                <RequireRole role="LABORATORY">
+                  <RequireApproved><LaboratoryInbox /></RequireApproved>
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/laboratory/messages/send"
+              element={
+                <RequireRole role="LABORATORY">
+                  <RequireApproved><LaboratorySendMessage /></RequireApproved>
+                </RequireRole>
+              }
+            />
+
+            {/* Patient: select laboratory */}
+            <Route
+              path="/patient/select-laboratory"
+              element={
+                <RequireRole role="PATIENT">
+                  <PatientSelectLaboratory />
+                </RequireRole>
+              }
+            />
+            {/* Patient: Laboratory List (Sidebar link) */}
+            <Route
+              path="/patient/laboratory/list"
+              element={
+                <RequireRole role="PATIENT">
+                  <LaboratoryList />
+                </RequireRole>
+              }
+            />
+            {/* Patient: My Laboratory */}
+            <Route
+              path="/patient/my-laboratory"
+              element={
+                <RequireRole role="PATIENT">
+                  <MyLaboratory />
                 </RequireRole>
               }
             />

@@ -16,7 +16,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = 'https://curevirtual-2-production-ee33.up.railway.app/api';
 
 const credentials = {
   email: 'rehan.code1514@gmail.com',

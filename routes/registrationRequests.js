@@ -75,11 +75,11 @@ async function enrichWithFreshUrl(record) {
 }
 
 /* ============================================================
-   POST /api/registration-requests/submit
-   Triggered after OTP verification for DOCTOR/PHARMACY users.
-   Auth: JWT required (the newly verified user)
-   Body: multipart/form-data { licenseFile, role, submittedData }
-   ============================================================ */
+  POST /api/registration-requests/submit
+  Triggered after OTP verification for DOCTOR/PHARMACY users.
+  Auth: JWT required (the newly verified user)
+  Body: multipart/form-data { licenseFile, role, submittedData }
+  ============================================================ */
 router.post(
   '/submit',
   submitRateLimit,
@@ -88,7 +88,7 @@ router.post(
     try {
       console.log('📦 Registration Submit: Received body:', req.body);
       console.log('📄 Registration Submit: Received file:', req.file ? req.file.originalname : 'NONE');
-      
+
       const { role, submittedData, userId: bodyUserId } = req.body;
       const licenseFile = req.file || (req.files && req.files.length > 0 ? req.files[0] : null);
       const userId = bodyUserId || req.user?.id;
@@ -103,7 +103,7 @@ router.post(
       if (!role) {
         return res.status(400).json({ error: 'Missing Account Role (role). Please select Doctor or Pharmacy.' });
       }
-      if (!['DOCTOR', 'PHARMACY'].includes(role)) {
+      if (!['DOCTOR', 'PHARMACY', 'LABORATORY'].includes(role)) {
         console.warn(`⚠️ Registration Submit: Invalid role received: "${role}"`);
         return res.status(400).json({ error: `Invalid role: "${role}". Must be DOCTOR or PHARMACY.` });
       }
@@ -162,9 +162,9 @@ router.post(
           statusCode: uploadError.statusCode,
           details: uploadError.details
         });
-        return res.status(500).json({ 
-          error: 'Failed to upload license document.', 
-          details: uploadError.message 
+        return res.status(500).json({
+          error: 'Failed to upload license document.',
+          details: uploadError.message
         });
       }
 
@@ -218,11 +218,11 @@ router.post(
 );
 
 /* ============================================================
-   GET /api/registration-requests/stats
-   Admin only. Quick stats counts.
-   ⚠️  MUST be defined before GET /:id and before GET / to ensure
-       Express does not treat "stats" as a dynamic :id segment.
-   ============================================================ */
+  GET /api/registration-requests/stats
+  Admin only. Quick stats counts.
+  ⚠️  MUST be defined before GET /:id and before GET / to ensure
+      Express does not treat "stats" as a dynamic :id segment.
+  ============================================================ */
 router.get('/stats', verifyToken, requireAdmin, async (req, res) => {
   try {
     const today = new Date();
@@ -237,6 +237,7 @@ router.get('/stats', verifyToken, requireAdmin, async (req, res) => {
         prisma.registrationRequest.count({ where: { status: 'REJECTED' } }),
         prisma.registrationRequest.count({ where: { role: 'DOCTOR' } }),
         prisma.registrationRequest.count({ where: { role: 'PHARMACY' } }),
+        prisma.registrationRequest.count({ where: { role: 'LABORATORY' } }),
       ]);
 
     return res.json({ pending, approvedToday, totalRejected, totalDoctors, totalPharmacies });
@@ -251,10 +252,10 @@ router.get('/stats', verifyToken, requireAdmin, async (req, res) => {
 });
 
 /* ============================================================
-   GET /api/registration-requests
-   Admin only. Paginated list of all requests.
-   Query: ?status=PENDING|APPROVED|REJECTED&role=DOCTOR|PHARMACY&page=1&limit=10
-   ============================================================ */
+  GET /api/registration-requests
+  Admin only. Paginated list of all requests.
+  Query: ?status=PENDING|APPROVED|REJECTED&role=DOCTOR|PHARMACY&page=1&limit=10
+  ============================================================ */
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
   try {
     const { status, role, page = '1', limit = '10' } = req.query;
@@ -266,7 +267,7 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
     if (status && ['PENDING', 'APPROVED', 'REJECTED'].includes(status)) {
       where.status = status;
     }
-    if (role && ['DOCTOR', 'PHARMACY'].includes(role)) {
+    if (role && ['DOCTOR', 'PHARMACY', 'LABORATORY'].includes(role)) {
       where.role = role;
     }
 
@@ -315,9 +316,9 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
 });
 
 /* ============================================================
-   GET /api/registration-requests/:id
-   Admin only. Single request with full submittedData.
-   ============================================================ */
+  GET /api/registration-requests/:id
+  Admin only. Single request with full submittedData.
+  ============================================================ */
 router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
     const request = await prisma.registrationRequest.findUnique({
@@ -350,10 +351,10 @@ router.get('/:id', verifyToken, requireAdmin, async (req, res) => {
 });
 
 /* ============================================================
-   PATCH /api/registration-requests/:id/review
-   Admin only. Approve or reject a request.
-   Body: { action: 'APPROVED'|'REJECTED', rejectionReason?: string }
-   ============================================================ */
+  PATCH /api/registration-requests/:id/review
+  Admin only. Approve or reject a request.
+  Body: { action: 'APPROVED'|'REJECTED', rejectionReason?: string }
+  ============================================================ */
 router.patch('/:id/review', verifyToken, requireAdmin, async (req, res) => {
   try {
     const { action, rejectionReason } = req.body;

@@ -26,7 +26,7 @@ export default function DashboardLayout({ children, role, user }) {
         <PremiumTopAppBar 
           userName={userName} 
           userAvatar={userAvatar} 
-          role={role === "PHARMACY" ? "Licensed Pharmacist" : role === "DOCTOR" ? "Verified Provider" : "Premium Member"}
+          role={role === "PHARMACY" ? "Licensed Pharmacist" : role === "PHYSICIAN_ASSISTANT" ? "Physician Assistant" : role === "DOCTOR" ? "Verified Provider" : "Premium Member"}
         />
 
         {/* Scrollable Content Area */}

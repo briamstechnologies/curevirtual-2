@@ -123,6 +123,7 @@ export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileM
                 <SubItem to="/superadmin/subscribers/doctors" label="Doctors" />
                 <SubItem to="/superadmin/subscribers/patients" label="Patients" />
                 <SubItem to="/superadmin/subscribers/pharmacy" label="Pharmacies" />
+                <SubItem to="/superadmin/subscribers/laboratory" label="Laboratories" />
               </DropdownItem>
               <NavItem to="/superadmin/system-reports" icon="analytics" label="System Audit" />
               <NavItem to="/superadmin/activity-logs" icon="list_alt" label="Action Logs" />
@@ -141,10 +142,16 @@ export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileM
               <NavItem to="/admin/registration-requests" icon="verified_user" label="Approval Queue" />
               <NavItem to="/admin/messages/inbox" icon="mail" label="Inbox" badge={unreadCount} />
               <NavItem to="/admin/subscription" icon="account_balance_wallet" label="Subscriptions" />
+              <DropdownItem icon="group" label="Subscribers" id="admin-subscribers">
+                <SubItem to="/admin/subscribers/doctors" label="Doctors" />
+                <SubItem to="/admin/subscribers/patients" label="Patients" />
+                <SubItem to="/admin/subscribers/pharmacy" label="Pharmacies" />
+                <SubItem to="/admin/subscribers/laboratory" label="Laboratories" />
+              </DropdownItem>
             </>
           )}
 
-          {role === "DOCTOR" && (
+          {(role === "DOCTOR" || role === "PHYSICIAN_ASSISTANT") && (
             <>
               <NavItem to="/doctor/dashboard" icon="dashboard" label="Provider Portal" />
               <NavItem to="/doctor/appointments" icon="calendar_today" label="Appointments" />
@@ -166,6 +173,9 @@ export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileM
               <DropdownItem icon="local_hospital" label="Network" id="patient-network">
                 <SubItem to="/patient/doctors/list" label="Find Doctors" />
                 <SubItem to="/patient/pharmacy/list" label="Pharmacies" />
+                <SubItem to="/patient/my-pharmacy" label="My Pharmacies" />
+                <SubItem to="/patient/laboratory/list" label="Laboratories" />
+                <SubItem to="/patient/my-laboratory" label="My Labs" />
               </DropdownItem>
             </>
           )}
@@ -176,6 +186,17 @@ export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileM
               <NavItem to="/pharmacy/prescriptions" icon="inventory" label="Order Flow" />
               <NavItem to="/pharmacy/messages/inbox" icon="mail" label="Inquiries" badge={unreadCount} />
               <NavItem to="/pharmacy/view-profile" icon="store" label="Store Identity" />
+            </>
+          )}
+
+          {role === "LABORATORY" && (
+            <>
+              <NavItem to="/laboratory/dashboard" icon="dashboard" label="Lab Console" />
+              <NavItem to="/laboratory/tests" icon="biotech" label="Test Menu" />
+              <NavItem to="/laboratory/reports" icon="folder_shared" label="Reports Archive" />
+              <NavItem to="/laboratory/patients" icon="group" label="Patient Queue" />
+              <NavItem to="/laboratory/messages/inbox" icon="mail" label="Inquiries" badge={unreadCount} />
+              <NavItem to="/laboratory/view-profile" icon="badge" label="Lab Identity" />
             </>
           )}
         </nav>

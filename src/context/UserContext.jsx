@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import api from "../Lib/api";
 
 const UserContext = createContext();
 
@@ -33,9 +34,19 @@ export const UserProvider = ({ children }) => {
     setUser(userData);
   };
 
-  const logout = () => {
-    localStorage.clear();
-    setUser(null);
+  const logout = async () => {
+    try {
+      const userId = localStorage.getItem("userId");
+      const role = localStorage.getItem("role");
+      if (userId && (role === "DOCTOR" || role === "PHYSICIAN_ASSISTANT")) {
+        await api.post("/auth/logout", { userId, role });
+      }
+    } catch (err) {
+      console.error("Logout API call failed:", err);
+    } finally {
+      localStorage.clear();
+      setUser(null);
+    }
   };
 
   const updateUser = (updates) => {

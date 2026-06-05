@@ -34,7 +34,7 @@ const ROLES = [
 const SPECIALIZATIONS = [
   'General Medicine', 'Cardiology', 'Dermatology', 'Neurology', 'Pediatrics',
   'Psychiatry', 'Orthopedics', 'Gynecology', 'Ophthalmology', 'Dentistry',
-  'ENT', 'Urology', 'Oncology', 'Other',
+  'ENT', 'Urology', 'Oncology', 'Physician Assistant (PA)', 'Other',
 ];
 
 export default function RegisterScreen({ navigation }) {
@@ -96,13 +96,14 @@ export default function RegisterScreen({ navigation }) {
     const formattedLastName = toTitleCase(lastName.trim());
     const formattedMiddleName = middleName.trim() ? toTitleCase(middleName.trim()) : null;
 
+    const requestRole = role === 'DOCTOR' && specialization === 'Physician Assistant (PA)' ? 'PHYSICIAN_ASSISTANT' : role;
     const userData = {
       firstName: formattedFirstName,
       middleName: formattedMiddleName,
       lastName: formattedLastName,
       email: email.trim().toLowerCase(),
       password,
-      role,
+      role: requestRole,
       dateOfBirth: dateOfBirth || new Date().toISOString(),
       gender,
       maritalStatus,
@@ -389,6 +390,25 @@ export default function RegisterScreen({ navigation }) {
                     onChangeText={setCustomSpecialization}
                     autoFocus
                   />
+                )}
+                {!isCustomSpecialization && specialization === 'Physician Assistant (PA)' && (
+                  <View style={{
+                    marginTop: 10,
+                    padding: 12,
+                    borderRadius: RADIUS.md,
+                    borderWidth: 1,
+                    borderColor: 'rgba(0,106,255,0.2)',
+                    backgroundColor: 'rgba(0,106,255,0.05)',
+                  }}>
+                    <Text style={{
+                      fontSize: 11,
+                      color: COLORS.primary,
+                      fontWeight: '700',
+                      lineHeight: 16,
+                    }}>
+                      Physician Assistant (PA): Supports the doctor by handling routine consultations, follow-ups, monitoring, and clinical notes under supervision.
+                    </Text>
+                  </View>
                 )}
               </View>
             )}

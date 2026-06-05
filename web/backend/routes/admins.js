@@ -231,6 +231,80 @@ router.get("/users", async (req, res) => {
     console.error("❌ Admin /users error:", err);
     res.status(500).json({ error: "Failed to fetch users" });
   }
+  // ✅ Assign Physician Assistant to Doctor
+  router.post(
+    "/assign-pa",
+    requireRole("SUPERADMIN", "ADMIN"),
+    async (req, res) => {
+      try {
+        const { doctorId, paId } = req.body;
+
+        const doctor = await prisma.user.findUnique({
+          where: { id: doctorId },
+        });
+
+        const pa = await prisma.user.findUnique({
+          where: { id: paId },
+        });
+
+        if (!doctor || doctor.role !== "DOCTOR") {
+          return res.status(400).json({
+            error: "Invalid doctor",
+          });
+        }
+
+        if (!pa || pa.role !== "PHYSICIAN_ASSISTANT") {
+          return res.status(400).json({
+            error: "Invalid physician assistant",
+          });
+        }
+
+        const assignment = await prisma.physicianAssistantDoctor.create({
+          data: {
+            doctorId,
+            paId,
+          },
+        });
+
+        res.json({
+          success: true,
+          assignment,
+        });
+      } catch (err) {
+        console.error("❌ Assign PA error:", err);
+
+        res.status(500).json({
+          error: "Failed to assign physician assistant",
+        });
+      }
+    },
+  );
+
+  // ✅ Get Doctor Physician Assistants
+  router.get(
+    "/doctor/:doctorId/physician-assistants",
+    async (req, res) => {
+      try {
+        const assistants =
+          await prisma.physicianAssistantDoctor.findMany({
+            where: {
+              doctorId: req.params.doctorId,
+            },
+            include: {
+              assistant: true,
+            },
+          });
+
+        res.json(assistants);
+      } catch (err) {
+        console.error("❌ Fetch PA error:", err);
+
+        res.status(500).json({
+          error: "Failed to fetch physician assistants",
+        });
+      }
+    },
+  );
 });
 
 module.exports = router;

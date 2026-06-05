@@ -1,6 +1,17 @@
 // FILE: src/pages/Register.jsx
 import { useState, useEffect } from "react";
-import { FiEye, FiEyeOff, FiMail, FiLock, FiArrowLeft, FiShield, FiUpload, FiX, FiCheckCircle, FiClock } from "react-icons/fi";
+import {
+  FiEye,
+  FiEyeOff,
+  FiMail,
+  FiLock,
+  FiArrowLeft,
+  FiShield,
+  FiUpload,
+  FiX,
+  FiCheckCircle,
+  FiClock,
+} from "react-icons/fi";
 import { FaArrowRight, FaStethoscope } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -14,10 +25,18 @@ const ROLES_REQUIRING_APPROVAL = ["DOCTOR", "PHARMACY", "LABORATORY"];
 export default function Register() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    firstName: "", middleName: "", lastName: "", email: "",
-    password: "", confirmPassword: "", role: "PATIENT",
-    specialization: "", customProfession: "",
-    gender: "PREFER_NOT_TO_SAY", dateOfBirth: "", maritalStatus: "SINGLE",
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "PATIENT",
+    specialization: "",
+    customProfession: "",
+    gender: "PREFER_NOT_TO_SAY",
+    dateOfBirth: "",
+    maritalStatus: "SINGLE",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -42,7 +61,7 @@ export default function Register() {
     if (isResubmitting && existingUserId) {
       const storedEmail = localStorage.getItem("email") || localStorage.getItem("userEmail");
       if (storedEmail && !form.email) {
-        setForm(f => ({ ...f, email: storedEmail }));
+        setForm((f) => ({ ...f, email: storedEmail }));
       }
     }
 
@@ -56,7 +75,7 @@ export default function Register() {
     }
   }, [navigate]);
 
-  // License file state (Doctor/Pharmacy/Laboratory only)
+  // License file state (Doctor/Pharmacy only)
   const [licenseFile, setLicenseFile] = useState(null);
   const [licensePreview, setLicensePreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -98,15 +117,26 @@ export default function Register() {
     e.preventDefault();
     if (submitting) return;
 
-    if (form.password !== form.confirmPassword) { toast.error("Passwords do not match."); return; }
+    if (form.password !== form.confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email.trim())) { toast.error("Please enter a valid email address."); return; }
-    if (form.password.length < 8) { toast.error("Password must be at least 8 characters long."); return; }
+    if (!emailRegex.test(form.email.trim())) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    if (form.password.length < 8) {
+      toast.error("Password must be at least 8 characters long.");
+      return;
+    }
     if (form.dateOfBirth && new Date(form.dateOfBirth) > new Date()) {
-      toast.error("Date of Birth cannot be in the future."); return;
+      toast.error("Date of Birth cannot be in the future.");
+      return;
     }
     if (needsApproval && !licenseFile) {
-      toast.error("Please upload your license or degree certificate."); return;
+      toast.error("Please upload your license or degree certificate.");
+      return;
     }
 
     setSubmitting(true);
@@ -115,6 +145,32 @@ export default function Register() {
         // Skip Supabase signup, go straight to request submission
         await submitRegistrationRequest(existingUserId);
       } else {
+        // ── 🆕 EMAIL AVAILABILITY & SYNC CHECK ────────────────────────────────
+        toast.info("Checking email availability...");
+        const checkRes = await api.post("/auth/check-email", {
+          email: form.email.trim().toLowerCase(),
+        });
+
+        const { status: emailStatus, cleared } = checkRes.data;
+
+        if (emailStatus === "ALREADY_REGISTERED") {
+          toast.error("This email is already registered. Please log in.");
+          setSubmitting(false);
+          return;
+        }
+
+        if (emailStatus === "PENDING_ACTIVATION") {
+          if (cleared) {
+            toast.warn("Recovered an incomplete signup. Initializing fresh registration...");
+            // Proceed to sign up since the stuck Supabase account was cleared
+          } else {
+            toast.error("Account pending activation. Please verify your email or contact support.");
+            setSubmitting(false);
+            return;
+          }
+        }
+
+        // Proceed to Supabase signup
         const { error } = await supabase.auth.signUp({
           email: form.email.trim().toLowerCase(),
           password: form.password,
@@ -123,9 +179,12 @@ export default function Register() {
               firstName: toTitleCase(form.firstName.trim()),
               middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
               lastName: toTitleCase(form.lastName.trim()),
-              role: form.role, dateOfBirth: form.dateOfBirth,
-              gender: form.gender, maritalStatus: form.maritalStatus,
-              specialization: form.specialization === "Other" ? form.customProfession : form.specialization,
+              role: form.specialization === "Physician Assistant (PA)" ? "PHYSICIAN_ASSISTANT" : form.role,
+              dateOfBirth: form.dateOfBirth,
+              gender: form.gender,
+              maritalStatus: form.maritalStatus,
+              specialization:
+                form.specialization === "Other" ? form.customProfession : form.specialization,
             },
           },
         });
@@ -145,20 +204,25 @@ export default function Register() {
     toast.info("Submitting your application...");
 
     try {
+      const mappedRole = form.specialization === "Physician Assistant (PA)" ? "PHYSICIAN_ASSISTANT" : form.role;
       const formData = new FormData();
       formData.append("userId", userId);
-      formData.append("role", form.role);
-      formData.append("submittedData", JSON.stringify({
-        firstName: toTitleCase(form.firstName.trim()),
-        middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
-        lastName: toTitleCase(form.lastName.trim()),
-        email: form.email.trim().toLowerCase(),
-        role: form.role,
-        dateOfBirth: form.dateOfBirth,
-        gender: form.gender,
-        maritalStatus: form.maritalStatus,
-        specialization: form.specialization === "Other" ? form.customProfession : form.specialization,
-      }));
+      formData.append("role", mappedRole);
+      formData.append(
+        "submittedData",
+        JSON.stringify({
+          firstName: toTitleCase(form.firstName.trim()),
+          middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
+          lastName: toTitleCase(form.lastName.trim()),
+          email: form.email.trim().toLowerCase(),
+          role: mappedRole,
+          dateOfBirth: form.dateOfBirth,
+          gender: form.gender,
+          maritalStatus: form.maritalStatus,
+          specialization:
+            form.specialization === "Other" ? form.customProfession : form.specialization,
+        })
+      );
       formData.append("licenseFile", licenseFile);
 
       await api.post("/registration-requests/submit", formData, {
@@ -171,10 +235,10 @@ export default function Register() {
       setTimeout(() => navigate("/pending-approval"), 1500);
     } catch (err) {
       console.error("❌ Registration Request Submit Error:", err);
-      const errorMsg = err.response?.data?.details 
+      const errorMsg = err.response?.data?.details
         ? `${err.response.data.error}: ${err.response.data.details}`
-        : (err.response?.data?.error || err.message || "Failed to submit request");
-      
+        : err.response?.data?.error || err.message || "Failed to submit request";
+
       throw new Error(errorMsg);
     } finally {
       setIsUploading(false);
@@ -190,36 +254,43 @@ export default function Register() {
     try {
       const { data, error } = await supabase.auth.verifyOtp({
         email: form.email.trim().toLowerCase(),
-        token: otp, type: "signup",
+        token: otp,
+        type: "signup",
       });
       if (error) throw error;
 
       // Sync user to backend
+      const mappedRole = form.specialization === "Physician Assistant (PA)" ? "PHYSICIAN_ASSISTANT" : form.role;
       const syncRes = await api.post("/auth/register-success", {
         supabaseId: data.user.id,
         email: form.email.trim().toLowerCase(),
         firstName: toTitleCase(form.firstName.trim()),
         middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
         lastName: toTitleCase(form.lastName.trim()),
-        role: form.role, dateOfBirth: form.dateOfBirth,
-        gender: form.gender, maritalStatus: form.maritalStatus,
-        specialization: form.specialization === "Other" ? form.customProfession : form.specialization,
+        role: mappedRole,
+        dateOfBirth: form.dateOfBirth,
+        gender: form.gender,
+        maritalStatus: form.maritalStatus,
+        specialization:
+          form.specialization === "Other" ? form.customProfession : form.specialization,
       });
 
       const dbUser = syncRes.data.user || syncRes.data;
 
-        // For DOCTOR/PHARMACY/LABORATORY: submit approval request
-        if (needsApproval && licenseFile) {
-          await submitRegistrationRequest(dbUser.id);
-        } else {
-          toast.success("Verification successful! Redirecting to login...");
-          setTimeout(() => { window.location.href = "/login"; }, 2000);
-        }
+      // For DOCTOR/PHARMACY: submit approval request
+      if (needsApproval && licenseFile) {
+        await submitRegistrationRequest(dbUser.id);
+      } else {
+        toast.success("Verification successful! Redirecting to login...");
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 2000);
+      }
     } catch (err) {
       toast.error(err.response?.data?.error || err.message || "Verification failed.");
     } finally {
       setSubmitting(false);
-      setIsUploading(false);
+      // setIsUploading(false);
     }
   };
 
@@ -242,8 +313,14 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[var(--bg-main)]">
       {/* Dynamic Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] opacity-20 bg-[var(--brand-blue)] animate-pulse-soft" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] opacity-20 bg-[var(--brand-green)] animate-pulse-soft" style={{ animationDelay: '2s' }} />
-      <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full blur-[100px] opacity-10 bg-[var(--brand-purple)] animate-pulse-soft" style={{ animationDelay: '4s' }} />
+      <div
+        className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] opacity-20 bg-[var(--brand-green)] animate-pulse-soft"
+        style={{ animationDelay: "2s" }}
+      />
+      <div
+        className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full blur-[100px] opacity-10 bg-[var(--brand-purple)] animate-pulse-soft"
+        style={{ animationDelay: "4s" }}
+      />
 
       <div className="w-full max-w-[1100px] flex flex-col md:flex-row glass-panel !p-0 overflow-hidden shadow-premium animate-in fade-in slide-in-from-bottom-8 duration-700 relative z-10">
         {/* Left Panel */}
@@ -253,16 +330,28 @@ export default function Register() {
             <div className="absolute bottom-10 right-0 w-full h-full bg-[radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.2),transparent)]"></div>
           </div>
           <div className="z-10">
-            <Link to="/" className="inline-flex items-center gap-2 mb-12 text-white/80 hover:text-white transition-all font-black text-[10px] uppercase tracking-[0.3em] group">
-              <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back to Home
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 mb-12 text-white/80 hover:text-white transition-all font-black text-[10px] uppercase tracking-[0.3em] group"
+            >
+              <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back to
+              Home
             </Link>
             <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-4 rounded-3xl mb-8 border border-white/20 shadow-2xl">
-              <img src="/images/logo/Asset3.png" alt="Logo" className="w-10 h-10 brightness-0 invert" />
-              <span className="text-xl font-black tracking-tighter text-white uppercase">CURE<span className="text-white/70">VIRTUAL</span></span>
+              <img
+                src="/images/logo/Asset3.png"
+                alt="Logo"
+                className="w-10 h-10 brightness-0 invert"
+              />
+              <span className="text-xl font-black tracking-tighter text-white uppercase">
+                CURE<span className="text-white/70">VIRTUAL</span>
+              </span>
             </div>
             <h2 className="text-5xl lg:text-6xl font-black tracking-tighter mb-6 leading-[0.85] uppercase">
               Join the <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">Revolution</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">
+                Revolution
+              </span>
             </h2>
             <p className="text-white/80 text-sm leading-relaxed max-w-xs font-bold uppercase tracking-widest italic">
               Empowering healthcare through digital excellence.
@@ -274,8 +363,12 @@ export default function Register() {
                 <FiShield className="text-2xl" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Medical Shield</p>
-                <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest">End-to-end encrypted</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white">
+                  Medical Shield
+                </p>
+                <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest">
+                  End-to-end encrypted
+                </p>
               </div>
             </div>
           </div>
@@ -286,14 +379,18 @@ export default function Register() {
           <div className="mb-10">
             <div className="md:hidden flex items-center justify-center gap-2 mb-8">
               <img src="/images/logo/Asset3.png" alt="Logo" className="w-8 h-8" />
-              <span className="text-lg font-black tracking-tighter text-[var(--text-main)] uppercase">CURE<span className="text-[var(--brand-blue)]">VIRTUAL</span></span>
+              <span className="text-lg font-black tracking-tighter text-[var(--text-main)] uppercase">
+                CURE<span className="text-[var(--brand-blue)]">VIRTUAL</span>
+              </span>
             </div>
             <h1 className="text-3xl md:text-5xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-3 leading-none">
               {isResubmitting ? "Resubmit" : "Join"}{" "}
               <span className="text-[var(--brand-green)]">Platform</span>
             </h1>
             <p className="text-[var(--text-soft)] text-xs font-black uppercase tracking-[0.3em] opacity-60">
-              {isResubmitting ? "Update your credentials for review" : "The future of virtual healthcare"}
+              {isResubmitting
+                ? "Update your credentials for review"
+                : "The future of virtual healthcare"}
             </p>
           </div>
 
@@ -301,35 +398,59 @@ export default function Register() {
             <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
               {/* OTP Step */}
               <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--brand-green)] ml-1">Identity Verification</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--brand-green)] ml-1">
+                  Identity Verification
+                </label>
                 <div className="relative group">
-                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all text-xl"><FiShield /></div>
-                  <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)}
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all text-xl">
+                    <FiShield />
+                  </div>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
                     className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-[2rem] py-5 pl-16 pr-6 text-sm font-black tracking-[0.5em] focus:border-[var(--brand-green)] outline-none transition-all shadow-inner text-center"
-                    placeholder="••••••" required />
+                    placeholder="••••••"
+                    required
+                  />
                 </div>
-                <p className="text-[9px] text-[var(--text-muted)] font-black uppercase tracking-widest text-center">Code sent to: {form.email}</p>
+                <p className="text-[9px] text-[var(--text-muted)] font-black uppercase tracking-widest text-center">
+                  Code sent to: {form.email}
+                </p>
               </div>
 
-              <button type="button" onClick={handleVerifyOtp} disabled={submitting || !otp || (needsApproval && !licenseFile)}
-                className="btn btn-primary w-full !rounded-[2rem] !py-5 text-[10px] shadow-premium">
+              <button
+                type="button"
+                onClick={handleVerifyOtp}
+                disabled={submitting || !otp || (needsApproval && !licenseFile)}
+                className="btn btn-primary w-full !rounded-[2rem] !py-5 text-[10px] shadow-premium"
+              >
                 {submitting ? (
-                  <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>{isUploading ? "UPLOADING DOCS..." : "VERIFYING..."}</span></>
+                  <>
+                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>{isUploading ? "UPLOADING DOCS..." : "VERIFYING..."}</span>
+                  </>
                 ) : (
-                  <>VERIFY & COMPLETE <FaArrowRight /></>
+                  <>
+                    VERIFY & COMPLETE <FaArrowRight />
+                  </>
                 )}
               </button>
-              
+
               <div className="flex flex-col gap-4">
-                <button type="button" onClick={() => setShowOtp(false)}
-                  className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest hover:text-[var(--text-main)] transition-all">
+                <button
+                  type="button"
+                  onClick={() => setShowOtp(false)}
+                  className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest hover:text-[var(--text-main)] transition-all"
+                >
                   Go Back
                 </button>
                 <div className="text-center p-4 rounded-2xl bg-[var(--bg-main)]/50 border border-[var(--border)]">
-                  <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">Didn't receive code?</p>
-                  <button 
-                    type="button" 
+                  <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">
+                    Didn't receive code?
+                  </p>
+                  <button
+                    type="button"
                     onClick={handleResendOtp}
                     disabled={resendTimer > 0 || submitting}
                     className={`text-[10px] font-black uppercase tracking-widest transition-all ${resendTimer > 0 ? "text-[var(--text-muted)] opacity-50 cursor-not-allowed" : "text-[var(--brand-orange)] hover:scale-105 active:scale-95"}`}
@@ -343,11 +464,23 @@ export default function Register() {
             <form onSubmit={handleRegister} className="space-y-6">
               {/* Name fields */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {[["firstName", "First Name"], ["middleName", "Middle"], ["lastName", "Last Name"]].map(([name, ph]) => (
+                {[
+                  ["firstName", "First Name"],
+                  ["middleName", "Middle"],
+                  ["lastName", "Last Name"],
+                ].map(([name, ph]) => (
                   <div key={name} className="space-y-2">
-                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">{ph}</label>
-                    <input name={name} value={form[name]} onChange={handleChange} placeholder={ph} required={name !== "middleName"}
-                      className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 px-6 text-xs font-black focus:border-[var(--brand-blue)] outline-none transition-all shadow-inner" />
+                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">
+                      {ph}
+                    </label>
+                    <input
+                      name={name}
+                      value={form[name]}
+                      onChange={handleChange}
+                      placeholder={ph}
+                      required={name !== "middleName"}
+                      className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 px-6 text-xs font-black focus:border-[var(--brand-blue)] outline-none transition-all shadow-inner"
+                    />
                   </div>
                 ))}
               </div>
@@ -355,18 +488,43 @@ export default function Register() {
               {/* DOB + Gender + Marital */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">Date of Birth</label>
-                  <input type="date" name="dateOfBirth" value={form.dateOfBirth} onChange={handleChange} max={new Date().toISOString().split("T")[0]} required
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 px-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
+                  <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={form.dateOfBirth}
+                    onChange={handleChange}
+                    max={new Date().toISOString().split("T")[0]}
+                    required
+                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 px-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  {[["gender", ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"], ["Male", "Female", "Other", "Prefer Not To Say"]],
-                    ["maritalStatus", ["SINGLE", "MARRIED"], ["Single", "Married"]]].map(([field, vals, labels]) => (
+                  {[
+                    [
+                      "gender",
+                      ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"],
+                      ["Male", "Female", "Other", "Prefer Not To Say"],
+                    ],
+                    ["maritalStatus", ["SINGLE", "MARRIED"], ["Single", "Married"]],
+                  ].map(([field, vals, labels]) => (
                     <div key={field} className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">{field === "gender" ? "Gender" : "Marital"}</label>
-                      <select name={field} value={form[field]} onChange={handleChange}
-                        className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 px-5 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner appearance-none">
-                        {vals.map((v, i) => <option key={v} value={v}>{labels[i]}</option>)}
+                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">
+                        {field === "gender" ? "Gender" : "Marital"}
+                      </label>
+                      <select
+                        name={field}
+                        value={form[field]}
+                        onChange={handleChange}
+                        className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 px-5 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner appearance-none"
+                      >
+                        {vals.map((v, i) => (
+                          <option key={v} value={v}>
+                            {labels[i]}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   ))}
@@ -375,26 +533,57 @@ export default function Register() {
 
               {/* Email */}
               <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">Email Identity</label>
+                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">
+                  Email Identity
+                </label>
                 <div className="relative group">
-                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all text-lg"><FiMail /></div>
-                  <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="Email" required disabled={isResubmitting}
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 pl-14 pr-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner disabled:opacity-60" />
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all text-lg">
+                    <FiMail />
+                  </div>
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder="Email"
+                    required
+                    disabled={isResubmitting}
+                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 pl-14 pr-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner disabled:opacity-60"
+                  />
                 </div>
               </div>
 
               {/* Passwords */}
               {!isResubmitting && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {[["password", "Security Code"], ["confirmPassword", "Confirm Code"]].map(([field, ph]) => (
+                  {[
+                    ["password", "Security Code"],
+                    ["confirmPassword", "Confirm Code"],
+                  ].map(([field, ph]) => (
                     <div key={field} className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">{ph}</label>
+                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">
+                        {ph}
+                      </label>
                       <div className="relative group">
-                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all text-lg"><FiLock /></div>
-                        <input type={showPassword ? "text" : "password"} name={field} value={form[field]} onChange={handleChange} placeholder="••••••••" required minLength={8}
-                          className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 pl-14 pr-14 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
+                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all text-lg">
+                          <FiLock />
+                        </div>
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          name={field}
+                          value={form[field]}
+                          onChange={handleChange}
+                          placeholder="••••••••"
+                          required
+                          minLength={8}
+                          className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 pl-14 pr-14 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner"
+                        />
                         {field === "confirmPassword" && (
-                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all"
+                          >
                             {showPassword ? <FiEyeOff /> : <FiEye />}
                           </button>
                         )}
@@ -406,18 +595,35 @@ export default function Register() {
 
               {/* Role selector */}
               <div className="space-y-3">
-                <label className="text-[9px] font-black uppercase tracking-[0.4em] text-[var(--text-muted)] ml-1">Define Your Role</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[{ id: "PATIENT", label: "Patient", color: "var(--brand-orange)" },
+                <label className="text-[9px] font-black uppercase tracking-[0.4em] text-[var(--text-muted)] ml-1">
+                  Define Your Role
+                </label>
+                {/* Yahan sm:grid-cols-3 ko badal kar sm:grid-cols-4 kiya hai taake 4 buttons sahi se set ho sakein */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  {[
+                    { id: "PATIENT", label: "Patient", color: "var(--brand-orange)" },
                     { id: "DOCTOR", label: "Doctor", color: "var(--brand-green)" },
                     { id: "PHARMACY", label: "Pharmacist", color: "var(--brand-blue)" },
-                    { id: "LABORATORY", label: "Laboratory", color: "var(--brand-purple)" }
+                    {
+                      id: "LABORATORY",
+                      label: "Laboratory",
+                      color: "var(--brand-purple, #8B5CF6)",
+                    },
                   ].map((role) => (
-                    <button key={role.id} type="button" onClick={() => !isResubmitting && setForm((f) => ({ ...f, role: role.id }))}
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => !isResubmitting && setForm((f) => ({ ...f, role: role.id }))}
                       className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden group ${form.role === role.id ? "bg-[var(--bg-main)] text-[var(--text-main)] shadow-lg" : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-soft)]"} ${isResubmitting && form.role !== role.id ? "opacity-30 grayscale cursor-not-allowed" : ""}`}
-                      style={form.role === role.id ? { borderColor: role.color } : {}}>
+                      style={form.role === role.id ? { borderColor: role.color } : {}}
+                    >
                       {role.label}
-                      {form.role === role.id && <div className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: role.color }} />}
+                      {form.role === role.id && (
+                        <div
+                          className="absolute top-1 right-1 w-2 h-2 rounded-full"
+                          style={{ backgroundColor: role.color }}
+                        />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -426,25 +632,128 @@ export default function Register() {
               {/* Doctor specialization */}
               {form.role === "DOCTOR" && (
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">Expertise Field</label>
+                  <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">
+                    Expertise Field
+                  </label>
                   <div className="relative group">
-                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--brand-green)] text-xl"><FaStethoscope /></div>
-                    <select name="specialization" value={form.specialization} onChange={handleChange} required
-                      className="w-full bg-[var(--bg-main)] border border-[var(--brand-green)]/30 rounded-2xl py-4 pl-16 pr-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner appearance-none">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--brand-green)] text-xl">
+                      <FaStethoscope />
+                    </div>
+                    <select
+                      name="specialization"
+                      value={form.specialization}
+                      onChange={handleChange}
+                      required
+                      className="w-full bg-[var(--bg-main)] border border-[var(--brand-green)]/30 rounded-2xl py-4 pl-16 pr-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner appearance-none"
+                    >
                       <option value="">Select Specialization</option>
-                      {["General Medicine","Cardiology","Dermatology","Neurology","Pediatrics","Psychiatry","Orthopedics","Gynecology","Ophthalmology","Dentistry","ENT","Urology","Oncology","Other"].map(s => <option key={s} value={s}>{s}</option>)}
+                      {[
+                        "General Medicine",
+                        "Cardiology",
+                        "Dermatology",
+                        "Neurology",
+                        "Pediatrics",
+                        "Psychiatry",
+                        "Orthopedics",
+                        "Gynecology",
+                        "Ophthalmology",
+                        "Dentistry",
+                        "ENT",
+                        "Urology",
+                        "Oncology",
+                        "Physician Assistant (PA)",
+                        "Other",
+                      ].map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
                     </select>
                   </div>
+                  {form.specialization === "Physician Assistant (PA)" && (
+                    <div className="p-4 rounded-2xl border border-[var(--brand-blue)]/30 bg-[var(--brand-blue)]/5 flex gap-4 animate-in fade-in slide-in-from-top-2">
+                      <div className="mt-1">
+                        <FiShield className="text-[var(--brand-blue)] text-lg" />
+                      </div>
+                      <p className="text-[9px] font-black text-[var(--brand-blue)] uppercase tracking-widest leading-relaxed">
+                        Physician Assistant (PA): Supports the doctor by handling routine consultations, follow-ups, monitoring, and clinical notes under supervision.
+                      </p>
+                    </div>
+                  )}
                   {form.specialization === "Other" && (
                     <div className="relative group mt-3 animate-in fade-in slide-in-from-top-1">
-                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--brand-green)] text-xl"><FaStethoscope /></div>
-                      <input name="customProfession" value={form.customProfession || ""} onChange={handleChange} placeholder="Specify Field" required
-                        className="w-full bg-[var(--bg-main)] border border-[var(--brand-green)]/30 rounded-2xl py-4 pl-16 pr-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner" />
+                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--brand-green)] text-xl">
+                        <FaStethoscope />
+                      </div>
+                      <input
+                        name="customProfession"
+                        value={form.customProfession || ""}
+                        onChange={handleChange}
+                        placeholder="Specify Field"
+                        required
+                        className="w-full bg-[var(--bg-main)] border border-[var(--brand-green)]/30 rounded-2xl py-4 pl-16 pr-6 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner"
+                      />
                     </div>
                   )}
                 </div>
               )}
 
+              {form.role === "LABORATORY" && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">
+                    Laboratory Type & Services
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--brand-purple)] text-xl">
+                      <FiShield />
+                    </div>
+                    <select
+                      name="specialization"
+                      value={form.specialization}
+                      onChange={handleChange}
+                      required
+                      className="w-full bg-[var(--bg-main)] border border-[var(--brand-purple)]/30 rounded-2xl py-4 pl-16 pr-6 text-xs font-black focus:border-[var(--brand-purple)] outline-none transition-all shadow-inner appearance-none"
+                    >
+                      <option value="">Select Lab Category</option>
+                      {[
+                        "Pathology Laboratory",
+                        "Radiology & Imaging Center",
+                        "Diagnostic Center",
+                        "Hematology Lab",
+                        "Microbiology Laboratory",
+                        "Molecular Biology Lab",
+                        "Biochemistry Lab",
+                        "Cytology / Histology",
+                        "Genetics Laboratory",
+                        "Forensic Lab",
+                        "Clinical Research Lab",
+                        "Other",
+                      ].map((lab) => (
+                        <option key={lab} value={lab}>
+                          {lab}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Agar "Other" select ho toh specific field dikhao (Jaise Doctor me hai) */}
+                  {form.specialization === "Other" && (
+                    <div className="relative group mt-3 animate-in fade-in slide-in-from-top-1">
+                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--brand-purple)] text-xl">
+                        <FiShield />
+                      </div>
+                      <input
+                        name="customProfession"
+                        value={form.customProfession || ""}
+                        onChange={handleChange}
+                        placeholder="Specify Laboratory Type"
+                        required
+                        className="w-full bg-[var(--bg-main)] border border-[var(--brand-purple)]/30 rounded-2xl py-4 pl-16 pr-6 text-xs font-black focus:border-[var(--brand-purple)] outline-none transition-all shadow-inner"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
               {/* License upload */}
               {needsApproval && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2 p-6 rounded-3xl border-2 border-dashed border-[var(--brand-blue)]/20 bg-[var(--brand-blue)]/5">
@@ -458,15 +767,31 @@ export default function Register() {
                     <div className="w-12 h-12 rounded-full bg-[var(--brand-blue)]/10 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
                       <FiUpload className="text-[var(--brand-blue)] text-xl" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] group-hover:text-[var(--brand-blue)] transition-all text-center">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] group-hover:text-[var(--brand-blue)] transition-all">
                       {licenseFile ? licenseFile.name : "Choose License Image or PDF"}
                     </span>
-                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleLicenseUpload} className="hidden" />
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,.pdf"
+                      onChange={handleLicenseUpload}
+                      className="hidden"
+                    />
                   </label>
                   {licensePreview && (
                     <div className="relative group mt-2 rounded-2xl overflow-hidden border border-[var(--border)] shadow-lg max-h-40">
-                      <img src={licensePreview} alt="License preview" className="w-full object-contain bg-black/5" />
-                      <button type="button" onClick={() => { setLicenseFile(null); setLicensePreview(null); }} className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-md text-white p-2 rounded-full shadow-lg hover:bg-red-500 transition-all">
+                      <img
+                        src={licensePreview}
+                        alt="License preview"
+                        className="w-full object-contain bg-black/5"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLicenseFile(null);
+                          setLicensePreview(null);
+                        }}
+                        className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-md text-white p-2 rounded-full shadow-lg hover:bg-red-500 transition-all"
+                      >
                         <FiX className="text-xs" />
                       </button>
                     </div>
@@ -477,20 +802,32 @@ export default function Register() {
               {/* Notice */}
               {needsApproval && (
                 <div className="p-4 rounded-2xl border border-[var(--brand-orange)]/30 bg-[var(--brand-orange)]/5 flex gap-4">
-                  <div className="mt-1"><FiClock className="text-[var(--brand-orange)] text-lg" /></div>
+                  <div className="mt-1">
+                    <FiClock className="text-[var(--brand-orange)] text-lg" />
+                  </div>
                   <p className="text-[9px] font-black text-[var(--brand-orange)] uppercase tracking-widest leading-relaxed">
-                    Account Verification: Your credentials will be reviewed by our medical board. Approval typically takes 24 hours.
+                    Account Verification: Your credentials will be reviewed by our medical board.
+                    Approval typically takes 24 hours.
                   </p>
                 </div>
               )}
 
-              <button type="submit" disabled={submitting}
-                className="btn btn-primary w-full !rounded-[2rem] !py-5 text-[10px] shadow-premium">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn btn-primary w-full !rounded-[2rem] !py-5 text-[10px] shadow-premium"
+              >
                 {submitting ? (
-                  <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>{isUploading ? "UPLOADING..." : "PROCESSING..."}</span></>
+                  <>
+                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>{isUploading ? "UPLOADING..." : "PROCESSING..."}</span>
+                  </>
                 ) : (
-                  <> {isResubmitting ? "RESUBMIT FOR REVIEW" : "COMPLETE REGISTRATION"} <FaArrowRight /></>
+                  <>
+                    {" "}
+                    {isResubmitting ? "RESUBMIT FOR REVIEW" : "COMPLETE REGISTRATION"}{" "}
+                    <FaArrowRight />
+                  </>
                 )}
               </button>
             </form>
@@ -499,12 +836,21 @@ export default function Register() {
           <footer className="mt-12 text-center border-t border-[var(--border)] pt-8">
             <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
               Already a member?{" "}
-              <Link to="/login" className="text-[var(--brand-orange)] hover:text-[var(--brand-red)] transition-all ml-1">Access Account</Link>
+              <Link
+                to="/login"
+                className="text-[var(--brand-orange)] hover:text-[var(--brand-red)] transition-all ml-1"
+              >
+                Access Account
+              </Link>
             </p>
           </footer>
         </div>
       </div>
-      <ToastContainer position="top-right" autoClose={2500} theme={theme === "dark" ? "dark" : "light"} />
+      <ToastContainer
+        position="top-right"
+        autoClose={2500}
+        theme={theme === "dark" ? "dark" : "light"}
+      />
     </div>
   );
 }

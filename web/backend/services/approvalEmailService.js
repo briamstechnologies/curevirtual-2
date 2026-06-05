@@ -40,7 +40,11 @@ try {
 async function sendApprovalEmail({ email, name, role }) {
   if (!transporter) throw new Error('Email transporter not configured');
 
-  const roleLabel = role === 'DOCTOR' ? 'Doctor' : 'Pharmacy';
+  const roleLabels = {
+    'DOCTOR': 'Doctor',
+    'PHARMACY': 'Pharmacy',
+    'LABORATORY': 'Laboratory'
+  }
 
   const html = `
 <!DOCTYPE html>
@@ -128,7 +132,12 @@ async function sendApprovalEmail({ email, name, role }) {
 async function sendRejectionEmail({ email, name, role, rejectionReason }) {
   if (!transporter) throw new Error('Email transporter not configured');
 
-  const roleLabel = role === 'DOCTOR' ? 'Doctor' : 'Pharmacy';
+  const roleLabels = {
+    'DOCTOR': 'Doctor',
+    'PHARMACY': 'Pharmacy',
+    'LABORATORY': 'Laboratory'
+  };
+  const roleLabel = roleLabels[role] || 'User';
   const reasonHtml = rejectionReason
     ? `<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:16px;margin:24px 0;">
          <p style="color:#fca5a5;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;">Reason:</p>

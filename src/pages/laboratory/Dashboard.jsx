@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FiActivity, FiUsers, FiFileText, FiDollarSign, FiClock, FiUploadCloud, FiCheckCircle } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import DashboardLayout from "../../layouts/DashboardLayout";
 
 export default function LaboratoryDashboard() {
   const labName = localStorage.getItem("userName") || "CureVirtual Lab";
@@ -20,7 +21,8 @@ export default function LaboratoryDashboard() {
   ];
 
   return (
-    <div className="p-6 md:p-10 min-h-screen bg-[var(--bg-main)] animate-in fade-in duration-700">
+    <DashboardLayout role="LABORATORY" user={{ name: labName }}>
+      <div className="animate-in fade-in duration-700">
       
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
@@ -123,5 +125,6 @@ export default function LaboratoryDashboard() {
 
       </div>
     </div>
+  </DashboardLayout>
   );
 }

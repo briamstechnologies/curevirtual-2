@@ -264,6 +264,9 @@ router.get(
       const pharmacyActive = active.filter(
         (s) => s.user?.role === "PHARMACY",
       ).length;
+      const laboratoryActive = active.filter(
+        (s) => s.user?.role === "LABORATORY",
+      ).length;
 
       return res.json({
         success: true,
@@ -274,6 +277,7 @@ router.get(
           doctorsActive,
           patientsActive,
           pharmacyActive,
+          laboratoryActive,
         },
       });
     } catch (err) {
@@ -293,7 +297,7 @@ router.get(
       const { role, plan, status, q, page = 1, pageSize = 20 } = req.query;
 
       const whereUser = {};
-      if (role && ["DOCTOR", "PATIENT", "PHARMACY"].includes(String(role))) {
+      if (role && ["DOCTOR", "PATIENT", "PHARMACY", "LABORATORY"].includes(String(role))) {
         whereUser.role = String(role);
       }
 

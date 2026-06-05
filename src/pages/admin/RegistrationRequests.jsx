@@ -197,6 +197,7 @@ export default function RegistrationRequests() {
               <option value="">All Roles</option>
               <option value="DOCTOR">Doctors</option>
               <option value="PHARMACY">Pharmacies</option>
+              <option value="LABORATORY">Laboratory</option>
             </select>
           </div>
         </div>

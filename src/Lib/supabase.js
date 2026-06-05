@@ -24,11 +24,11 @@ export const supabase = (isValidUrl(supabaseUrl) && supabaseAnonKey)
  * Upload a license document to Supabase Storage 'license-documents' bucket.
  * Returns a 24h signed URL for admin review.
  * NOTE: This is a client-side helper; the actual production upload path is
- * handled server-side via /api/registration-requests/submit (multipart).
+ * handled server-side via //registration-requests/submit (multipart).
  *
  * @param {File}   file   - Browser File object
  * @param {string} userId - Authenticated user ID
- * @param {string} role   - 'DOCTOR' | 'PHARMACY'
+ * @param {string} role   - 'DOCTOR' | 'PHARMACY' | 'LABORATORY'
  * @returns {Promise<string>} signedUrl valid for 24 hours
  */
 export async function uploadLicenseDocument(file, userId, role) {
@@ -48,5 +48,5 @@ export async function uploadLicenseDocument(file, userId, role) {
     .createSignedUrl(fileName, 86400); // 24 hours
 
   if (signedError) throw signedError;
-  return signedData.signedUrl;
+  return signedData.signed;
 }

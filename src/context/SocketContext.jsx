@@ -4,104 +4,107 @@ import { io } from "socket.io-client";
 import { SocketContext } from "./useSocket";
 import api from "../Lib/api";
 import { supabase } from "../Lib/supabase";
-
 import { useUser } from "./UserContext";
 
 export const SocketProvider = ({ children }) => {
   const { user } = useUser();
+
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionState, setConnectionState] = useState("disconnected"); // 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
-  const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 5;
+  const [connectionState, setConnectionState] = useState("disconnected");
 
-  // Derive socket URL from API base URL (strip /api suffix)
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001/api";
-  const backendUrl = apiBaseUrl.replace(/\/api\/?$/, "");
+  const reconnectAttempts = useRef(0);
+
+  // ✅ LOCAL + PRODUCTION AUTO SWITCH
+  const backendUrl =
+    import.meta.env.MODE === "development"
+      ? "https://curevirtual-2-production-ee33.up.railway.app"
+      : "https://curevirtual-2-production-ee33.up.railway.app";
 
   useEffect(() => {
-    // Get user info from localStorage OR UserContext
     const userId = user?.id || localStorage.getItem("userId");
     const role = user?.role || localStorage.getItem("role");
-    const name = user?.name || localStorage.getItem("userName") || localStorage.getItem("name") || "User";
-    const token = localStorage.getItem("token"); // JWT token for authentication
+    const name =
+      user?.name || localStorage.getItem("userName") || localStorage.getItem("name") || "User";
 
+    const token = localStorage.getItem("token");
+
+    // ✅ Allow public pages without socket
     if (!userId || !role || !token) {
-      console.log("ℹ️ Socket: Waiting for user authentication before connecting.");
-      setIsConnected(false);
-      setConnectionState("disconnected");
+      console.log("ℹ️ Socket waiting for auth...");
       return;
     }
 
-    console.log(`🔌 Socket: Initializing for user ${userId} (${role})...`);
+    console.log("🔌 Connecting socket to:", backendUrl);
+
     setConnectionState("connecting");
 
-    // Initialize socket connection with JWT auth
-    const newSocket = io(backendUrl, {
+    const socketInstance = io(backendUrl, {
       withCredentials: true,
-      // Use polling as fallback during Railway cold starts.
-      // Socket.io tries WebSocket first, falls back to long-polling if the
-      // server isn't fully awake yet, then auto-upgrades once stable.
-      transports: ["websocket", "polling"],
+
+      // ✅ Important for localhost + Railway
+      transports: ["polling", "websocket"],
+
       auth: {
-        token: token, // JWT authentication
+        token,
       },
+
       reconnection: true,
+      reconnectionAttempts: 10,
       reconnectionDelay: 2000,
       reconnectionDelayMax: 10000,
-      reconnectionAttempts: 10,
+
       timeout: 20000,
+      autoConnect: true,
     });
 
-    // Connection successful
-    newSocket.on("connect", () => {
-      console.log("✅ Socket connected:", newSocket.id);
+    // =========================
+    // CONNECTED
+    // =========================
+    socketInstance.on("connect", () => {
+      console.log("✅ Socket Connected:", socketInstance.id);
+
+      setSocket(socketInstance);
       setIsConnected(true);
       setConnectionState("connected");
+
       reconnectAttempts.current = 0;
 
-      // Register user with the server
-      newSocket.emit("user_online", {
+      socketInstance.emit("user_online", {
         userId,
         role,
         name,
       });
     });
 
-    const isRefreshing = { current: false };
+    // =========================
+    // CONNECT ERROR
+    // =========================
+    socketInstance.on("connect_error", async (error) => {
+      console.error("❌ Socket Error:", error.message);
 
-    // Connection error
-    newSocket.on("connect_error", async (error) => {
-      console.error("❌ Socket connection error:", error.message);
+      setIsConnected(false);
+      setConnectionState("reconnecting");
 
-      // Handle Authentication Issues (Expired, Invalid, or Missing)
-      const isAuthError =
-        error.message === "jwt expired" ||
-        error.message === "Authentication required" ||
-        error.message === "Invalid token";
+      const authErrors = ["jwt expired", "Authentication required", "Invalid token"];
 
-      if (isAuthError && !isRefreshing.current) {
-        isRefreshing.current = true;
-        console.log("🔄 Socket auth failed. Attempting token refresh...");
-
+      if (authErrors.includes(error.message)) {
         try {
-          // 1. Get fresh Supabase session (auto-refreshes if needed)
+          console.log("🔄 Attempting token refresh...");
+
           const {
             data: { session },
             error: sessionError,
           } = await supabase.auth.getSession();
 
           if (sessionError || !session) {
-            console.error("❌ Supabase session lost or invalid. Logging out.");
             localStorage.clear();
             window.location.href = "/login";
             return;
           }
 
-          // 2. Sync with backend for new legacy JWT
           const userEmail = localStorage.getItem("email");
-          console.log(`📡 Syncing with backend for user: ${userEmail}`);
-          
+
           const res = await api.post("/auth/login-sync", {
             email: userEmail,
             supabaseId: session.user.id,
@@ -111,84 +114,89 @@ export const SocketProvider = ({ children }) => {
           const newToken = res.data.token;
 
           if (newToken) {
-            console.log("✅ Token refreshed. Updating socket and reconnecting...");
             localStorage.setItem("token", newToken);
 
-            // 3. Update socket auth and reconnect
-            newSocket.auth.token = newToken;
-            newSocket.connect();
-            
-            // Short delay before unlocking to avoid race conditions with quick retries
-            setTimeout(() => {
-              isRefreshing.current = false;
-            }, 2000);
-            return;
+            socketInstance.auth.token = newToken;
+
+            socketInstance.connect();
+
+            console.log("✅ Socket token refreshed");
           }
-        } catch (refreshErr) {
-          console.error("❌ Critical failure during socket token refresh:", refreshErr);
-          isRefreshing.current = false;
+        } catch (err) {
+          console.error("❌ Token refresh failed:", err);
+
+          localStorage.clear();
+          window.location.href = "/login";
         }
       }
+    });
 
-      setIsConnected(false);
+    // =========================
+    // RECONNECTING
+    // =========================
+    socketInstance.io.on("reconnect_attempt", (attempt) => {
+      reconnectAttempts.current = attempt;
+
+      console.log(`🔄 Reconnect Attempt: ${attempt}`);
+
       setConnectionState("reconnecting");
     });
 
-    // Reconnect attempt
-    newSocket.on("reconnect_attempt", (attemptNumber) => {
-      console.log(`🔄 Reconnection attempt ${attemptNumber}/${maxReconnectAttempts}`);
-      setConnectionState("reconnecting");
-      reconnectAttempts.current = attemptNumber;
-    });
+    socketInstance.io.on("reconnect", (attempt) => {
+      console.log(`✅ Reconnected after ${attempt} attempts`);
 
-    // Reconnect successful
-    newSocket.on("reconnect", (attemptNumber) => {
-      console.log(`✅ Reconnected after ${attemptNumber} attempts`);
       setIsConnected(true);
       setConnectionState("connected");
-      reconnectAttempts.current = 0;
 
-      // Re-register user
-      newSocket.emit("user_online", {
+      socketInstance.emit("user_online", {
         userId,
         role,
         name,
       });
     });
 
-    // Reconnect failed
-    newSocket.on("reconnect_failed", () => {
-      console.error("❌ Reconnection failed after maximum attempts");
-      setIsConnected(false);
+    socketInstance.io.on("reconnect_failed", () => {
+      console.error("❌ Socket reconnect failed");
+
       setConnectionState("disconnected");
+      setIsConnected(false);
     });
 
-    // Disconnected
-    newSocket.on("disconnect", (reason) => {
+    // =========================
+    // DISCONNECT
+    // =========================
+    socketInstance.on("disconnect", (reason) => {
       console.log("🔌 Socket disconnected:", reason);
+
       setIsConnected(false);
+
       if (reason === "io server disconnect") {
-        // Server disconnected us, need to manually reconnect
-        newSocket.connect();
+        socketInstance.connect();
       }
+
       setConnectionState("disconnected");
     });
 
-    setSocket(newSocket);
-
-    // Cleanup on unmount
+    // =========================
+    // CLEANUP
+    // =========================
     return () => {
-      if (newSocket) {
-        newSocket.disconnect();
-      }
+      console.log("🧹 Cleaning socket...");
+
+      socketInstance.removeAllListeners();
+      socketInstance.disconnect();
     };
-  }, [backendUrl, user]);
+  }, [user, backendUrl]);
 
-  const contextValue = {
-    socket,
-    isConnected,
-    connectionState,
-  };
-
-  return <SocketContext.Provider value={contextValue}>{children}</SocketContext.Provider>;
+  return (
+    <SocketContext.Provider
+      value={{
+        socket,
+        isConnected,
+        connectionState,
+      }}
+    >
+      {children}
+    </SocketContext.Provider>
+  );
 };

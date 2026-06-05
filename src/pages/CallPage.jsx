@@ -52,7 +52,7 @@ const CallPage = () => {
     }
     
     const role = localStorage.getItem("role") || localStorage.getItem("userRole");
-    navigate(role === "DOCTOR" ? "/doctor/appointments" : "/patient/my-appointments");
+    navigate((role === "DOCTOR" || role === "PHYSICIAN_ASSISTANT") ? "/doctor/appointments" : "/patient/my-appointments");
   };
 
   if (loading) {
@@ -92,7 +92,9 @@ const CallPage = () => {
   }
 
   const role = localStorage.getItem("role") || localStorage.getItem("userRole");
-  const displayName = role === "DOCTOR" ? appointment.doctorName || "Doctor" : appointment.patientName || "Patient";
+  const displayName = (role === "DOCTOR" || role === "PHYSICIAN_ASSISTANT") 
+    ? appointment.doctorName || (role === "PHYSICIAN_ASSISTANT" ? "Physician Assistant" : "Doctor") 
+    : appointment.patientName || "Patient";
   const userId = localStorage.getItem("userId") || `user-${Date.now()}`;
 
   return (
