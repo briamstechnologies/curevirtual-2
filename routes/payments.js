@@ -3,17 +3,33 @@ const router = express.Router();
 const prisma = require("../prisma/prismaClient");
 const Stripe = require("stripe");
 
-// Initialize Stripe with secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Guard: ensure STRIPE_SECRET_KEY is set before initializing
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error("❌ CRITICAL: STRIPE_SECRET_KEY is not set in environment variables. Payments will not work.");
+}
+
+// Initialize Stripe with secret key (lazy — will throw on first use if key is missing)
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 const { verifyToken } = require("../middleware/rbac");
+
+// Middleware to block payment routes if Stripe is not configured
+const requireStripe = (req, res, next) => {
+  if (!stripe) {
+    return res.status(503).json({ error: "Payment service unavailable: STRIPE_SECRET_KEY not configured." });
+  }
+  next();
+};
+
 
 /**
  * POST /api/payments/create-session-payment
  * Input: { appointmentId }
  * Description: Creates a Stripe Checkout session for a per-session consultation payment.
  */
-router.post("/create-session-payment", verifyToken, async (req, res) => {
+router.post("/create-session-payment", verifyToken, requireStripe, async (req, res) => {
   try {
     const { appointmentId } = req.body;
     const priceId = process.env.STRIPE_PRICE_ID_SESSION;
@@ -81,7 +97,7 @@ router.post("/create-session-payment", verifyToken, async (req, res) => {
  * Input: { planType, userType }
  * Description: Creates a Stripe Checkout Session for a subscription.
  */
-router.post("/create-subscription", verifyToken, async (req, res) => {
+router.post("/create-subscription", verifyToken, requireStripe, async (req, res) => {
   try {
     const { planType, userType } = req.body; 
     const priceId = process.env.STRIPE_PRICE_ID_MONTHLY;
