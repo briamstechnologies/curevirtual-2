@@ -16,9 +16,18 @@ if (!isValidUrl(supabaseUrl) || !supabaseAnonKey) {
   console.error('❌ Supabase configuration is invalid or missing! URL:', supabaseUrl);
 }
 
-export const supabase = (isValidUrl(supabaseUrl) && supabaseAnonKey)
+const client = (isValidUrl(supabaseUrl) && supabaseAnonKey)
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
+
+export const supabase = client || new Proxy({}, {
+  get(target, prop) {
+    if (prop === 'isPlaceholder') return true;
+    throw new Error(
+      "Supabase client is not initialized. Please verify that VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in your frontend environment variables."
+    );
+  }
+});
 
 /**
  * Upload a license document to Supabase Storage 'license-documents' bucket.
