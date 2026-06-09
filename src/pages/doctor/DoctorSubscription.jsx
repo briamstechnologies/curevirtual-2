@@ -62,8 +62,6 @@ export default function DoctorSubscription() {
     load();
   }, [load]);
 
-
-
   const handleSubscribeFallback = async () => {
     try {
       if (!userId) {
@@ -152,44 +150,59 @@ export default function DoctorSubscription() {
               <div className="w-full max-w-md mx-auto">
                 <h3 className="text-xl font-bold mb-4">Complete Payment</h3>
                 <Elements stripe={stripePromise} options={{ clientSecret }}>
-                  <CheckoutForm 
-                    clientSecret={clientSecret} 
-                    onSuccess={() => { setClientSecret(null); load(); }} 
-                    onCancel={() => setClientSecret(null)} 
+                  <CheckoutForm
+                    clientSecret={clientSecret}
+                    onSuccess={() => {
+                      setClientSecret(null);
+                      load();
+                    }}
+                    onCancel={() => setClientSecret(null)}
                   />
                 </Elements>
               </div>
             ) : (
               <div className="w-full max-w-sm mx-auto flex flex-col items-center justify-center p-8 bg-[var(--bg-glass)] border border-[var(--border)] rounded-2xl shadow-lg">
                 <h2 className="text-2xl font-black text-[var(--text-main)] mb-2">Subscribe</h2>
-                <p className="text-[var(--text-soft)] text-center text-sm mb-6">Choose a plan to get unlimited access.</p>
-                
+                <p className="text-[var(--text-soft)] text-center text-sm mb-6">
+                  Choose a plan to get unlimited access.
+                </p>
+
                 <div className="flex bg-[var(--bg-main)] p-1 rounded-full w-full mb-6 relative">
-                  <button 
-                    className={`flex-1 py-2 text-sm font-bold rounded-full transition-all ${plan === 'MONTHLY' ? 'bg-[var(--brand-blue)] text-white shadow-md' : 'text-[var(--text-soft)]'}`}
-                    onClick={() => setPlan('MONTHLY')}
+                  <button
+                    className={`flex-1 py-2 text-sm font-bold rounded-full transition-all ${plan === "MONTHLY" ? "bg-[var(--brand-blue)] text-white shadow-md" : "text-[var(--text-soft)]"}`}
+                    onClick={() => setPlan("MONTHLY")}
                   >
                     Monthly
                   </button>
-                  <button 
-                    className={`flex-1 py-2 text-sm font-bold rounded-full transition-all ${plan === 'YEARLY' ? 'bg-[var(--brand-blue)] text-white shadow-md' : 'text-[var(--text-soft)]'}`}
-                    onClick={() => setPlan('YEARLY')}
+                  <button
+                    className={`flex-1 py-2 text-sm font-bold rounded-full transition-all ${plan === "YEARLY" ? "bg-[var(--brand-blue)] text-white shadow-md" : "text-[var(--text-soft)]"}`}
+                    onClick={() => setPlan("YEARLY")}
                   >
                     Yearly
                   </button>
                 </div>
-                
+
                 <div className="text-4xl font-extrabold mb-8 text-[var(--text-main)]">
-                  {plan === 'MONTHLY' ? fmtUSD(prices.monthlyUsd || 25) : fmtUSD(prices.yearlyUsd || 250)}
-                  <span className="text-sm font-normal text-[var(--text-muted)]">/{plan === "MONTHLY" ? "mo" : "yr"}</span>
+                  {plan === "MONTHLY"
+                    ? fmtUSD(prices.monthlyUsd || 25)
+                    : fmtUSD(prices.yearlyUsd || 250)}
+                  <span className="text-sm font-normal text-[var(--text-muted)]">
+                    /{plan === "MONTHLY" ? "mo" : "yr"}
+                  </span>
                 </div>
 
-                <button 
-                  disabled={processing || status.status === "ACTIVE"} 
-                  onClick={handleSubscribeFallback} 
+                <button
+                  disabled={processing || status.status === "ACTIVE"}
+                  onClick={handleSubscribeFallback}
                   className="w-full py-3 bg-[var(--brand-blue)] text-white hover:bg-blue-600 rounded-xl font-bold transition-all disabled:opacity-50 flex justify-center"
                 >
-                  {processing ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : status.status === "ACTIVE" ? "Current Plan" : "Subscribe Now"}
+                  {processing ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : status.status === "ACTIVE" ? (
+                    "Current Plan"
+                  ) : (
+                    "Subscribe Now"
+                  )}
                 </button>
               </div>
             )}

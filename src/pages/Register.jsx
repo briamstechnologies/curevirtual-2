@@ -48,7 +48,6 @@ export default function Register() {
   const isResubmitting = localStorage.getItem("approvalStatus") === "REJECTED";
   const existingUserId = localStorage.getItem("userId");
 
-  // Timer logic for Resend OTP
   useEffect(() => {
     let interval;
     if (resendTimer > 0) {
@@ -57,7 +56,6 @@ export default function Register() {
       }, 1000);
     }
 
-    // If resubmitting, prefill email if possible
     if (isResubmitting && existingUserId) {
       const storedEmail = localStorage.getItem("email") || localStorage.getItem("userEmail");
       if (storedEmail && !form.email) {
@@ -68,14 +66,12 @@ export default function Register() {
     return () => clearInterval(interval);
   }, [resendTimer, isResubmitting, existingUserId, form.email]);
 
-  // If already PENDING, don't allow registration
   useEffect(() => {
     if (localStorage.getItem("approvalStatus") === "PENDING") {
       navigate("/pending-approval");
     }
   }, [navigate]);
 
-  // License file state (Doctor/Pharmacy only)
   const [licenseFile, setLicenseFile] = useState(null);
   const [licensePreview, setLicensePreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -142,10 +138,8 @@ export default function Register() {
     setSubmitting(true);
     try {
       if (isResubmitting) {
-        // Skip Supabase signup, go straight to request submission
         await submitRegistrationRequest(existingUserId);
       } else {
-        // ── 🆕 EMAIL AVAILABILITY & SYNC CHECK ────────────────────────────────
         toast.info("Checking email availability...");
         const checkRes = await api.post("/auth/check-email", {
           email: form.email.trim().toLowerCase(),
@@ -162,7 +156,6 @@ export default function Register() {
         if (emailStatus === "PENDING_ACTIVATION") {
           if (cleared) {
             toast.warn("Recovered an incomplete signup. Initializing fresh registration...");
-            // Proceed to sign up since the stuck Supabase account was cleared
           } else {
             toast.error("Account pending activation. Please verify your email or contact support.");
             setSubmitting(false);
@@ -170,29 +163,32 @@ export default function Register() {
           }
         }
 
-        // Proceed to Supabase signup
-        const { error } = await supabase.auth.signUp({
+        // ✅ signUp with display_name in user_metadata
+        const fullName = toTitleCase(`${form.firstName.trim()} ${form.lastName.trim()}`);
+
+        const { data, error } = await supabase.auth.signUp({
           email: form.email.trim().toLowerCase(),
           password: form.password,
           options: {
             data: {
-              firstName: toTitleCase(form.firstName.trim()),
-              middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
-              lastName: toTitleCase(form.lastName.trim()),
-              role: form.specialization === "Physician Assistant (PA)" ? "PHYSICIAN_ASSISTANT" : form.role,
-              dateOfBirth: form.dateOfBirth,
-              gender: form.gender,
-              maritalStatus: form.maritalStatus,
-              specialization:
-                form.specialization === "Other" ? form.customProfession : form.specialization,
+              display_name: fullName,
+              full_name: fullName,
+              first_name: toTitleCase(form.firstName.trim()),
+              last_name: toTitleCase(form.lastName.trim()),
             },
+            // emailRedirectTo undefined = OTP mode (no magic link)
+            emailRedirectTo: undefined,
           },
         });
+
+        console.log("Supabase signUp result", { data, error });
         if (error) throw error;
         setShowOtp(true);
+        setResendTimer(60);
         toast.success("OTP sent! Please check your email.");
       }
     } catch (err) {
+      console.error("Supabase signUp error:", err);
       toast.error(err.message || "Registration failed. Please try again.");
     } finally {
       setSubmitting(false);
@@ -204,7 +200,8 @@ export default function Register() {
     toast.info("Submitting your application...");
 
     try {
-      const mappedRole = form.specialization === "Physician Assistant (PA)" ? "PHYSICIAN_ASSISTANT" : form.role;
+      const mappedRole =
+        form.specialization === "Physician Assistant (PA)" ? "PHYSICIAN_ASSISTANT" : form.role;
       const formData = new FormData();
       formData.append("userId", userId);
       formData.append("role", mappedRole);
@@ -254,16 +251,17 @@ export default function Register() {
     try {
       const { data, error } = await supabase.auth.verifyOtp({
         email: form.email.trim().toLowerCase(),
-        token: otp,
+        token: otp.trim(),
         type: "signup",
       });
       if (error) throw error;
 
-      // Sync user to backend
-      const mappedRole = form.specialization === "Physician Assistant (PA)" ? "PHYSICIAN_ASSISTANT" : form.role;
+      const mappedRole =
+        form.specialization === "Physician Assistant (PA)" ? "PHYSICIAN_ASSISTANT" : form.role;
+
       const syncRes = await api.post("/auth/register-success", {
         supabaseId: data.user.id,
-        email: form.email.trim().toLowerCase(),
+        email: form.email.trim().toLowerCase(), // ✅ Yeh email backend tak ja rahi hai
         firstName: toTitleCase(form.firstName.trim()),
         middleName: form.middleName ? toTitleCase(form.middleName.trim()) : null,
         lastName: toTitleCase(form.lastName.trim()),
@@ -277,7 +275,9 @@ export default function Register() {
 
       const dbUser = syncRes.data.user || syncRes.data;
 
-      // For DOCTOR/PHARMACY: submit approval request
+      // Ab jab ye call complete hogi, backend mein tumhari 'DoctorProfile' table
+      // mein email automatically save ho jani chahiye (agar tumne backend update kiya hai)
+
       if (needsApproval && licenseFile) {
         await submitRegistrationRequest(dbUser.id);
       } else {
@@ -290,7 +290,6 @@ export default function Register() {
       toast.error(err.response?.data?.error || err.message || "Verification failed.");
     } finally {
       setSubmitting(false);
-      // setIsUploading(false);
     }
   };
 
@@ -300,10 +299,13 @@ export default function Register() {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email: form.email.trim().toLowerCase(),
+        options: {
+          emailRedirectTo: undefined,
+        },
       });
       if (error) throw error;
       toast.success("Verification code resent! Please check your inbox.");
-      setResendTimer(60); // 60s cooldown
+      setResendTimer(60);
     } catch (err) {
       toast.error(err.message || "Failed to resend verification code.");
     }
@@ -397,9 +399,19 @@ export default function Register() {
           {showOtp ? (
             <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
               {/* OTP Step */}
+              <div className="text-center p-6 rounded-3xl bg-[var(--bg-main)] border border-[var(--border)] mb-2">
+                <div className="w-16 h-16 rounded-full bg-[var(--brand-green)]/10 flex items-center justify-center mx-auto mb-4">
+                  <FiShield className="text-[var(--brand-green)] text-3xl" />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] mb-1">
+                  Code sent to
+                </p>
+                <p className="text-sm font-black text-[var(--text-main)]">{form.email}</p>
+              </div>
+
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--brand-green)] ml-1">
-                  Identity Verification
+                  Enter Verification Code
                 </label>
                 <div className="relative group">
                   <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand-green)] transition-all text-xl">
@@ -408,21 +420,24 @@ export default function Register() {
                   <input
                     type="text"
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-[2rem] py-5 pl-16 pr-6 text-sm font-black tracking-[0.5em] focus:border-[var(--brand-green)] outline-none transition-all shadow-inner text-center"
                     placeholder="••••••"
+                    maxLength={6}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
                     required
                   />
                 </div>
                 <p className="text-[9px] text-[var(--text-muted)] font-black uppercase tracking-widest text-center">
-                  Code sent to: {form.email}
+                  Enter the 6-digit code from your email
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={handleVerifyOtp}
-                disabled={submitting || !otp || (needsApproval && !licenseFile)}
+                disabled={submitting || otp.length < 6 || (needsApproval && !licenseFile)}
                 className="btn btn-primary w-full !rounded-[2rem] !py-5 text-[10px] shadow-premium"
               >
                 {submitting ? (
@@ -440,10 +455,13 @@ export default function Register() {
               <div className="flex flex-col gap-4">
                 <button
                   type="button"
-                  onClick={() => setShowOtp(false)}
+                  onClick={() => {
+                    setShowOtp(false);
+                    setOtp("");
+                  }}
                   className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest hover:text-[var(--text-main)] transition-all"
                 >
-                  Go Back
+                  ← Go Back
                 </button>
                 <div className="text-center p-4 rounded-2xl bg-[var(--bg-main)]/50 border border-[var(--border)]">
                   <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">
@@ -453,7 +471,11 @@ export default function Register() {
                     type="button"
                     onClick={handleResendOtp}
                     disabled={resendTimer > 0 || submitting}
-                    className={`text-[10px] font-black uppercase tracking-widest transition-all ${resendTimer > 0 ? "text-[var(--text-muted)] opacity-50 cursor-not-allowed" : "text-[var(--brand-orange)] hover:scale-105 active:scale-95"}`}
+                    className={`text-[10px] font-black uppercase tracking-widest transition-all ${
+                      resendTimer > 0
+                        ? "text-[var(--text-muted)] opacity-50 cursor-not-allowed"
+                        : "text-[var(--brand-orange)] hover:scale-105 active:scale-95"
+                    }`}
                   >
                     {resendTimer > 0 ? `RESEND IN ${resendTimer}s` : "RESEND NEW CODE"}
                   </button>
@@ -598,7 +620,6 @@ export default function Register() {
                 <label className="text-[9px] font-black uppercase tracking-[0.4em] text-[var(--text-muted)] ml-1">
                   Define Your Role
                 </label>
-                {/* Yahan sm:grid-cols-3 ko badal kar sm:grid-cols-4 kiya hai taake 4 buttons sahi se set ho sakein */}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   {[
                     { id: "PATIENT", label: "Patient", color: "var(--brand-orange)" },
@@ -614,7 +635,15 @@ export default function Register() {
                       key={role.id}
                       type="button"
                       onClick={() => !isResubmitting && setForm((f) => ({ ...f, role: role.id }))}
-                      className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden group ${form.role === role.id ? "bg-[var(--bg-main)] text-[var(--text-main)] shadow-lg" : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-soft)]"} ${isResubmitting && form.role !== role.id ? "opacity-30 grayscale cursor-not-allowed" : ""}`}
+                      className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden group ${
+                        form.role === role.id
+                          ? "bg-[var(--bg-main)] text-[var(--text-main)] shadow-lg"
+                          : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-soft)]"
+                      } ${
+                        isResubmitting && form.role !== role.id
+                          ? "opacity-30 grayscale cursor-not-allowed"
+                          : ""
+                      }`}
                       style={form.role === role.id ? { borderColor: role.color } : {}}
                     >
                       {role.label}
@@ -676,7 +705,8 @@ export default function Register() {
                         <FiShield className="text-[var(--brand-blue)] text-lg" />
                       </div>
                       <p className="text-[9px] font-black text-[var(--brand-blue)] uppercase tracking-widest leading-relaxed">
-                        Physician Assistant (PA): Supports the doctor by handling routine consultations, follow-ups, monitoring, and clinical notes under supervision.
+                        Physician Assistant (PA): Supports the doctor by handling routine
+                        consultations, follow-ups, monitoring, and clinical notes under supervision.
                       </p>
                     </div>
                   )}
@@ -735,8 +765,6 @@ export default function Register() {
                       ))}
                     </select>
                   </div>
-
-                  {/* Agar "Other" select ho toh specific field dikhao (Jaise Doctor me hai) */}
                   {form.specialization === "Other" && (
                     <div className="relative group mt-3 animate-in fade-in slide-in-from-top-1">
                       <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--brand-purple)] text-xl">
@@ -754,6 +782,7 @@ export default function Register() {
                   )}
                 </div>
               )}
+
               {/* License upload */}
               {needsApproval && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2 p-6 rounded-3xl border-2 border-dashed border-[var(--brand-blue)]/20 bg-[var(--brand-blue)]/5">
@@ -824,7 +853,6 @@ export default function Register() {
                   </>
                 ) : (
                   <>
-                    {" "}
                     {isResubmitting ? "RESUBMIT FOR REVIEW" : "COMPLETE REGISTRATION"}{" "}
                     <FaArrowRight />
                   </>

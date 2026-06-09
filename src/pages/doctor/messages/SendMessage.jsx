@@ -14,15 +14,16 @@ export default function DoctorSendMessage() {
   const [sending, setSending] = useState(false);
 
   const doctorUserId = localStorage.getItem("userId");
-  const doctorName =
-    localStorage.getItem("userName") || localStorage.getItem("name") || "Doctor";
+  const doctorName = localStorage.getItem("userName") || localStorage.getItem("name") || "Doctor";
 
-      // Load my patients for dropdown
-    async function loadMyPatients() {
-      const res = await api.get("/doctor/patients", { params: { doctorUserId } });
-      setPatients(res.data?.data || []); // array of PatientProfile with p.user
-    }
-    useEffect(() => { loadMyPatients(); }, []);
+  // Load my patients for dropdown
+  async function loadMyPatients() {
+    const res = await api.get("/doctor/patients", { params: { doctorUserId } });
+    setPatients(res.data?.data || []); // array of PatientProfile with p.user
+  }
+  useEffect(() => {
+    loadMyPatients();
+  }, []);
 
   // Load patients for dropdown
   useEffect(() => {
@@ -31,10 +32,12 @@ export default function DoctorSendMessage() {
         const res = await api.get("/doctor/patients");
         const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
         // Normalize to { id: <Patient User.id>, name: <Patient Name> }
-        const normalized = list.map((p) => ({
-          id: p?.user?.id ?? p?.userId ?? p?.id,
-          name: p?.user?.name ?? p?.name ?? "Patient",
-        })).filter(p => !!p.id);
+        const normalized = list
+          .map((p) => ({
+            id: p?.user?.id ?? p?.userId ?? p?.id,
+            name: p?.user?.name ?? p?.name ?? "Patient",
+          }))
+          .filter((p) => !!p.id);
         setPatients(normalized);
       } catch (err) {
         console.error("Failed to load patients:", err);
@@ -54,8 +57,8 @@ export default function DoctorSendMessage() {
     setSending(true);
     try {
       await api.post("/doctor/messages/send", {
-        senderId: doctorUserId,   // Doctor's User.id
-        receiverId,               // Patient's User.id
+        senderId: doctorUserId, // Doctor's User.id
+        receiverId, // Patient's User.id
         content: content.trim(),
       });
       toast.success("Message sent!");
@@ -72,12 +75,14 @@ export default function DoctorSendMessage() {
   return (
     <DashboardLayout role="DOCTOR" user={{ id: doctorUserId, name: doctorName }}>
       <div className="p-6 min-h-screen bg-[var(--bg-main)]/90 text-[var(--text-main)]">
-                      <img
-                    src="/images/logo/Asset3.png"
-                    alt="CureVirtual"
-                    style={{ width: 120, height: "auto" }}
-                    onError={(e) => { e.currentTarget.src = PLACEHOLDER_LOGO; }} // fallback if missing
-                  />
+        <img
+          src="/images/logo/Asset3.png"
+          alt="CureVirtual"
+          style={{ width: 120, height: "auto" }}
+          onError={(e) => {
+            e.currentTarget.src = PLACEHOLDER_LOGO;
+          }} // fallback if missing
+        />
         <h1 className="text-2xl font-bold mb-6 text-[#ffffff]">Send Message</h1>
 
         <form

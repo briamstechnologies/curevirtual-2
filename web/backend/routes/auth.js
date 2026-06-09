@@ -582,7 +582,7 @@ router.post("/register-success", async (req, res) => {
     const normedEmail = String(email).trim().toLowerCase();
 
     let existingUser;
-    
+
     // Use upsert to handle concurrent duplicate requests gracefully
     try {
       existingUser = await prisma.user.upsert({
@@ -609,7 +609,7 @@ router.post("/register-success", async (req, res) => {
       console.log("✅ User upserted successfully in Prisma:", existingUser.id);
     } catch (dbError) {
       console.warn("⚠️ Prisma upsert failed. Attempting fallback lookup / retry...", dbError.message);
-      
+
       existingUser = await prisma.user.findFirst({
         where: {
           OR: [
@@ -713,7 +713,7 @@ router.post("/check-email", async (req, res) => {
         // Unconfirmed auth user -> stuck / incomplete signup
         console.log(`⚠️ Stuck unconfirmed auth user found for ${normedEmail}. Cleaning up...`);
         let cleared = false;
-        
+
         // Delete from public."User" first to avoid foreign key constraints (if any)
         try {
           await prisma.user.deleteMany({
@@ -757,7 +757,7 @@ router.post("/check-email", async (req, res) => {
           verified: false,
           status: "PENDING_ACTIVATION",
           cleared,
-          message: cleared 
+          message: cleared
             ? "Account pending activation. Stuck session cleared successfully. You can now register again."
             : "Account pending activation but stuck session could not be cleared automatically."
         });

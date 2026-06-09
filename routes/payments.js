@@ -40,7 +40,7 @@ router.post("/create-session-payment", verifyToken, requireStripe, async (req, r
 
     const appointment = await prisma.appointment.findUnique({
       where: { id: appointmentId },
-      include: { 
+      include: {
         patient: { include: { user: true } },
         doctor: { include: { user: true } }
       }
@@ -54,11 +54,11 @@ router.post("/create-session-payment", verifyToken, requireStripe, async (req, r
       payment_method_types: ['card'],
       mode: 'payment',
       line_items: [{ price: priceId, quantity: 1 }],
-      metadata: { 
+      metadata: {
         appointmentId,
         patientId: appointment.patientId,
         doctorId: appointment.doctorId,
-        type: "APPOINTMENT_PAYMENT" 
+        type: "APPOINTMENT_PAYMENT"
       },
       customer_email: req.user.email,
       success_url: `${process.env.APP_BASE_URL || 'https://curevirtual-2.vercel.app'}/patient/appointments?status=success&session_id={CHECKOUT_SESSION_ID}`,
@@ -99,7 +99,7 @@ router.post("/create-session-payment", verifyToken, requireStripe, async (req, r
  */
 router.post("/create-subscription", verifyToken, requireStripe, async (req, res) => {
   try {
-    const { planType, userType } = req.body; 
+    const { planType, userType } = req.body;
     const priceId = process.env.STRIPE_PRICE_ID_MONTHLY;
     const userId = req.user.id;
 
@@ -152,7 +152,7 @@ router.get("/transactions", verifyToken, async (req, res) => {
         appointment: { select: { id: true, appointmentDate: true, doctor: { include: { user: { select: { firstName: true, lastName: true } } } } } }
       }
     });
-    
+
     res.json({ success: true, data: transactions });
   } catch (err) {
     console.error("❌ GET /transactions error:", err);
@@ -216,7 +216,7 @@ router.post("/webhook", async (req, res) => {
               plan: plan || "MONTHLY",
             },
           });
-          
+
           await prisma.user.update({
             where: { id: userId },
             data: { subscriptionState: "ACTIVE" }
@@ -262,8 +262,8 @@ router.post("/webhook", async (req, res) => {
           const stripeSub = await stripe.subscriptions.retrieve(subscriptionId);
           const updatedSub = await prisma.subscription.update({
             where: { stripeSubscriptionId: subscriptionId },
-            data: { 
-              status: "ACTIVE", 
+            data: {
+              status: "ACTIVE",
               startDate: new Date(stripeSub.current_period_start * 1000),
               endDate: new Date(stripeSub.current_period_end * 1000)
             }

@@ -7,6 +7,7 @@ import { supabase } from "../Lib/supabase";
 import { useUser } from "./UserContext";
 
 export const SocketProvider = ({ children }) => {
+  const socketRef = useRef(null);
   const { user } = useUser();
 
   const [socket, setSocket] = useState(null);
@@ -39,24 +40,45 @@ export const SocketProvider = ({ children }) => {
 
     setConnectionState("connecting");
 
+    // Reuse existing socket if already created
+    if (socketRef.current) {
+      // Update token if needed
+      socketRef.current.auth.token = token;
+      setSocket(socketRef.current);
+      setIsConnected(socketRef.current.connected);
+      setConnectionState(socketRef.current.connected ? "connected" : "disconnected");
+      return;
+    }
+
     const socketInstance = io(backendUrl, {
       withCredentials: true,
-
-      // ✅ Important for localhost + Railway
       transports: ["polling", "websocket"],
-
-      auth: {
-        token,
-      },
-
+      auth: { token },
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
       reconnectionDelayMax: 10000,
-
       timeout: 20000,
       autoConnect: true,
     });
+      // Increase max listeners to avoid warnings
+      if (socketInstance.setMaxListeners) {
+        socketInstance.setMaxListeners(0);
+      }
+      if (socketInstance.io && socketInstance.io.setMaxListeners) {
+        socketInstance.io.setMaxListeners(0);
+      }
+
+    // Increase max listeners to avoid warnings
+    if (socketInstance.setMaxListeners) {
+      socketInstance.setMaxListeners(0);
+    }
+    // Also increase underlying engine listeners if present
+    if (socketInstance.io && socketInstance.io.setMaxListeners) {
+      socketInstance.io.setMaxListeners(0);
+    }
+
+    socketRef.current = socketInstance;
 
     // =========================
     // CONNECTED
@@ -70,11 +92,7 @@ export const SocketProvider = ({ children }) => {
 
       reconnectAttempts.current = 0;
 
-      socketInstance.emit("user_online", {
-        userId,
-        role,
-        name,
-      });
+      socketInstance.emit("user_online", { userId, role, name });
     });
 
     // =========================
@@ -92,10 +110,7 @@ export const SocketProvider = ({ children }) => {
         try {
           console.log("🔄 Attempting token refresh...");
 
-          const {
-            data: { session },
-            error: sessionError,
-          } = await supabase.auth.getSession();
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
           if (sessionError || !session) {
             localStorage.clear();
@@ -115,16 +130,12 @@ export const SocketProvider = ({ children }) => {
 
           if (newToken) {
             localStorage.setItem("token", newToken);
-
             socketInstance.auth.token = newToken;
-
             socketInstance.connect();
-
             console.log("✅ Socket token refreshed");
           }
         } catch (err) {
           console.error("❌ Token refresh failed:", err);
-
           localStorage.clear();
           window.location.href = "/login";
         }
@@ -136,28 +147,19 @@ export const SocketProvider = ({ children }) => {
     // =========================
     socketInstance.io.on("reconnect_attempt", (attempt) => {
       reconnectAttempts.current = attempt;
-
       console.log(`🔄 Reconnect Attempt: ${attempt}`);
-
       setConnectionState("reconnecting");
     });
 
     socketInstance.io.on("reconnect", (attempt) => {
       console.log(`✅ Reconnected after ${attempt} attempts`);
-
       setIsConnected(true);
       setConnectionState("connected");
-
-      socketInstance.emit("user_online", {
-        userId,
-        role,
-        name,
-      });
+      socketInstance.emit("user_online", { userId, role, name });
     });
 
     socketInstance.io.on("reconnect_failed", () => {
       console.error("❌ Socket reconnect failed");
-
       setConnectionState("disconnected");
       setIsConnected(false);
     });
@@ -167,13 +169,10 @@ export const SocketProvider = ({ children }) => {
     // =========================
     socketInstance.on("disconnect", (reason) => {
       console.log("🔌 Socket disconnected:", reason);
-
       setIsConnected(false);
-
       if (reason === "io server disconnect") {
         socketInstance.connect();
       }
-
       setConnectionState("disconnected");
     });
 
@@ -182,9 +181,11 @@ export const SocketProvider = ({ children }) => {
     // =========================
     return () => {
       console.log("🧹 Cleaning socket...");
-
-      socketInstance.removeAllListeners();
-      socketInstance.disconnect();
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
   }, [user, backendUrl]);
 

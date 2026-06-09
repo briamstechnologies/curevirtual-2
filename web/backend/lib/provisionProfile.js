@@ -45,6 +45,7 @@ async function ensureDefaultProfile(user, specialization) {
     return prisma.doctorProfile.create({
       data: {
         userId: user.id,
+        email: user.email,
         specialization: specialization || 'General Medicine',
         qualifications: user.role === 'PHYSICIAN_ASSISTANT' ? 'PA-C' : 'MBBS',
         licenseNumber,

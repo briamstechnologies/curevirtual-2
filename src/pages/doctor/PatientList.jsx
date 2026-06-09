@@ -1,32 +1,29 @@
 // FILE: src/pages/doctor/PatientList.jsx
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import DashboardLayout from '../../layouts/DashboardLayout';
-import api from '../../Lib/api';
-import { FaEye, FaSearch, FaUser } from 'react-icons/fa';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import DashboardLayout from "../../layouts/DashboardLayout";
+import api from "../../Lib/api";
+import { FaEye, FaSearch, FaUser } from "react-icons/fa";
 
 export default function PatientList() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
   const [viewPatient, setViewPatient] = useState(null);
-  const doctorUserId = localStorage.getItem('userId');
-  const userName =
-    localStorage.getItem('userName') ||
-    localStorage.getItem('name') ||
-    'Doctor';
-  const role = 'DOCTOR';
+  const doctorUserId = localStorage.getItem("userId");
+  const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "Doctor";
+  const role = "DOCTOR";
 
   const fetchPatients = useCallback(async () => {
     try {
       setLoading(true);
-      setError('');
-      const res = await api.get('/doctor/my-patients', {
+      setError("");
+      const res = await api.get("/doctor/my-patients", {
         params: { doctorId: doctorUserId },
       });
       setPatients(res.data || []);
     } catch (err) {
-      setError('Failed to load clinical registry.');
+      setError("Failed to load clinical registry.");
     } finally {
       setLoading(false);
     }
@@ -40,9 +37,7 @@ export default function PatientList() {
     const q = search.trim().toLowerCase();
     if (!q) return patients;
     return patients.filter(
-      (p) =>
-        (p.name || '').toLowerCase().includes(q) ||
-        (p.email || '').toLowerCase().includes(q)
+      (p) => (p.name || "").toLowerCase().includes(q) || (p.email || "").toLowerCase().includes(q)
     );
   }, [patients, search]);
 
@@ -73,9 +68,7 @@ export default function PatientList() {
         {error && (
           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3">
             <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-            <p className="text-red-500 text-[10px] font-black uppercase tracking-widest">
-              {error}
-            </p>
+            <p className="text-red-500 text-[10px] font-black uppercase tracking-widest">{error}</p>
           </div>
         )}
 
@@ -122,10 +115,7 @@ export default function PatientList() {
                   </tr>
                 ) : (
                   filtered.map((p) => (
-                    <tr
-                      key={p.id}
-                      className="hover:bg-[var(--bg-main)]/30 transition-colors"
-                    >
+                    <tr key={p.id} className="hover:bg-[var(--bg-main)]/30 transition-colors">
                       <td className="px-6 py-4 text-sm font-black text-[var(--text-main)]">
                         {p.name}
                       </td>
@@ -134,12 +124,12 @@ export default function PatientList() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="px-3 py-1 rounded-full bg-[var(--bg-main)]/50 border border-[var(--border)] text-[9px] font-black uppercase tracking-widest text-[var(--text-soft)]">
-                          {p.gender || 'UNKNOWN'}
+                          {p.gender || "UNKNOWN"}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-[10px] font-black font-mono text-[var(--brand-blue)]">
-                          {p.bloodGroup || '—'}
+                          {p.bloodGroup || "—"}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -147,9 +137,7 @@ export default function PatientList() {
                           <button
                             onClick={async () => {
                               try {
-                                const res = await api.get(
-                                  `/doctor/patient/${p.id}`
-                                );
+                                const res = await api.get(`/doctor/patient/${p.id}`);
                                 setViewPatient({ profile: res.data });
                               } catch (e) {
                                 setViewPatient(p);
@@ -172,9 +160,7 @@ export default function PatientList() {
 
       {viewPatient && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            onClick={() => setViewPatient(null)}
-          ></div>
+          <div onClick={() => setViewPatient(null)}></div>
           <div className="relative w-full max-w-2xl glass !p-8 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto scrollbar-hide">
             <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-6 flex items-center gap-3">
               <FaUser className="text-[var(--brand-green)]" /> Subject Profile
@@ -189,7 +175,7 @@ export default function PatientList() {
                   <p className="text-sm font-black text-[var(--text-main)]">
                     {viewPatient.profile?.user
                       ? `${viewPatient.profile.user.firstName} ${viewPatient.profile.user.lastName}`
-                      : viewPatient.name || '—'}
+                      : viewPatient.name || "—"}
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -197,9 +183,7 @@ export default function PatientList() {
                     Email Address
                   </p>
                   <p className="text-sm font-black text-[var(--text-main)]">
-                    {viewPatient.profile?.user?.email ||
-                      viewPatient.email ||
-                      '—'}
+                    {viewPatient.profile?.user?.email || viewPatient.email || "—"}
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -208,7 +192,7 @@ export default function PatientList() {
                       Gender
                     </p>
                     <p className="text-sm font-black text-[var(--text-main)]">
-                      {viewPatient.profile?.gender || '—'}
+                      {viewPatient.profile?.gender || "—"}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -216,7 +200,7 @@ export default function PatientList() {
                       Blood Type
                     </p>
                     <p className="text-sm font-black text-[var(--brand-blue)] font-mono">
-                      {viewPatient.profile?.bloodGroup || '—'}
+                      {viewPatient.profile?.bloodGroup || "—"}
                     </p>
                   </div>
                 </div>
@@ -229,9 +213,7 @@ export default function PatientList() {
                       Height
                     </p>
                     <p className="text-sm font-black text-[var(--text-main)]">
-                      {viewPatient.profile?.height
-                        ? `${viewPatient.profile.height} cm`
-                        : '—'}
+                      {viewPatient.profile?.height ? `${viewPatient.profile.height} cm` : "—"}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -239,9 +221,7 @@ export default function PatientList() {
                       Weight
                     </p>
                     <p className="text-sm font-black text-[var(--text-main)]">
-                      {viewPatient.profile?.weight
-                        ? `${viewPatient.profile.weight} kg`
-                        : '—'}
+                      {viewPatient.profile?.weight ? `${viewPatient.profile.weight} kg` : "—"}
                     </p>
                   </div>
                 </div>
@@ -251,10 +231,8 @@ export default function PatientList() {
                   </p>
                   <p className="text-sm font-black text-[var(--text-main)]">
                     {viewPatient.profile?.dateOfBirth
-                      ? new Date(
-                          viewPatient.profile.dateOfBirth
-                        ).toLocaleDateString()
-                      : '—'}
+                      ? new Date(viewPatient.profile.dateOfBirth).toLocaleDateString()
+                      : "—"}
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -262,7 +240,7 @@ export default function PatientList() {
                     Emergency Contact
                   </p>
                   <p className="text-xs font-bold text-[var(--text-soft)]">
-                    {viewPatient.profile?.emergencyContact || '—'}
+                    {viewPatient.profile?.emergencyContact || "—"}
                   </p>
                 </div>
               </section>
@@ -274,7 +252,7 @@ export default function PatientList() {
                       Known Allergies
                     </p>
                     <div className="bg-[var(--bg-main)]/50 p-4 rounded-2xl border border-[var(--border)] text-xs font-bold text-[var(--text-soft)] min-h-[60px]">
-                      {viewPatient.profile?.allergies || 'No allergies logged.'}
+                      {viewPatient.profile?.allergies || "No allergies logged."}
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -282,8 +260,7 @@ export default function PatientList() {
                       Current Medications
                     </p>
                     <div className="bg-[var(--bg-main)]/50 p-4 rounded-2xl border border-[var(--border)] text-xs font-bold text-[var(--text-soft)] min-h-[60px]">
-                      {viewPatient.profile?.medications ||
-                        'No active medications.'}
+                      {viewPatient.profile?.medications || "No active medications."}
                     </div>
                   </div>
                 </div>
@@ -292,8 +269,7 @@ export default function PatientList() {
                     Medical History
                   </p>
                   <div className="bg-[var(--bg-main)]/50 p-4 rounded-2xl border border-[var(--border)] text-xs font-bold text-[var(--text-soft)] min-h-[80px]">
-                    {viewPatient.profile?.medicalHistory ||
-                      'Historical records unavailable.'}
+                    {viewPatient.profile?.medicalHistory || "Historical records unavailable."}
                   </div>
                 </div>
               </section>

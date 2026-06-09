@@ -2,6 +2,10 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
+// Silence potential EventEmitter max listeners warnings (if any global EventEmitter exists)
+if (window.EventEmitter) {
+  window.EventEmitter.defaultMaxListeners = 0;
+}
 
 import { SocketProvider } from "./context/SocketContext.jsx";
 

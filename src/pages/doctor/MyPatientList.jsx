@@ -42,45 +42,82 @@ export default function MyPatientList() {
     }
   }, [doctorUserId, search, gender, bloodGroup, minAge, maxAge]);
 
-  useEffect(() => { fetchPatients(); }, [fetchPatients]);
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
 
-  const filterBar = useMemo(() => (
-    <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
-      <input className="rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]"
-             placeholder="Search name/MRN/address"
-             value={search} onChange={(e)=>setSearch(e.target.value)} />
-      <select className="rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]"
-              value={gender} onChange={(e)=>setGender(e.target.value)}>
-        <option value="">Gender</option>
-        <option value="MALE">Male</option>
-        <option value="FEMALE">Female</option>
-        <option value="OTHER">Other</option>
-        <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
-      </select>
-      <select className="rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]"
-              value={bloodGroup} onChange={(e)=>setBloodGroup(e.target.value)}>
-        <option value="">Blood Group</option>
-        <option value="A_POSITIVE">A+</option>
-        <option value="A_NEGATIVE">A-</option>
-        <option value="B_POSITIVE">B+</option>
-        <option value="B_NEGATIVE">B-</option>
-        <option value="AB_POSITIVE">AB+</option>
-        <option value="AB_NEGATIVE">AB-</option>
-        <option value="O_POSITIVE">O+</option>
-        <option value="O_NEGATIVE">O-</option>
-        <option value="UNKNOWN">Unknown</option>
-      </select>
-      <input className="rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]" placeholder="Min Age"
-             value={minAge} onChange={(e)=>setMinAge(e.target.value)} />
-      <input className="rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]" placeholder="Max Age"
-             value={maxAge} onChange={(e)=>setMaxAge(e.target.value)} />
-      <div className="col-span-2 md:col-span-1 flex gap-2">
-        <button onClick={fetchPatients} className="bg-[#027906] hover:bg-[#190366] px-4 py-2 rounded">Apply</button>
-        <button onClick={() => { setSearch(""); setGender(""); setBloodGroup(""); setMinAge(""); setMaxAge(""); }}
-                className="bg-[var(--bg-glass)] px-4 py-2 rounded">Reset</button>
+  const filterBar = useMemo(
+    () => (
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
+        <input
+          className="rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]"
+          placeholder="Search name/MRN/address"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select
+          className="rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]"
+          value={gender}
+          onChange={(e) => setGender(e.target.value)}
+        >
+          <option value="">Gender</option>
+          <option value="MALE">Male</option>
+          <option value="FEMALE">Female</option>
+          <option value="OTHER">Other</option>
+          <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+        </select>
+        <select
+          className="rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]"
+          value={bloodGroup}
+          onChange={(e) => setBloodGroup(e.target.value)}
+        >
+          <option value="">Blood Group</option>
+          <option value="A_POSITIVE">A+</option>
+          <option value="A_NEGATIVE">A-</option>
+          <option value="B_POSITIVE">B+</option>
+          <option value="B_NEGATIVE">B-</option>
+          <option value="AB_POSITIVE">AB+</option>
+          <option value="AB_NEGATIVE">AB-</option>
+          <option value="O_POSITIVE">O+</option>
+          <option value="O_NEGATIVE">O-</option>
+          <option value="UNKNOWN">Unknown</option>
+        </select>
+        <input
+          className="rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]"
+          placeholder="Min Age"
+          value={minAge}
+          onChange={(e) => setMinAge(e.target.value)}
+        />
+        <input
+          className="rounded bg-[var(--bg-glass)] border border-[var(--border)] p-2 text-[var(--text-main)]"
+          placeholder="Max Age"
+          value={maxAge}
+          onChange={(e) => setMaxAge(e.target.value)}
+        />
+        <div className="col-span-2 md:col-span-1 flex gap-2">
+          <button
+            onClick={fetchPatients}
+            className="bg-[#027906] hover:bg-[#190366] px-4 py-2 rounded"
+          >
+            Apply
+          </button>
+          <button
+            onClick={() => {
+              setSearch("");
+              setGender("");
+              setBloodGroup("");
+              setMinAge("");
+              setMaxAge("");
+            }}
+            className="bg-[var(--bg-glass)] px-4 py-2 rounded"
+          >
+            Reset
+          </button>
+        </div>
       </div>
-    </div>
-  ), [search, gender, bloodGroup, minAge, maxAge, fetchPatients]);
+    ),
+    [search, gender, bloodGroup, minAge, maxAge, fetchPatients]
+  );
 
   const ageFromDob = (dob) => {
     if (!dob) return "—";
@@ -119,14 +156,21 @@ export default function MyPatientList() {
                   </thead>
                   <tbody>
                     {rows.map((p) => (
-                      <tr key={p.id} className="border-b border-[var(--border)] hover:bg-[var(--bg-glass)]">
+                      <tr
+                        key={p.id}
+                        className="border-b border-[var(--border)] hover:bg-[var(--bg-glass)]"
+                      >
                         <td className="p-3">
                           <div className="font-semibold">{p.user?.name || "—"}</div>
                           <div className="text-xs text-[var(--text-soft)]">{p.user?.email}</div>
-                          <div className="text-xs text-[var(--text-muted)]">MRN: {p.medicalRecordNumber || "—"}</div>
+                          <div className="text-xs text-[var(--text-muted)]">
+                            MRN: {p.medicalRecordNumber || "—"}
+                          </div>
                         </td>
                         <td className="p-3">{p.gender}</td>
-                        <td className="p-3">{p.bloodGroup?.replace("_POSITIVE","+").replace("_NEGATIVE","-") || "—"}</td>
+                        <td className="p-3">
+                          {p.bloodGroup?.replace("_POSITIVE", "+").replace("_NEGATIVE", "-") || "—"}
+                        </td>
                         <td className="p-3">{ageFromDob(p.dateOfBirth)}</td>
                         <td className="p-3">{p.address || "—"}</td>
                         <td className="p-3">
@@ -146,7 +190,6 @@ export default function MyPatientList() {
               </div>
             )}
           </div>
-
         </div>
       </div>
     </div>

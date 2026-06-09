@@ -48,7 +48,7 @@ export default function AuthCallback() {
         localStorage.setItem("token", backendToken);
         localStorage.setItem("userId", user.id);
         localStorage.setItem("email", user.email);
-        localStorage.setItem("name", `${user.firstName} ${user.lastName}`.trim());
+        localStorage.setItem("fullName", `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || "");
         localStorage.setItem("userName", `${user.firstName} ${user.lastName}`.trim());
         localStorage.setItem("role", user.role);
         localStorage.setItem("type", "USER");

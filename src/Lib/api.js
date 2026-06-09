@@ -6,8 +6,15 @@ import axios from "axios";
    ============================================================ */
 
 const api = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_BASE_URL || 'https://curevirtual-2-production-ee33.up.railway.app/api',
+  // Determine base URL dynamically: use explicit env var, then dev localhost, else production
+  baseURL: (() => {
+    // Priority 1: development mode – point to locally running backend
+    if (import.meta.env.DEV) return "http://localhost:5001/api";
+    // Priority 2: explicit VITE_API_BASE_URL (can be set for any env)
+    if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+    // Fallback: production Railway URL
+    return "https://curevirtual-2-production-ee33.up.railway.app/api";
+  })(),
   headers: {
     "Content-Type": "application/json",
   },

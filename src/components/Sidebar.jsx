@@ -151,6 +151,7 @@ export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileM
             </>
           )}
 
+
           {(role === "DOCTOR" || role === "PHYSICIAN_ASSISTANT") && (
             <>
               <NavItem to="/doctor/dashboard" icon="dashboard" label="Provider Portal" />

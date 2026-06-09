@@ -1,11 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import {
-  FaEnvelopeOpen,
-  FaEnvelope,
-  FaTimes,
-  FaPaperPlane,
-  FaTrash,
-} from "react-icons/fa";
+import { FaEnvelopeOpen, FaEnvelope, FaTimes, FaPaperPlane, FaTrash } from "react-icons/fa";
 import DashboardLayout from "../../../layouts/DashboardLayout";
 import api from "../../../Lib/api";
 import { ToastContainer, toast } from "react-toastify";
@@ -88,26 +82,21 @@ export default function DoctorInbox() {
   }, [fetchInbox]);
 
   // open viewer, mark as read immediately
-      const openMessage = async (msg) => {
-        setSelectedMessage(msg);
+  const openMessage = async (msg) => {
+    setSelectedMessage(msg);
 
-        if (!msg.readAt) {
-          const nowIso = new Date().toISOString();
-          setMessages((prev) =>
-            prev.map((m) => (m.id === msg.id ? { ...m, readAt: nowIso } : m))
-          );
+    if (!msg.readAt) {
+      const nowIso = new Date().toISOString();
+      setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, readAt: nowIso } : m)));
 
-          try {
-            await api.patch(`/messages/${msg.id}/read`, { userId });
-          } catch (err) {
-            console.warn("Mark read failed:", err?.response?.data || err);
-            setMessages((prev) =>
-              prev.map((m) => (m.id === msg.id ? { ...m, readAt: null } : m))
-            );
-          }
-        }
-      };
-
+      try {
+        await api.patch(`/messages/${msg.id}/read`, { userId });
+      } catch (err) {
+        console.warn("Mark read failed:", err?.response?.data || err);
+        setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, readAt: null } : m)));
+      }
+    }
+  };
 
   const handleReply = async () => {
     if (!replyContent.trim() || !selectedMessage) return;
@@ -147,7 +136,7 @@ export default function DoctorInbox() {
     try {
       setConfirmLoading(true);
       await api.delete(`/messages/${pendingDeleteId}`, {
-        params: { userId }, 
+        params: { userId },
       });
       setMessages((prev) => prev.filter((m) => m.id !== pendingDeleteId));
       if (selectedMessage?.id === pendingDeleteId) setSelectedMessage(null);
@@ -165,12 +154,14 @@ export default function DoctorInbox() {
   return (
     <DashboardLayout role="DOCTOR" user={user}>
       <div className="p-6 min-h-screen bg-[var(--bg-main)]/90 text-[var(--text-main)]">
-                      <img
-                    src="/images/logo/Asset3.png"
-                    alt="CureVirtual"
-                    style={{ width: 120, height: "auto" }}
-                    onError={(e) => { e.currentTarget.src = "/placeholder-logo.png"; }} // fallback if missing
-                  />
+        <img
+          src="/images/logo/Asset3.png"
+          alt="CureVirtual"
+          style={{ width: 120, height: "auto" }}
+          onError={(e) => {
+            e.currentTarget.src = "/placeholder-logo.png";
+          }} // fallback if missing
+        />
         <h1 className="text-2xl font-bold mb-6 text-[var(--text-main)]">Dr Inbox</h1>
 
         {loading ? (
@@ -190,44 +181,41 @@ export default function DoctorInbox() {
                 </tr>
               </thead>
               <tbody>
-               {messages.map((msg) => {
-                const isRead = !!msg.readAt;
-                return (
-                  <tr
-                    key={msg.id}
-                    className={`border-b border-[var(--border)] hover:bg-[var(--bg-main)] transition cursor-pointer ${
-                      isRead ? "text-[var(--text-soft)]" : "font-semibold"
-                    }`}
-                    onClick={() => openMessage(msg)}
-                  >
-                    <td className="p-3">
-                      {msg.contactName || "Unknown"}
-                    </td>
-                    <td className="p-3 truncate max-w-xs">{msg.content}</td>
-                    <td className="p-3">{new Date(msg.createdAt).toLocaleString()}</td>
-                    <td className="p-3 text-center">
-                      {isRead ? (
-                        <FaEnvelopeOpen className="text-green-400 mx-auto" />
-                      ) : (
-                        <FaEnvelope className="text-[var(--text-soft)] mx-auto" />
-                      )}
-                    </td>
-                    <td className="p-3 text-center">
-                      <button
-                        title="Delete"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          requestDelete(msg.id);
-                        }}
-                        className="hover:scale-110 transition"
-                      >
-                        <FaTrash className="text-red-400 inline-block" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-
+                {messages.map((msg) => {
+                  const isRead = !!msg.readAt;
+                  return (
+                    <tr
+                      key={msg.id}
+                      className={`border-b border-[var(--border)] hover:bg-[var(--bg-main)] transition cursor-pointer ${
+                        isRead ? "text-[var(--text-soft)]" : "font-semibold"
+                      }`}
+                      onClick={() => openMessage(msg)}
+                    >
+                      <td className="p-3">{msg.contactName || "Unknown"}</td>
+                      <td className="p-3 truncate max-w-xs">{msg.content}</td>
+                      <td className="p-3">{new Date(msg.createdAt).toLocaleString()}</td>
+                      <td className="p-3 text-center">
+                        {isRead ? (
+                          <FaEnvelopeOpen className="text-green-400 mx-auto" />
+                        ) : (
+                          <FaEnvelope className="text-[var(--text-soft)] mx-auto" />
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        <button
+                          title="Delete"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            requestDelete(msg.id);
+                          }}
+                          className="hover:scale-110 transition"
+                        >
+                          <FaTrash className="text-red-400 inline-block" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -247,12 +235,14 @@ export default function DoctorInbox() {
 
               {/* Header + inline delete */}
               <div className="flex items-center justify-between">
-                                <img
-                    src="/images/logo/Asset3.png"
-                    alt="CureVirtual"
-                    style={{ width: 120, height: "auto" }}
-                    onError={(e) => { e.currentTarget.src = "/placeholder-logo.png"; }} // fallback if missing
-                  />
+                <img
+                  src="/images/logo/Asset3.png"
+                  alt="CureVirtual"
+                  style={{ width: 120, height: "auto" }}
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder-logo.png";
+                  }} // fallback if missing
+                />
                 <h4 className="text-xl font-bold text-[#190366]">
                   From {selectedMessage.contactName || "Unknown"}
                 </h4>

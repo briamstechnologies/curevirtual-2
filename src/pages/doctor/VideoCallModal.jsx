@@ -61,7 +61,12 @@ export default function VideoCallModal({ consultation, onClose }) {
     <div className="fixed inset-0 bg-black flex z-[200]">
       {/* Video Side — Zego */}
       <div className="flex-[2] relative bg-neutral-950">
-        <ZegoVideoCall roomName={activeRoomName} userName={userName} userId={userId} onClose={handleEnd} />
+        <ZegoVideoCall
+          roomName={activeRoomName}
+          userName={userName}
+          userId={userId}
+          onClose={handleEnd}
+        />
       </div>
 
       {/* Clinical Notes Side */}

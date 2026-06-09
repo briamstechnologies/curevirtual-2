@@ -34,10 +34,10 @@ export default function Home() {
             onClick={() => navigate("/")}
           >
             <div className="bg-[var(--bg-glass)] p-1.5 rounded-xl group-hover:rotate-12 transition-transform shadow-sm flex items-center">
-              <img 
-                src="/images/logo/Asset3.png" 
-                alt="Logo" 
-                className="h-8 md:h-10 w-auto object-contain" 
+              <img
+                src="/images/logo/Asset3.png"
+                alt="Logo"
+                className="h-8 md:h-10 w-auto object-contain"
               />
             </div>
             <span className="text-lg md:text-xl font-black tracking-tighter text-[var(--text-main)] uppercase">
@@ -65,13 +65,13 @@ export default function Home() {
             {/* Desktop Auth Buttons */}
             <button
               onClick={() => navigate("/login")}
-              className="hidden md:block px-4 md:px-5 py-2 font-black text-xs uppercase tracking-widest text-[var(--text-soft)] hover:text-[var(--brand-green)] transition-colors"
+              className="hidden lg:block px-4 md:px-5 py-2 font-black text-xs uppercase tracking-widest text-[var(--text-soft)] hover:text-[var(--brand-green)] transition-colors"
             >
               Sign In
             </button>
             <button
               onClick={() => navigate("/register")}
-              className="hidden md:block btn btn-primary !py-2.5 !px-6 text-[10px]"
+              className="hidden lg:block btn btn-primary !py-2.5 !px-6 text-[10px]"
             >
               Join Portal
             </button>
@@ -144,15 +144,15 @@ export default function Home() {
         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-[var(--brand-blue)]/5 to-transparent -z-10 blur-[120px]"></div>
         <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-gradient-to-tr from-[var(--brand-green)]/5 to-transparent -z-10 blur-[120px]"></div>
 
-        <div className="page-container grid md:grid-cols-2 gap-10 md:gap-12 items-center">
-          <div className="text-center md:text-left space-y-6 md:space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border-[var(--border)] text-[var(--brand-purple)] text-[10px] font-black uppercase tracking-[0.2em] animate-in fade-in slide-in-from-bottom-4 duration-700 mx-auto md:mx-0">
+        <div className="page-container grid lg:grid-cols-2 gap-12 lg:gap-12 items-center">
+          <div className="text-center lg:text-left space-y-6 lg:space-y-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border-[var(--border)] text-[var(--brand-purple)] text-[10px] font-black uppercase tracking-[0.2em] animate-in fade-in slide-in-from-bottom-4 duration-700 mx-auto lg:mx-0">
               <span className="h-2 w-2 rounded-full bg-[var(--brand-purple)] animate-pulse"></span>
               Online Healthcare
             </div>
 
             <div className="space-y-4 md:space-y-5">
-              <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-[var(--text-main)] leading-[1.1] tracking-tighter uppercase">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-[var(--text-main)] leading-[1.1] tracking-tighter uppercase">
                 CURE <br className="hidden lg:block" />
                 <span className="text-gradient">VIRTUAL</span>
               </h1>
@@ -161,27 +161,27 @@ export default function Home() {
               </p>
             </div>
 
-            <p className="text-base md:text-lg text-[var(--text-soft)] max-w-xl leading-relaxed font-medium mx-auto md:mx-0 opacity-80">
+            <p className="text-base md:text-lg text-[var(--text-soft)] max-w-xl leading-relaxed font-medium mx-auto lg:mx-0 opacity-80">
               Experience medical consultation with zero boundaries. Connect with world-class
               specialists instantly through our high-performance virtual clinic.
             </p>
 
-            <div className="flex flex-row gap-4 items-center justify-center md:justify-start pt-4 md:pt-6">
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start w-full pt-4 md:pt-6">
               <button
                 onClick={() => navigate("/register")}
-                className="btn btn-primary px-6 md:px-8 py-3 md:py-4 text-xs md:text-sm shadow-green-500/20 whitespace-nowrap"
+                className="btn btn-primary w-full sm:w-auto px-6 md:px-8 py-3 md:py-4 text-xs md:text-sm shadow-green-500/20 whitespace-nowrap"
               >
                 Start Consultation <FaArrowRight className="inline-block ml-1" />
               </button>
               <button
                 onClick={() => navigate("/login")}
-                className="btn btn-glass px-6 md:px-8 py-3 md:py-4 text-xs md:text-sm text-[var(--text-main)] border-2 border-[var(--brand-green)] hover:bg-[var(--brand-green)] hover:text-white whitespace-nowrap"
+                className="btn btn-glass w-full sm:w-auto px-6 md:px-8 py-3 md:py-4 text-xs md:text-sm text-[var(--text-main)] border-2 border-[var(--brand-green)] hover:bg-[var(--brand-green)] hover:text-white whitespace-nowrap"
               >
                 Login to Portal
               </button>
             </div>
 
-            <div className="flex items-center justify-center md:justify-start gap-10 md:gap-12 pt-8 md:pt-10 opacity-70">
+            <div className="flex items-center justify-center lg:justify-start gap-10 md:gap-12 pt-8 md:pt-10 opacity-70">
               <div className="text-left">
                 <p className="text-2xl md:text-3xl font-black text-[var(--brand-blue)]">24/7</p>
                 <p className="text-[10px] font-black uppercase tracking-widest">Support</p>
@@ -194,16 +194,16 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative mt-12 md:mt-0">
+          <div className="relative mt-12 lg:mt-0">
             <div className="glass !p-3 md:!p-4 !rounded-[2rem] md:!rounded-[3rem] overflow-hidden border-[var(--border)] shadow-2xl animate-float">
               <img
                 src="/images/logo/Asset3.png"
                 alt="Telemedicine"
-                className="rounded-[1.5rem] md:rounded-[2.5rem] w-full h-[300px] md:h-[600px] object-cover opacity-90 hover:scale-105 transition-transform duration-700"
+                className="rounded-[1.5rem] md:rounded-[2.5rem] w-full h-[250px] sm:h-[400px] lg:h-[600px] object-cover opacity-90 hover:scale-105 transition-transform duration-700"
               />
             </div>
             {/* Status Floating Widget */}
-            <div className="absolute -left-4 md:-left-8 top-1/2 -translate-y-1/2 glass !p-4 md:!p-6 !rounded-2xl md:!rounded-3xl shadow-2xl border-[var(--border)] animate-bounce-slow backdrop-blur-3xl">
+            <div className="absolute left-4 sm:-left-6 lg:-left-8 top-1/2 -translate-y-1/2 glass !p-4 md:!p-6 !rounded-2xl md:!rounded-3xl shadow-2xl border-[var(--border)] animate-bounce-slow backdrop-blur-3xl">
               <div className="flex items-center gap-5">
                 <div className="h-14 w-14 rounded-2xl bg-[var(--brand-green)]/10 flex items-center justify-center text-[var(--brand-green)] text-3xl">
                   <FaVideo />
@@ -293,7 +293,7 @@ export default function Home() {
           <div className="lg:w-1/2 w-full">
             <img
               src="/images/about.jpeg"
-              className="rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl border border-[var(--border)] w-full object-cover h-[400px] md:h-[600px] hover:scale-[1.02] transition-transform duration-700"
+              className="rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl border border-[var(--border)] w-full object-cover h-[250px] sm:h-[400px] lg:h-[600px] hover:scale-[1.02] transition-transform duration-700"
               alt="Modern Hospital"
             />
           </div>

@@ -4,15 +4,9 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../Lib/api";
 import { supabase } from "../Lib/supabase";
+import { AuthApiError } from "@supabase/supabase-js";
 
-import {
-  FiEye,
-  FiEyeOff,
-  FiMail,
-  FiLock,
-  FiArrowLeft,
-  FiSmartphone,
-} from "react-icons/fi";
+import { FiEye, FiEyeOff, FiMail, FiLock, FiArrowLeft, FiSmartphone } from "react-icons/fi";
 
 import { FaArrowRight } from "react-icons/fa";
 
@@ -42,15 +36,18 @@ export default function Login() {
     // ✅ Save user data
     localStorage.setItem("token", token);
     localStorage.setItem("userId", user.id);
-    localStorage.setItem("name", user.name || "");
-    localStorage.setItem("userName", user.name || "");
+    localStorage.setItem(
+      "name",
+      `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.name || ""
+    );
+    localStorage.setItem(
+      "userName",
+      `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.name || ""
+    );
     localStorage.setItem("role", user.role || "");
     localStorage.setItem("email", user.email || fallbackEmail || "");
     localStorage.setItem("type", user.type || "USER");
-    localStorage.setItem(
-      "approvalStatus",
-      user.approvalStatus || "NOT_REQUIRED"
-    );
+    localStorage.setItem("approvalStatus", user.approvalStatus || "NOT_REQUIRED");
 
     toast.success("Login successful!");
 
@@ -68,11 +65,7 @@ export default function Login() {
       ["DOCTOR", "PHARMACY", "LABORATORY"].includes(user.role) &&
       user.approvalStatus === "REJECTED"
     ) {
-      navigate(
-        `/registration-rejected?reason=${encodeURIComponent(
-          user.rejectionReason || ""
-        )}`
-      );
+      navigate(`/registration-rejected?reason=${encodeURIComponent(user.rejectionReason || "")}`);
       return;
     }
 
@@ -126,11 +119,10 @@ export default function Login() {
       // PASSWORD LOGIN
       // =========================================================
       if (loginMode === "password") {
-        const { data, error: authError } =
-          await supabase.auth.signInWithPassword({
-            email: email.trim().toLowerCase(),
-            password,
-          });
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
 
         if (authError) {
           throw authError;
@@ -138,9 +130,7 @@ export default function Login() {
 
         // ✅ Email verification check
         if (!data?.user?.email_confirmed_at) {
-          throw new Error(
-            "Please verify your email before logging in."
-          );
+          throw new Error("Please verify your email before logging in.");
         }
 
         // ✅ Backend Sync
@@ -159,13 +149,12 @@ export default function Login() {
       else {
         // Send OTP
         if (!otpSent) {
-          const { error: otpError } =
-            await supabase.auth.signInWithOtp({
-              email: email.trim().toLowerCase(),
-              options: {
-                shouldCreateUser: false,
-              },
-            });
+          const { error: otpError } = await supabase.auth.signInWithOtp({
+            email: email.trim().toLowerCase(),
+            options: {
+              shouldCreateUser: false,
+            },
+          });
 
           if (otpError) {
             throw otpError;
@@ -177,12 +166,11 @@ export default function Login() {
 
         // Verify OTP
         else {
-          const { data, error: verifyError } =
-            await supabase.auth.verifyOtp({
-              email: email.trim().toLowerCase(),
-              token: otp,
-              type: "email",
-            });
+          const { data, error: verifyError } = await supabase.auth.verifyOtp({
+            email: email.trim().toLowerCase(),
+            token: otp,
+            type: "email",
+          });
 
           if (verifyError) {
             throw verifyError;
@@ -203,7 +191,16 @@ export default function Login() {
         }
       }
     } catch (err) {
-      console.error("❌ Login Error:", err);
+      // console.error("❌ Login Error:", err);
+
+      // Handle Supabase AuthApiError for invalid credentials
+      if (err instanceof AuthApiError) {
+        const friendlyMsg = "Invalid email or password. Please try again.";
+        setError(friendlyMsg);
+        toast.error(friendlyMsg);
+        setIsLoading(false);
+        return;
+      }
 
       const serverError = err?.response?.data;
 
@@ -211,39 +208,25 @@ export default function Login() {
       if (err?.response?.status === 403) {
         if (serverError?.approvalStatus === "PENDING") {
           toast.info("Your account is under review.");
-
-          localStorage.setItem(
-            "approvalStatus",
-            "PENDING"
-          );
-
+          localStorage.setItem("approvalStatus", "PENDING");
           navigate("/pending-approval");
           return;
         }
 
         if (serverError?.approvalStatus === "REJECTED") {
-          localStorage.setItem(
-            "approvalStatus",
-            "REJECTED"
-          );
-
+          localStorage.setItem("approvalStatus", "REJECTED");
           navigate(
             `/registration-rejected?reason=${encodeURIComponent(
               serverError?.rejectionReason || ""
             )}`
           );
-
           return;
         }
       }
 
-      const message =
-        serverError?.error ||
-        err.message ||
-        "Login failed";
+      const message = serverError?.error || err.message || "Login failed";
 
       setError(message);
-
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -268,7 +251,6 @@ export default function Login() {
       </div>
 
       <div className="w-full max-w-[1000px] flex flex-col md:flex-row glass overflow-hidden shadow-2xl rounded-[3rem] border border-[var(--border)]">
-
         {/* LEFT */}
         <div className="hidden md:flex flex-col justify-between w-2/5 p-12 bg-gradient-to-br from-[#bcd6ff] to-[#dee6f7]">
           <div>
@@ -281,17 +263,11 @@ export default function Login() {
             </Link>
 
             <div className="flex items-center gap-3 bg-white/50 p-3 rounded-2xl mb-6">
-              <img
-                src="/images/logo/Asset3.png"
-                alt="Logo"
-                className="w-10 h-10"
-              />
+              <img src="/images/logo/Asset3.png" alt="Logo" className="w-10 h-10" />
 
               <span className="text-xl font-black uppercase">
                 CURE
-                <span className="text-[var(--brand-blue)]">
-                  VIRTUAL
-                </span>
+                <span className="text-[var(--brand-blue)]">VIRTUAL</span>
               </span>
             </div>
 
@@ -309,31 +285,23 @@ export default function Login() {
 
         {/* RIGHT */}
         <div className="w-full md:w-3/5 bg-[var(--bg-card)] p-6 md:p-14">
-
           <div className="mb-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[var(--brand-green)]/20 bg-[var(--brand-green)]/5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--brand-green)] mb-4">
               <FiLock />
               Secure Login
             </div>
 
-            <h1 className="text-4xl font-black uppercase tracking-tighter">
-              Login
-            </h1>
+            <h1 className="text-4xl font-black uppercase tracking-tighter">Login</h1>
 
             <p className="text-sm opacity-70 mt-2">
-              {loginMode === "password"
-                ? "Login using email and password"
-                : "Login using OTP"}
+              {loginMode === "password" ? "Login using email and password" : "Login using OTP"}
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
-
             {/* EMAIL */}
             <div>
-              <label className="text-[10px] font-black uppercase tracking-[0.3em]">
-                Email
-              </label>
+              <label className="text-[10px] font-black uppercase tracking-[0.3em]">Email</label>
 
               <div className="relative mt-2">
                 <FiMail className="absolute left-5 top-1/2 -translate-y-1/2" />
@@ -371,25 +339,17 @@ export default function Login() {
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowPassword(!showPassword)
-                    }
+                    onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-5 top-1/2 -translate-y-1/2"
                   >
-                    {showPassword ? (
-                      <FiEyeOff />
-                    ) : (
-                      <FiEye />
-                    )}
+                    {showPassword ? <FiEyeOff /> : <FiEye />}
                   </button>
                 </div>
               </div>
             ) : (
               otpSent && (
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-[0.3em]">
-                    OTP
-                  </label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em]">OTP</label>
 
                   <div className="relative mt-2">
                     <FiSmartphone className="absolute left-5 top-1/2 -translate-y-1/2" />
@@ -410,9 +370,7 @@ export default function Login() {
             {/* ERROR */}
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl">
-                <p className="text-red-500 text-xs font-bold">
-                  {error}
-                </p>
+                <p className="text-red-500 text-xs font-bold">{error}</p>
               </div>
             )}
 
@@ -426,9 +384,7 @@ export default function Login() {
                 <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
               ) : (
                 <>
-                  {loginMode === "otp" && !otpSent
-                    ? "Send OTP"
-                    : "Login"}
+                  {loginMode === "otp" && !otpSent ? "Send OTP" : "Login"}
 
                   <FaArrowRight />
                 </>
@@ -439,11 +395,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => {
-                setLoginMode(
-                  loginMode === "password"
-                    ? "otp"
-                    : "password"
-                );
+                setLoginMode(loginMode === "password" ? "otp" : "password");
 
                 setOtpSent(false);
                 setOtp("");
@@ -461,10 +413,7 @@ export default function Login() {
           <div className="mt-10 text-center border-t border-[var(--border)] pt-8">
             <p className="text-xs font-bold uppercase tracking-widest">
               Don’t have an account?
-              <Link
-                to="/register"
-                className="ml-2 text-[var(--brand-blue)] font-black"
-              >
+              <Link to="/register" className="ml-2 text-[var(--brand-blue)] font-black">
                 Register
               </Link>
             </p>
@@ -475,4 +424,4 @@ export default function Login() {
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
-} 
+}

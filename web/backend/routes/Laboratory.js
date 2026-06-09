@@ -6,7 +6,7 @@ const { verifyToken, requireRole } = require("../middleware/rbac.js");
 const emailService = require("../services/emailService");
 
 const authenticateLab = [verifyToken, requireRole(["LABORATORY", "SUPERADMIN", "ADMIN"])];
- 
+
 /* --------------------------- helpers --------------------------- */
 const toNullIfBlank = (v) =>
     v === undefined || v === null || String(v).trim() === "" ? null : String(v).trim();
@@ -249,6 +249,56 @@ router.get(
         } catch (err) {
             console.error("❌ GET /laboratory/orders error:", err);
             return res.status(500).json({ error: "Failed to load orders" });
+        }
+    }
+);
+
+
+// Add this in backend/routes/laboratory.js
+
+router.get(
+    "/reports",
+    verifyToken,
+    requireRole(["LABORATORY", "ADMIN", "SUPERADMIN"]),
+    async (req, res) => {
+        try {
+            const userId = inferUserId(req);
+            if (!userId) return res.status(400).json({ error: "userId is required" });
+
+            const lab = await prisma.laboratoryProfile.findUnique({
+                where: { userId },
+                select: { id: true },
+            });
+            if (!lab) return res.json({ success: true, data: [] });
+
+            // Yahan se aap reports fetch karein
+            const reports = await prisma.labOrder.findMany({
+                where: {
+                    laboratoryId: lab.id,
+                    status: "COMPLETED" // Sirf completed reports chahiye honi chahiye
+                },
+                include: {
+                    doctor: { include: { user: true } },
+                    patient: { include: { user: true } },
+                },
+                orderBy: { completedAt: "desc" },
+            });
+
+            // Map data taake frontend ko wahi mile jo usay chahiye
+            const formattedReports = reports.map(r => ({
+                id: r.id,
+                patientName: `${r.patient.user.firstName} ${r.patient.user.lastName}`,
+                testName: r.testName,
+                doctorName: r.doctor ? `${r.doctor.user.firstName} ${r.doctor.user.lastName}` : "N/A",
+                createdAt: r.createdAt,
+                status: r.status,
+                reportUrl: r.resultUrl || "#"
+            }));
+
+            return res.json({ success: true, data: formattedReports });
+        } catch (err) {
+            console.error("❌ GET /laboratory/reports error:", err);
+            return res.status(500).json({ error: "Failed to load reports" });
         }
     }
 );

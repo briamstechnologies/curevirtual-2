@@ -91,7 +91,9 @@ model ActivityLog {
 model DoctorProfile {
   id                    String              @id @default(uuid())
   userId                String              @unique
+  email                 String?
   specialization        String
+
   customProfession      String?
   qualifications        String
   licenseNumber         String              @unique
