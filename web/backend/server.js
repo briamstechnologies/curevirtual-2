@@ -493,7 +493,7 @@ const patientDoctorsRoutes = require("./routes/patientDoctors");
 
 app.use("/api", patientDoctorsRoutes);
 app.use("/api/patient", patientRoutes);
- 
+
 const notificationsRoutes = require("./routes/notifications");
 app.use("/api/notifications", notificationsRoutes);
 
@@ -524,6 +524,7 @@ app.use("/api/pharmacy", pharmacyRoute);
 // ----------------------------
 const laboratoryRoute = require("./routes/Laboratory");
 app.use("/api/laboratory", laboratoryRoute);
+
 
 // ----------------------------
 // ✅ SUPPORT ROUTES

@@ -1,8 +1,14 @@
 // FILE: src/pages/laboratory/LaboratoryReports.jsx
 
 import { useEffect, useMemo, useState } from "react";
-import { 
-  FiSearch, FiDownload, FiFileText, FiEye, FiFilter, FiCheckCircle, FiClock 
+import {
+  FiSearch,
+  FiDownload,
+  FiFileText,
+  FiEye,
+  FiFilter,
+  FiCheckCircle,
+  FiClock,
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import api from "../../Lib/api";
@@ -14,9 +20,6 @@ export default function LaboratoryReports() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  // =========================================
-  // FETCH REPORTS (Dummy data removed)
-  // =========================================
   useEffect(() => {
     const fetchReports = async () => {
       try {
@@ -29,11 +32,18 @@ export default function LaboratoryReports() {
           },
         });
 
-        setReports(res.data || []);
+        // DEBUG: Yeh line console mein dekho ke data kaisa aa raha hai
+        console.log("Full API Response:", res.data);
+
+        // FIX: Agar res.data ek object hai, toh uska 'data' property pick karo
+        // Agar seedha array hai, toh wo use karo
+        const reportsData = Array.isArray(res.data) ? res.data : res.data?.data || []; // Yahan 'data' property target ki hai
+
+        setReports(reportsData);
       } catch (error) {
         console.error("API Error:", error);
         toast.error("Failed to load reports.");
-        setReports([]); 
+        setReports([]);
       } finally {
         setLoading(false);
       }
@@ -109,7 +119,8 @@ export default function LaboratoryReports() {
             </div>
             <div className="flex items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] px-5">
               <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">
-                Total Reports: <span className="ml-2 text-[var(--brand-purple)]">{filteredReports.length}</span>
+                Total Reports:{" "}
+                <span className="ml-2 text-[var(--brand-purple)]">{filteredReports.length}</span>
               </p>
             </div>
           </div>
@@ -125,7 +136,9 @@ export default function LaboratoryReports() {
           </div>
 
           {loading ? (
-            <div className="py-20 text-center font-bold text-[var(--text-muted)]">Loading reports...</div>
+            <div className="py-20 text-center font-bold text-[var(--text-muted)]">
+              Loading reports...
+            </div>
           ) : filteredReports.length === 0 ? (
             <div className="py-20 text-center text-sm text-[var(--text-muted)] font-bold uppercase tracking-widest">
               No reports found.
@@ -135,33 +148,69 @@ export default function LaboratoryReports() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-[var(--border)]">
-                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">Report ID</th>
-                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">Patient</th>
-                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">Test</th>
-                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">Doctor</th>
-                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">Date</th>
-                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">Status</th>
-                    <th className="text-right py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">Actions</th>
+                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">
+                      Report ID
+                    </th>
+                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">
+                      Patient
+                    </th>
+                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">
+                      Test
+                    </th>
+                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">
+                      Doctor
+                    </th>
+                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">
+                      Date
+                    </th>
+                    <th className="text-left py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">
+                      Status
+                    </th>
+                    <th className="text-right py-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-black">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredReports.map((report) => (
-                    <tr key={report.id} className="border-b border-[var(--border)]/40 hover:bg-[var(--bg-card)] transition-all">
-                      <td className="py-5 text-sm font-black text-[var(--text-main)]">{report.id}</td>
-                      <td className="py-5 text-sm font-bold text-[var(--text-main)]">{report.patientName}</td>
-                      <td className="py-5 text-sm text-[var(--text-soft)] font-bold">{report.testName}</td>
-                      <td className="py-5 text-sm text-[var(--text-soft)] font-bold">{report.doctorName}</td>
-                      <td className="py-5 text-sm text-[var(--text-soft)] font-bold">{report.createdAt}</td>
+                    <tr
+                      key={report.id}
+                      className="border-b border-[var(--border)]/40 hover:bg-[var(--bg-card)] transition-all"
+                    >
+                      <td className="py-5 text-sm font-black text-[var(--text-main)]">
+                        {report.id}
+                      </td>
+                      <td className="py-5 text-sm font-bold text-[var(--text-main)]">
+                        {report.patientName}
+                      </td>
+                      <td className="py-5 text-sm text-[var(--text-soft)] font-bold">
+                        {report.testName}
+                      </td>
+                      <td className="py-5 text-sm text-[var(--text-soft)] font-bold">
+                        {report.doctorName}
+                      </td>
+                      <td className="py-5 text-sm text-[var(--text-soft)] font-bold">
+                        {report.createdAt}
+                      </td>
                       <td className="py-5">
-                        <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${report.status === "COMPLETED" ? "bg-green-500/10 text-green-500" : "bg-amber-500/10 text-amber-500"}`}>
+                        <span
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${report.status === "COMPLETED" ? "bg-green-500/10 text-green-500" : "bg-amber-500/10 text-amber-500"}`}
+                        >
                           {report.status === "COMPLETED" ? <FiCheckCircle /> : <FiClock />}
                           {report.status}
                         </span>
                       </td>
                       <td className="py-5 text-right">
                         <div className="flex justify-end gap-3">
-                          <button className="h-11 w-11 rounded-2xl bg-[var(--brand-blue)]/10 text-[var(--brand-blue)] flex items-center justify-center hover:scale-105 transition-all"><FiEye /></button>
-                          <button onClick={() => handleDownload(report.reportUrl)} className="h-11 w-11 rounded-2xl bg-[var(--brand-purple)]/10 text-[var(--brand-purple)] flex items-center justify-center hover:scale-105 transition-all"><FiDownload /></button>
+                          <button className="h-11 w-11 rounded-2xl bg-[var(--brand-blue)]/10 text-[var(--brand-blue)] flex items-center justify-center hover:scale-105 transition-all">
+                            <FiEye />
+                          </button>
+                          <button
+                            onClick={() => handleDownload(report.reportUrl)}
+                            className="h-11 w-11 rounded-2xl bg-[var(--brand-purple)]/10 text-[var(--brand-purple)] flex items-center justify-center hover:scale-105 transition-all"
+                          >
+                            <FiDownload />
+                          </button>
                         </div>
                       </td>
                     </tr>

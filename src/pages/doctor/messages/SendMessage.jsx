@@ -1,4 +1,3 @@
-// FILE: src/pages/doctor/messages/SendMessage.jsx
 import { useEffect, useState } from "react";
 import { FaPaperPlane } from "react-icons/fa";
 import DashboardLayout from "../../../layouts/DashboardLayout";
@@ -16,57 +15,52 @@ export default function DoctorSendMessage() {
   const doctorUserId = localStorage.getItem("userId");
   const doctorName = localStorage.getItem("userName") || localStorage.getItem("name") || "Doctor";
 
-  // Load my patients for dropdown
-  async function loadMyPatients() {
-    const res = await api.get("/doctor/patients", { params: { doctorUserId } });
-    setPatients(res.data?.data || []); // array of PatientProfile with p.user
-  }
   useEffect(() => {
-    loadMyPatients();
-  }, []);
-
-  // Load patients for dropdown
-  useEffect(() => {
-    (async () => {
+    // Sirf ek dafa fetch karo
+    async function fetchPatients() {
       try {
-        const res = await api.get("/doctor/patients");
+        setLoading(true);
+        const res = await api.get("/doctor/patients", { params: { doctorUserId } });
+
+        // Data format adjust karo (backend response ke hisaab se)
         const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
-        // Normalize to { id: <Patient User.id>, name: <Patient Name> }
+
         const normalized = list
           .map((p) => ({
             id: p?.user?.id ?? p?.userId ?? p?.id,
             name: p?.user?.name ?? p?.name ?? "Patient",
           }))
           .filter((p) => !!p.id);
+
         setPatients(normalized);
       } catch (err) {
         console.error("Failed to load patients:", err);
-        toast.error(err?.response?.data?.error || "Failed to load patients");
+        toast.error("Patients list load nahi ho saki.");
       } finally {
         setLoading(false);
       }
-    })();
-  }, []);
+    }
+    fetchPatients();
+  }, [doctorUserId]);
 
   const handleSend = async (e) => {
     e.preventDefault();
     if (!receiverId || !content.trim()) {
-      toast.error("Select a patient and type a message.");
+      toast.error("Please select a patient and type a message.");
       return;
     }
     setSending(true);
     try {
       await api.post("/doctor/messages/send", {
-        senderId: doctorUserId, // Doctor's User.id
-        receiverId, // Patient's User.id
+        senderId: doctorUserId,
+        receiverId,
         content: content.trim(),
       });
-      toast.success("Message sent!");
+      toast.success("Message sent successfully!");
       setReceiverId("");
       setContent("");
     } catch (err) {
-      console.error("Send failed:", err);
-      toast.error(err?.response?.data?.error || "Failed to send message");
+      toast.error(err?.response?.data?.error || "Message bhejne mein masla hua.");
     } finally {
       setSending(false);
     }
@@ -80,8 +74,8 @@ export default function DoctorSendMessage() {
           alt="CureVirtual"
           style={{ width: 120, height: "auto" }}
           onError={(e) => {
-            e.currentTarget.src = PLACEHOLDER_LOGO;
-          }} // fallback if missing
+            e.currentTarget.src = "/placeholder-logo.png";
+          }}
         />
         <h1 className="text-2xl font-bold mb-6 text-[#ffffff]">Send Message</h1>
 
@@ -89,11 +83,10 @@ export default function DoctorSendMessage() {
           onSubmit={handleSend}
           className="bg-[var(--bg-glass)] backdrop-blur-md rounded-2xl p-6 shadow-lg max-w-xl mx-auto"
         >
-          {/* Patient dropdown (name only) */}
           <div className="mb-4">
             <label className="block font-semibold mb-2">Select Patient</label>
             {loading ? (
-              <p>Loading patients...</p>
+              <p className="text-sm">Loading patients...</p>
             ) : (
               <select
                 className="w-full border border-gray-300 text-black rounded-md p-2"
@@ -111,7 +104,6 @@ export default function DoctorSendMessage() {
             )}
           </div>
 
-          {/* Message */}
           <div className="mb-4">
             <label className="block font-semibold mb-2">Message</label>
             <textarea
@@ -133,7 +125,6 @@ export default function DoctorSendMessage() {
           </button>
         </form>
       </div>
-
       <ToastContainer position="top-right" autoClose={2200} />
     </DashboardLayout>
   );

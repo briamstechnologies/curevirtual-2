@@ -506,9 +506,12 @@ model Subscription {
   @@schema("public")
 }
 
+
+
 model DoctorPatient {
   id        String         @id @default(uuid())
   doctorId  String
+  email     String? 
   patientId String
   createdAt DateTime       @default(now())
   doctor    DoctorProfile  @relation("DoctorPatient_Doctor", fields: [doctorId], references: [id], onDelete: Cascade)

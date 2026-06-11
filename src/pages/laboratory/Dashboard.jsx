@@ -5,7 +5,6 @@ import {
   FiFileText,
   FiDollarSign,
   FiClock,
-  FiUploadCloud,
   FiCheckCircle,
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
@@ -14,7 +13,6 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 export default function LaboratoryDashboard() {
   const labName = localStorage.getItem("userName") || "CureVirtual Lab";
 
-  // State for dynamic data
   const [stats, setStats] = useState([
     {
       label: "Pending Tests",
@@ -48,7 +46,6 @@ export default function LaboratoryDashboard() {
 
   const [pendingRequests, setPendingRequests] = useState([]);
 
-  // Yahan aap API call add karenge useEffect use karke
   useEffect(() => {
     // fetchData();
   }, []);
@@ -56,7 +53,7 @@ export default function LaboratoryDashboard() {
   return (
     <DashboardLayout role="LABORATORY" user={{ name: labName }}>
       <div className="animate-in fade-in duration-700">
-        {/* Header Section */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
           <div>
             <h1 className="text-3xl font-black text-[var(--text-main)] uppercase tracking-tighter">
@@ -101,85 +98,54 @@ export default function LaboratoryDashboard() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Pending Test Requests Table */}
-          <div className="lg:col-span-2 glass-panel p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-black text-[var(--text-main)] uppercase tracking-tight flex items-center gap-2">
-                <FiFileText className="text-[var(--brand-purple)]" /> Pending Test Requests
-              </h2>
-              <Link
-                to="#"
-                className="text-[10px] font-black text-[var(--brand-purple)] uppercase tracking-widest hover:underline"
-              >
-                View All
-              </Link>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-[var(--border)]">
-                    <th className="pb-3 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
-                      Patient
-                    </th>
-                    <th className="pb-3 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
-                      Test Type
-                    </th>
-                    <th className="pb-3 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
-                      Status
-                    </th>
-                    <th className="pb-3 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest text-right">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingRequests.length > 0 ? (
-                    pendingRequests.map((req, i) => (
-                      <tr
-                        key={i}
-                        className="border-b border-[var(--border)]/50 hover:bg-[var(--bg-card)] transition-colors group"
-                      >
-                        {/* Table data rows */}
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan="4"
-                        className="py-10 text-center text-[var(--text-muted)] text-sm"
-                      >
-                        No pending requests at the moment.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+        {/* Pending Test Requests */}
+        <div className="glass-panel p-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-black text-[var(--text-main)] uppercase tracking-tight flex items-center gap-2">
+              <FiFileText className="text-[var(--brand-purple)]" /> Pending Test Requests
+            </h2>
+            <Link
+              to="#"
+              className="text-[10px] font-black text-[var(--brand-purple)] uppercase tracking-widest hover:underline"
+            >
+              View All
+            </Link>
           </div>
-
-          {/* Quick Actions */}
-          <div className="space-y-6">
-            <div className="glass-panel p-8 bg-gradient-to-br from-[var(--brand-purple)]/5 to-transparent border-[var(--brand-purple)]/20">
-              <h3 className="text-sm font-black text-[var(--text-main)] uppercase tracking-widest mb-4">
-                Quick Actions
-              </h3>
-              <div className="space-y-3">
-                <button className="w-full flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border)] hover:border-[var(--brand-purple)] transition-all group">
-                  <span className="text-[10px] font-black text-[var(--text-soft)] uppercase tracking-widest group-hover:text-[var(--brand-purple)]">
-                    Register Walk-in Patient
-                  </span>
-                  <FiUsers className="text-[var(--text-muted)] group-hover:text-[var(--brand-purple)]" />
-                </button>
-                <button className="w-full flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border)] hover:border-[var(--brand-purple)] transition-all group">
-                  <span className="text-[10px] font-black text-[var(--text-soft)] uppercase tracking-widest group-hover:text-[var(--brand-purple)]">
-                    Update Test Pricing
-                  </span>
-                  <FiDollarSign className="text-[var(--text-muted)] group-hover:text-[var(--brand-purple)]" />
-                </button>
-              </div>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  <th className="pb-3 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
+                    Patient
+                  </th>
+                  <th className="pb-3 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
+                    Test Type
+                  </th>
+                  <th className="pb-3 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
+                    Status
+                  </th>
+                  <th className="pb-3 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest text-right">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingRequests.length > 0 ? (
+                  pendingRequests.map((req, i) => (
+                    <tr
+                      key={i}
+                      className="border-b border-[var(--border)]/50 hover:bg-[var(--bg-card)] transition-colors group"
+                    ></tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="py-10 text-center text-[var(--text-muted)] text-sm">
+                      No pending requests at the moment.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

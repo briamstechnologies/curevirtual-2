@@ -88,6 +88,8 @@ model ActivityLog {
   @@schema("public")
 }
 
+
+
 model DoctorProfile {
   id                    String              @id @default(uuid())
   userId                String              @unique

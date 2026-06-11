@@ -6,9 +6,20 @@ export default function LaboratorySubscription() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Yahan API call karein aur response set karein
-    // fetch('/api/subscription-plans').then(...)
-    // Example: setPlans(data); setLoading(false);
+    // Example API call to fetch subscription plans
+    const fetchPlans = async () => {
+      try {
+        const res = await fetch('/api/subscription-plans');
+        if (!res.ok) throw new Error('Network response was not ok');
+        const data = await res.json();
+        setPlans(data);
+      } catch (err) {
+        console.error('Failed to load subscription plans:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlans();
   }, []);
 
   if (loading) {

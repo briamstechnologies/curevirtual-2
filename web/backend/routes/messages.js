@@ -9,13 +9,9 @@ const {
 
 const router = express.Router();
 
-// ------------------------------------------------------------------
-// Constants & helpers
-// ------------------------------------------------------------------
 const PAGE_SIZE_DEFAULT = 20;
 const VALID_FOLDERS = new Set(["inbox", "sent", "unread", "all"]);
 
-// Helper to derive a clean name from a user object
 function deriveName(user) {
   if (!user) return "Unknown User";
   const name = `${user.firstName || ""} ${user.lastName || ""}`.trim();
@@ -24,11 +20,7 @@ function deriveName(user) {
   return `User #${String(user.id).slice(0, 4)}`;
 }
 
-// ------------------------------------------------------------------
-// Routes
-// ------------------------------------------------------------------
-
-// ✅ Get all contacts for messaging
+// ✅ Get all contacts
 router.get("/contacts/all", verifyToken, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
@@ -42,7 +34,7 @@ router.get("/contacts/all", verifyToken, async (req, res) => {
   }
 });
 
-// Unread count
+// ✅ Unread count
 router.get("/unread-count", verifyToken, async (req, res) => {
   const userId = req.query.userId || req.user.id;
   try {
@@ -51,11 +43,12 @@ router.get("/unread-count", verifyToken, async (req, res) => {
     });
     return res.json({ data: { count } });
   } catch (err) {
+    console.error("❌ Unread count error:", err);
     return res.status(500).json({ error: "Failed to fetch unread count" });
   }
 });
 
-// Mark single as read
+// ✅ Mark single as read
 router.patch("/:id/read", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -65,23 +58,19 @@ router.patch("/:id/read", verifyToken, async (req, res) => {
       select: { id: true, readAt: true },
     });
     return res.json({ data: msg });
-  } catch (e) {
+  } catch (err) {
+    console.error("❌ Mark read error:", err);
     return res.status(500).json({ error: "Failed to mark message read" });
   }
 });
 
-// ✅ Unified Inbox: Latest message for each conversation
+// ✅ Inbox
 router.get("/inbox", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    // ⚠️ PostgreSQL Fix: Prisma `distinct` requires `orderBy` to match the distinct fields first.
-    // We fetch the latest message per conversationId, ordered by conversationId.
     const messages = await prisma.message.findMany({
       where: { OR: [{ senderId: userId }, { receiverId: userId }] },
-      orderBy: [
-        { conversationId: "asc" },
-        { createdAt: "desc" }
-      ],
+      orderBy: [{ conversationId: "asc" }, { createdAt: "desc" }],
       distinct: ["conversationId"],
       include: {
         sender: { select: { id: true, firstName: true, lastName: true, role: true, email: true } },
@@ -105,9 +94,7 @@ router.get("/inbox", verifyToken, async (req, res) => {
       };
     });
 
-    // ✅ Sort by latest message globally (since distinct forced 'conversationId' sorting)
     formatted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
     return res.json({ data: formatted });
   } catch (err) {
     console.error("❌ Inbox sync error:", err);
@@ -115,7 +102,7 @@ router.get("/inbox", verifyToken, async (req, res) => {
   }
 });
 
-// ✅ Chat History
+// ✅ Chat History — FIXED (closing brace add ki)
 router.get("/history/:targetId", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -130,9 +117,10 @@ router.get("/history/:targetId", verifyToken, async (req, res) => {
       },
     });
     return res.json({ data: messages });
-  } catch (err) {
+  } catch (err) {                                          // ✅ Fix
+    console.error("❌ Load chat history error:", err);
     return res.status(500).json({ error: "Failed to load chat history" });
-  }
+  }                                                        // ✅ Fix
 });
 
 // ✅ Send Message
@@ -144,22 +132,17 @@ router.post("/send", verifyToken, async (req, res) => {
 
     if (!targetRecipient) {
       console.error("❌ Send Error: Missing recipient", req.body);
-      return res.status(400).json({ error: "Recipient is required", debug: { body: req.body } });
+      return res.status(400).json({ error: "Recipient is required" });
     }
     if (!content) {
       console.error("❌ Send Error: Missing content", req.body);
-      return res.status(400).json({ error: "Content is required", debug: { body: req.body } });
+      return res.status(400).json({ error: "Content is required" });
     }
 
     const conversationId = [String(actualSenderId), String(targetRecipient)].sort().join(":");
 
     const msg = await prisma.message.create({
-      data: {
-        senderId: actualSenderId,
-        receiverId: targetRecipient,
-        content,
-        conversationId,
-      },
+      data: { senderId: actualSenderId, receiverId: targetRecipient, content, conversationId },
       include: {
         sender: { select: { id: true, firstName: true, lastName: true, role: true } },
         receiver: { select: { id: true, firstName: true, lastName: true, role: true } },
@@ -173,11 +156,10 @@ router.post("/send", verifyToken, async (req, res) => {
       timestamp: msg.createdAt,
     };
 
-    // Socket emission
     try {
       const { emitToUser } = require("../socket/socketHandler.cjs");
       emitToUser(String(targetRecipient), "receiveMessage", formattedMsg);
-    } catch (sErr) {}
+    } catch (sErr) { }
 
     return res.json({ data: formattedMsg });
   } catch (e) {
@@ -186,34 +168,41 @@ router.post("/send", verifyToken, async (req, res) => {
   }
 });
 
-// POST /api/messages/mark-read
-// Marks messages as read by conversationId (bulk) or by specific messageIds.
-// Both fields are optional — if neither is provided the call is a no-op (200).
+// ✅ Delete Message — FIXED (bahar nikala)
+router.delete("/:id", verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const msg = await prisma.message.findUnique({ where: { id } });
+    if (!msg) return res.status(404).json({ error: "Message not found" });
+    if (msg.senderId !== userId && msg.receiverId !== userId)
+      return res.status(403).json({ error: "Not allowed" });
+
+    await prisma.message.delete({ where: { id } });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("❌ Delete error:", err);
+    return res.status(500).json({ error: "Delete failed" });
+  }
+});
+
+// ✅ Mark Read (bulk)
 router.post("/mark-read", verifyToken, async (req, res) => {
   try {
     const { conversationId, messageIds } = req.body;
     const userId = req.user.id;
 
     if (conversationId) {
-      // Mark all unread messages in this conversation where the current user is the receiver
       await prisma.message.updateMany({
-        where: {
-          conversationId,
-          receiverId: userId,
-          readAt: null, // Only update truly unread messages (null = unread per schema)
-        },
+        where: { conversationId, receiverId: userId, readAt: null },
         data: { readAt: new Date() },
       });
     }
 
     if (Array.isArray(messageIds) && messageIds.length > 0) {
-      // Mark specific messages as read — only if the current user is the receiver
       await prisma.message.updateMany({
-        where: {
-          id: { in: messageIds },
-          receiverId: userId,
-          readAt: null,
-        },
+        where: { id: { in: messageIds }, receiverId: userId, readAt: null },
         data: { readAt: new Date() },
       });
     }
@@ -225,7 +214,7 @@ router.post("/mark-read", verifyToken, async (req, res) => {
   }
 });
 
-// Existing Folder-based routes (Legacy support)
+// Legacy support
 router.get("/folder/:folder", verifyToken, async (req, res) => {
   return res.status(200).json({ data: [], message: "Use /inbox or /history for unified messaging" });
 });
