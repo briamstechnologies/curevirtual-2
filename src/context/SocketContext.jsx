@@ -19,8 +19,8 @@ export const SocketProvider = ({ children }) => {
   // ✅ LOCAL + PRODUCTION AUTO SWITCH
   const backendUrl =
     import.meta.env.MODE === "development"
-      ? "https://curevirtual-2-production-ee33.up.railway.app"
-      : "https://curevirtual-2-production-ee33.up.railway.app";
+      ? "https://curevirtual-2-production-e766.up.railway.app"
+      : "https://curevirtual-2-production-e766.up.railway.app";
 
   useEffect(() => {
     const userId = user?.id || localStorage.getItem("userId");
@@ -61,13 +61,13 @@ export const SocketProvider = ({ children }) => {
       timeout: 20000,
       autoConnect: true,
     });
-      // Increase max listeners to avoid warnings
-      if (socketInstance.setMaxListeners) {
-        socketInstance.setMaxListeners(0);
-      }
-      if (socketInstance.io && socketInstance.io.setMaxListeners) {
-        socketInstance.io.setMaxListeners(0);
-      }
+    // Increase max listeners to avoid warnings
+    if (socketInstance.setMaxListeners) {
+      socketInstance.setMaxListeners(0);
+    }
+    if (socketInstance.io && socketInstance.io.setMaxListeners) {
+      socketInstance.io.setMaxListeners(0);
+    }
 
     // Increase max listeners to avoid warnings
     if (socketInstance.setMaxListeners) {
@@ -110,7 +110,10 @@ export const SocketProvider = ({ children }) => {
         try {
           console.log("🔄 Attempting token refresh...");
 
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          const {
+            data: { session },
+            error: sessionError,
+          } = await supabase.auth.getSession();
 
           if (sessionError || !session) {
             localStorage.clear();

@@ -208,7 +208,7 @@ const RequireApproved = ({ children }) => {
 };
 
 export default function App() {
-  // 🚀 Warmup Backend on Load
+  // 🚀 Warmup Backend on LoadPV
   useEffect(() => {
     const wakeupBackend = async () => {
       try {
