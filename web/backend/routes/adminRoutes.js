@@ -1,28 +1,21 @@
 /**
  * Admin Routes - for ADMIN role (not SUPERADMIN)
- * ADMIN can manage users, view reports, but cannot manage other admins
- * Requires ADMIN or SUPERADMIN role
  */
 const express = require("express");
 const prisma = require("../prisma/prismaClient.js");
 const { verifyToken, requireHierarchy } = require("../middleware/rbac.js");
 const router = express.Router();
 
-// Apply RBAC - requires at least ADMIN level
 router.use(verifyToken);
-router.use(requireHierarchy("ADMIN")); // ADMIN or SUPERADMIN
+router.use(requireHierarchy("ADMIN"));
 
-/**
- * GET /api/admin/users
- * List all users (paginated)
- */
+// ✅ GET /api/admin/users
 router.get("/users", async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
-    const role = req.query.role; // optional filter
-
+    const role = req.query.role;
     const where = role ? { role } : {};
 
     const [users, total] = await Promise.all([
@@ -59,41 +52,36 @@ router.get("/users", async (req, res) => {
   }
 });
 
-/**
- * GET /api/admin/user/:id
- * Get single user details
- */
-router.get("/user/:id", async (req, res) => {
+// ✅ PUT /api/admin/users/:id - user update karo
+router.put("/users/:id", async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({
+    const { name, email, role } = req.body;
+    const [firstName, ...lastNameParts] = name.split(" ");
+    const lastName = lastNameParts.join(" ") || "";
+
+    const updated = await prisma.user.update({
       where: { id: req.params.id },
-      include: {
-        doctor: true,
-        patient: true,
-        pharmacy: true,
+      data: {
+        firstName,
+        lastName,
+        email,
+        role,
       },
     });
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res.json(user);
+    res.json({ ...updated, name: `${updated.firstName} ${updated.lastName}` });
   } catch (err) {
-    console.error("Failed to fetch user:", err);
-    res.status(500).json({ error: "Failed to fetch user" });
+    console.error("Failed to update user:", err);
+    res.status(500).json({ error: "Failed to update user" });
   }
 });
 
-/**
- * PATCH /api/admin/user/:id/suspend
- * Suspend a user account
- */
-router.patch("/user/:id/suspend", async (req, res) => {
+
+// ✅ PATCH /api/admin/users/:id/suspend
+router.patch("/users/:id/suspend", async (req, res) => {
   try {
     const userId = req.params.id;
 
-    // Can't suspend admins
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { role: true },
@@ -103,8 +91,7 @@ router.patch("/user/:id/suspend", async (req, res) => {
       return res.status(403).json({ error: "Cannot suspend SUPERADMIN users" });
     }
 
-    // For now, we don't have a suspension field on User, so just track last activity
-    const updated = await prisma.user.update({
+    await prisma.user.update({
       where: { id: userId },
       data: { updatedAt: new Date() },
     });
@@ -116,23 +103,17 @@ router.patch("/user/:id/suspend", async (req, res) => {
   }
 });
 
-/**
- * GET /api/admin/dashboard
- * Admin dashboard summary (non-superadmin version)
- */
+// ✅ GET /api/admin/dashboard
 router.get("/dashboard", async (req, res) => {
   try {
-    // Use helper for safe counts if models might be missing
-    const hasModel = (m) => m && typeof m.count === "function";
     const safeCount = async (fn) => {
       try {
         return await fn();
-      } catch (_) {
+      } catch (_err) {
         return 0;
       }
     };
 
-    // Parallel fetch for dashboard stats
     const [
       totalUsers,
       totalDoctors,
@@ -145,21 +126,12 @@ router.get("/dashboard", async (req, res) => {
       totalConsultations,
       totalPrescriptions,
     ] = await Promise.all([
-      // Users
       safeCount(() => prisma.user.count()),
       safeCount(() => prisma.user.count({ where: { role: "DOCTOR" } })),
       safeCount(() => prisma.user.count({ where: { role: "PATIENT" } })),
       safeCount(() => prisma.user.count({ where: { role: "SUPPORT" } })),
-
-      // Admins
       safeCount(() => prisma.user.count({ where: { role: "ADMIN" } })),
-
-      // Subscriptions
-      safeCount(() =>
-        prisma.subscription.count({ where: { status: "ACTIVE" } }),
-      ),
-
-      // Activity
+      safeCount(() => prisma.subscription.count({ where: { status: "ACTIVE" } })),
       safeCount(() => prisma.message.count()),
       safeCount(() => prisma.supportTicket.count()),
       safeCount(() => prisma.videoConsultation.count()),
@@ -168,7 +140,7 @@ router.get("/dashboard", async (req, res) => {
 
     res.json({
       totalUsers,
-      totalAdmins, // Included so frontend doesn't break
+      totalAdmins,
       totalDoctors,
       totalPatients,
       totalSupport,
@@ -185,14 +157,10 @@ router.get("/dashboard", async (req, res) => {
   }
 });
 
-/**
- * GET /api/admin/reports
- * Generate admin-level reports (excluding subscription revenue)
- */
+// ✅ GET /api/admin/reports
 router.get("/reports", async (req, res) => {
   try {
     const reportType = req.query.type || "general";
-
     let report = {};
 
     if (reportType === "general" || reportType === "all") {
@@ -218,17 +186,13 @@ router.get("/reports", async (req, res) => {
   }
 });
 
-/**
- * GET /api/admin/support-tickets
- * View all support tickets
- */
+// ✅ GET /api/admin/support-tickets
 router.get("/support-tickets", async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
-    const status = req.query.status; // optional filter
-
+    const status = req.query.status;
     const where = status ? { status } : {};
 
     const [tickets, total] = await Promise.all([
@@ -256,6 +220,73 @@ router.get("/support-tickets", async (req, res) => {
   } catch (err) {
     console.error("Failed to fetch support tickets:", err);
     res.status(500).json({ error: "Failed to fetch tickets" });
+  }
+});
+
+// ✅ GET /api/admin/doctors
+router.get("/doctors", async (req, res) => {
+  try {
+    const doctors = await prisma.doctorProfile.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    const formatted = doctors.map((d) => ({
+      id: d.id,
+      specialization: d.specialization,
+      user: {
+        id: d.user.id,
+        firstName: d.user.firstName,
+        lastName: d.user.lastName,
+        email: d.user.email,
+      },
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error("❌ Doctors fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch doctors" });
+  }
+});
+
+// ✅ POST /api/admin/assign-pa
+router.post("/assign-pa", async (req, res) => {
+  try {
+    const { paId, doctorId } = req.body;
+
+    const doctorProfile = await prisma.doctorProfile.findFirst({
+      where: { userId: doctorId },
+    });
+
+    if (!doctorProfile) {
+      return res.status(404).json({ error: "Doctor profile nahi mila" });
+    }
+
+    const pa = await prisma.physicianAssistant.findFirst({
+      where: { userId: paId },
+    });
+
+    if (!pa) {
+      return res.status(404).json({ error: "PA record nahi mila" });
+    }
+
+    const updated = await prisma.physicianAssistant.update({
+      where: { id: pa.id },
+      data: { assignedDoctorId: doctorProfile.id },
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error("❌ Assign PA error:", err);
+    res.status(500).json({ error: "Failed to assign PA" });
   }
 });
 
