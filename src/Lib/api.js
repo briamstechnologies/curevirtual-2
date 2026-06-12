@@ -6,19 +6,11 @@ import axios from "axios";
    ============================================================ */
 
 const api = axios.create({
-  // Determine base URL dynamically: use explicit env var, then dev localhost, else production
-  baseURL: (() => {
-    // Priority 1: development mode – point to locally running backend
-    if (import.meta.env.DEV) return "http://localhost:5001/api";
-    // Priority 2: explicit VITE_API_BASE_URL (can be set for any env)
-    if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
-    // Fallback: production Railway URL
-    return "https://curevirtual-2-production-ee33.up.railway.app/api";
-  })(),
+  baseURL: import.meta.env.VITE_API_URL || "https://curevirtual-2-production-e766.up.railway.app/api",
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 60000, // 60s to handle cold starts
+  timeout: 60000,
 });
 
 /* ============================================================
@@ -67,12 +59,12 @@ api.interceptors.response.use(
     if (error.response.status === 401) {
       // Check if it's an actual expiration error
       const isExpired = error.response.data?.isExpired || error.response.data?.message?.includes("expired");
-      
+
       if (isExpired) {
         console.warn("🔒 Token expired — clearing auth data and redirecting");
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        
+
         // Redirect to login only if not already on a public page
         const publicPages = ["/login", "/register", "/verify-otp"];
         if (!publicPages.includes(window.location.pathname)) {

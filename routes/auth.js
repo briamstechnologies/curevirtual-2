@@ -218,7 +218,7 @@ router.post("/register-success", async (req, res) => {
         console.error(
           "⚠️ Failed to provision default profile (non-blocking):",
           profileError,
-        );
+        );a
       }
     }
 
