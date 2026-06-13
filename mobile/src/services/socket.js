@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace('/api', '') || 'https://curevirtual-2-production-ee33.up.railway.app';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace('/api', '') || 'https://curevirtual-2-production-6781.up.railway.app';
 const SOCKET_URL = API_BASE_URL;
 
 class SocketService {
@@ -20,13 +20,13 @@ class SocketService {
 
     try {
       const token = await AsyncStorage.getItem('userToken');
-      
+
       console.log(`[Socket] Initializing connection to ${SOCKET_URL}...`);
       this.socket = io(SOCKET_URL, {
         auth: { token },
         // Standard Socket.io handshake: start with polling, upgrade to websocket
         // This is more reliable for passing through sticky-session load balancers
-        transports: ['polling', 'websocket'], 
+        transports: ['polling', 'websocket'],
         reconnection: true,
         reconnectionAttempts: 10, // Increased for stability
         timeout: 20000,
@@ -53,10 +53,10 @@ class SocketService {
           description: error.description, // Low-level detail (e.g. 403, 404)
           context: error.context?.status // XHR status code
         });
-        
+
         if (error.message === 'timeout' && this.socket.disconnected) {
-           console.log('[Socket] Attempting manual reconnect after timeout...');
-           this.socket.connect();
+          console.log('[Socket] Attempting manual reconnect after timeout...');
+          this.socket.connect();
         }
       });
 

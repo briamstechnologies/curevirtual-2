@@ -15,7 +15,7 @@ import { Alert } from 'react-native';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
-  'https://curevirtual-2-production-ee33.up.railway.app/api';
+  'https://curevirtual-2-production-6781.up.railway.app/api';
 
 // ============================================================
 // 1. Axios Instance
@@ -96,14 +96,14 @@ api.interceptors.response.use(
       } catch (e) {
         console.warn('[API] Failed to clear storage on 401:', e.message);
       }
-      
+
       Alert.alert('Session Expired', 'Your session has expired. Please log in again.');
-      
+
       // Trigger registered logout handler (set by AuthContext)
       if (_logoutHandler) {
         _logoutHandler();
       }
-    } 
+    }
     // 500 Backend error handling UX
     else if (status >= 500) {
       Alert.alert('Server Error', 'We are having trouble connecting to the server. Please try again later.');
