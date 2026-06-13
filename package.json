@@ -11,7 +11,7 @@
     "build": "prisma generate && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "prisma:generate": "prisma generate",
+    "build": "prisma generate --schema=web/backend/prisma/schema.prisma && vite build",
     "start": "node web/backend/server.js"
   },
   "dependencies": {
