@@ -8,7 +8,7 @@ import axios from "axios";
 const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || (isLocalhost ? "http://localhost:5001/api" : "https://curevirtual-2-production-e766.up.railway.app/api"),
+  baseURL: isLocalhost ? "http://localhost:5001" : "https://curevirtual-2-production-e766.up.railway.app",
   headers: {
     "Content-Type": "application/json",
   },
@@ -20,6 +20,11 @@ const api = axios.create({
    ============================================================ */
 api.interceptors.request.use(
   (config) => {
+    // Prefix /api to all outgoing requests to prevent Axios path resolution issues
+    if (config.url && !config.url.startsWith("/api")) {
+      config.url = config.url.startsWith("/") ? `/api${config.url}` : `/api/${config.url}`;
+    }
+
     // List of public endpoints that SHOULD NOT have a token attached
     // especially if the token might be expired (e.g., during registration)
     const publicEndpoints = [
