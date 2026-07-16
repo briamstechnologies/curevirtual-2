@@ -342,7 +342,8 @@ export default function VideoConsultation() {
           </div>
         ) : (
           <div className="glass overflow-hidden">
-            <table className="w-full border-collapse text-left">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px] border-collapse text-left">
               <thead>
                 <tr className="bg-[var(--bg-main)]/50 border-b border-[var(--border)]">
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
@@ -449,6 +450,7 @@ export default function VideoConsultation() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

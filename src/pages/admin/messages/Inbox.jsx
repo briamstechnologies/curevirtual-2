@@ -64,7 +64,7 @@ export default function Inbox() {
 
         <div className="card !p-0 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[800px] text-left border-collapse">
               <thead>
                 <tr className="bg-[var(--bg-main)]/50 border-b border-[var(--border)]">
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
