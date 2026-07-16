@@ -22,7 +22,7 @@
     "@supabase/supabase-js": "^2.102.1",
     "@zegocloud/zego-uikit-prebuilt-call-rn": "^6.6.9",
     "@zegocloud/zego-uikit-rn": "^2.19.2",
-    "axios": "^1.12.2",
+    "axios": "^1.18.1",
     "date-fns-tz": "^3.2.0",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",

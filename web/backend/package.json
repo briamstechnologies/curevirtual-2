@@ -27,7 +27,7 @@
     "@supabase/supabase-js": "^2.90.1",
     "agora-access-token": "^2.0.4",
     "agora-token": "^2.0.5",
-    "axios": "^1.13.2",
+    "axios": "^1.18.1",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
