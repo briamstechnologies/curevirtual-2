@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace('/api', '') || 'https://curevirtual-2-production-6781.up.railway.app';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace('/api', '') || 'https://curevirtual-2-production-e766.up.railway.app';
 const SOCKET_URL = API_BASE_URL;
 
 class SocketService {

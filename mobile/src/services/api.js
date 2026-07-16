@@ -15,7 +15,7 @@ import { Alert } from 'react-native';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
-  'https://curevirtual-2-production-6781.up.railway.app/api';
+  'https://curevirtual-2-production-e766.up.railway.app/api';
 
 // ============================================================
 // 1. Axios Instance
