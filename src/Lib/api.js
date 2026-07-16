@@ -5,8 +5,10 @@ import axios from "axios";
    🔧 1. Axios Instance
    ============================================================ */
 
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:5001/api" : "https://curevirtual-2-production-e766.up.railway.app/api"),
+  baseURL: import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || (isLocalhost ? "http://localhost:5001/api" : "https://curevirtual-2-production-e766.up.railway.app/api"),
   headers: {
     "Content-Type": "application/json",
   },
