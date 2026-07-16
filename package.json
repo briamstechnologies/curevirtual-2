@@ -10,7 +10,7 @@
     "dev:all": "npm run dev",
     "lint": "eslint .",
     "preview": "vite preview",
-    "build": "prisma generate --schema=web/backend/prisma/schema.prisma && vite build --force",
+   "build": "prisma generate --schema=web/backend/prisma/schema.prisma && vite build",
     "start": "node web/backend/server.js"
   },
   "dependencies": {
