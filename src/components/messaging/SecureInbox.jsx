@@ -183,9 +183,9 @@ export default function SecureInbox({ role: propRole }) {
 
   return (
     <DashboardLayout role={role}>
-      <div className="h-[calc(100vh-160px)] flex gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <div className="h-[calc(100vh-160px)] flex flex-col md:flex-row gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
         {/* Sidebar: Conversation List */}
-        <aside className="w-80 flex flex-col gap-4">
+        <aside className="w-full md:w-80 h-[40%] md:h-full flex flex-col gap-4 shrink-0 pb-2 md:pb-0 border-b md:border-b-0 border-outline-variant/30">
           <div className="flex items-center justify-between px-2">
             <h2 className="font-headline text-2xl font-bold text-primary">MESSAGES</h2>
             <button
