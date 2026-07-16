@@ -21,9 +21,7 @@ if (EMAIL_PROVIDER === "gmail") {
     process.env.EMAIL_SECURE === "true" || defaultPort === 465;
 
   transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || "smtp.gmail.com",
-    port: defaultPort,
-    secure: defaultSecure, // true for 465, false for other ports
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,

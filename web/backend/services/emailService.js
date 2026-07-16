@@ -6,7 +6,7 @@ const emailService = {
   init() {
     if (this.transporter) return;
 
-    if (process.env.EMAIL_SERVICE === "gmail") {
+    if (process.env.EMAIL_SERVICE === "gmail" || process.env.EMAIL_PROVIDER === "gmail") {
       this.transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
