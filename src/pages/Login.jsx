@@ -12,6 +12,7 @@ import { FaArrowRight } from "react-icons/fa";
 
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import TermsAndConditionsModal from "../components/TermsAndConditionsModal";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -27,6 +28,9 @@ export default function Login() {
 
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   // ✅ Handle Success
   const handleAuthSuccess = (responseData, fallbackEmail) => {
@@ -101,6 +105,10 @@ export default function Login() {
           navigate("/laboratory/dashboard");
           break;
 
+        case "PHYSICIAN_ASSISTANT":
+          navigate("/pa/dashboard");
+          break;
+
         default:
           navigate("/");
       }
@@ -110,6 +118,13 @@ export default function Login() {
   // ✅ Main Login
   const handleLogin = async (e) => {
     e.preventDefault();
+
+    if (!acceptedTerms) {
+      const msg = "You must agree to the Terms and Conditions to proceed.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
 
     setError("");
     setIsLoading(true);
@@ -321,11 +336,19 @@ export default function Login() {
             {/* PASSWORD */}
             {loginMode === "password" ? (
               <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.3em]">
-                  Password
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em]">
+                    Password
+                  </label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--brand-blue)] hover:underline"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
 
-                <div className="relative mt-2">
+                <div className="relative">
                   <FiLock className="absolute left-5 top-1/2 -translate-y-1/2" />
 
                   <input
@@ -373,6 +396,27 @@ export default function Login() {
                 <p className="text-red-500 text-xs font-bold">{error}</p>
               </div>
             )}
+
+            {/* TERMS & CONDITIONS AGREEMENT */}
+            <div className="flex items-start gap-3 p-2">
+              <input
+                type="checkbox"
+                id="accept-terms-login"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="w-5 h-5 rounded border-[var(--border)] text-[var(--brand-green)] focus:ring-[var(--brand-green)] mt-0.5 cursor-pointer accent-[var(--brand-green)]"
+              />
+              <label htmlFor="accept-terms-login" className="text-xs text-[var(--text-soft)] leading-snug cursor-pointer select-none">
+                I acknowledge and agree to the{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(true)}
+                  className="text-[var(--brand-blue)] font-black hover:underline cursor-pointer inline"
+                >
+                  Terms & Conditions
+                </button>
+              </label>
+            </div>
 
             {/* BUTTON */}
             <button
@@ -422,6 +466,11 @@ export default function Login() {
       </div>
 
       <ToastContainer position="top-right" autoClose={3000} />
+
+      <TermsAndConditionsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+      />
     </div>
   );
 }

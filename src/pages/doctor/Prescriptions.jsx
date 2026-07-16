@@ -1,5 +1,6 @@
 // FILE: src/pages/doctor/Prescriptions.jsx
 import { useState, useEffect, useCallback } from "react";
+import Select from "react-select";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
 import {
@@ -59,7 +60,13 @@ export default function DoctorPrescriptions() {
       const res = await api.get("/doctor/my-patients", {
         params: { doctorId: doctorUserId },
       });
-      setPatients(res.data?.data || res.data || []);
+      const uniquePatients = res.data?.data || res.data || [];
+      uniquePatients.sort((a, b) => {
+        const nameA = [a.user?.firstName, a.user?.lastName].filter(Boolean).join(" ");
+        const nameB = [b.user?.firstName, b.user?.lastName].filter(Boolean).join(" ");
+        return nameA.localeCompare(nameB);
+      });
+      setPatients(uniquePatients);
     } catch (err) {
       console.error("Error loading registry.");
     }
@@ -68,7 +75,13 @@ export default function DoctorPrescriptions() {
   const fetchPharmacies = useCallback(async () => {
     try {
       const res = await api.get("/pharmacy/list");
-      setPharmacies(res.data?.data?.items || res.data?.items || []);
+      const list = res.data?.data?.items || res.data?.items || [];
+      list.sort((a, b) => {
+        const nameA = a.name || a.displayName || "";
+        const nameB = b.name || b.displayName || "";
+        return nameA.localeCompare(nameB);
+      });
+      setPharmacies(list);
     } catch (err) {
       console.error("Error loading pharmacy list.");
     }
@@ -180,7 +193,7 @@ export default function DoctorPrescriptions() {
                     Auth Date
                   </th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Dispatch
+                    Status
                   </th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] text-center">
                     Protocol Actions
@@ -230,9 +243,12 @@ export default function DoctorPrescriptions() {
                         <div className="flex flex-col gap-1">
                           <span
                             className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md w-fit ${
-                              p.dispatchStatus === "SENT"
-                                ? "bg-green-500/20 text-green-500"
-                                : "bg-yellow-500/20 text-yellow-500"
+                              p.dispatchStatus === "DISPENSED" ? "bg-green-500/20 text-green-500" :
+                              p.dispatchStatus === "REJECTED" ? "bg-red-500/20 text-red-500" :
+                              p.dispatchStatus === "READY" ? "bg-purple-500/20 text-purple-500" :
+                              p.dispatchStatus === "ACKNOWLEDGED" ? "bg-blue-500/20 text-blue-500" :
+                              p.dispatchStatus === "SENT" ? "bg-yellow-500/20 text-yellow-500" :
+                              "bg-gray-500/20 text-gray-500"
                             }`}
                           >
                             {p.dispatchStatus || "PENDING"}
@@ -297,19 +313,32 @@ export default function DoctorPrescriptions() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
                   Target Subject
                 </label>
-                <select
-                  className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-black"
-                  value={form.patientId}
-                  onChange={(e) => setForm({ ...form, patientId: e.target.value })}
+                <Select
+                  options={patients.map((p) => ({ value: p.id, label: p.name || p.user?.name || "Unknown" }))}
+                  value={form.patientId ? { value: form.patientId, label: patients.find(p => p.id === form.patientId)?.name || patients.find(p => p.id === form.patientId)?.user?.name || "Unknown" } : null}
+                  onChange={(selected) => setForm({ ...form, patientId: selected?.value || "" })}
+                  placeholder="-- Search & Choose Patient --"
+                  isSearchable
                   required
-                >
-                  <option value="">-- Choose Patient --</option>
-                  {patients.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name || p.user?.name}
-                    </option>
-                  ))}
-                </select>
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      backgroundColor: "var(--bg-main)",
+                      borderColor: "var(--border)",
+                      borderRadius: "1rem",
+                      padding: "4px",
+                      color: "black",
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                    }),
+                    option: (base, state) => ({
+                      ...base,
+                      color: "black",
+                      backgroundColor: state.isFocused ? "#e5e7eb" : "white",
+                    }),
+                    singleValue: (base) => ({ ...base, color: "black" }),
+                  }}
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
@@ -327,18 +356,31 @@ export default function DoctorPrescriptions() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
                   Fulfillment Pharmacy (Optional)
                 </label>
-                <select
-                  className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-black"
-                  value={form.pharmacyId}
-                  onChange={(e) => setForm({ ...form, pharmacyId: e.target.value })}
-                >
-                  <option value="">-- Let Patient Choose / Use Default --</option>
-                  {pharmacies.map((ph) => (
-                    <option key={ph.id} value={ph.id}>
-                      {ph.name || ph.displayName}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  options={pharmacies.map((ph) => ({ value: ph.id, label: ph.name || ph.displayName || "Unknown" }))}
+                  value={form.pharmacyId ? { value: form.pharmacyId, label: pharmacies.find(ph => ph.id === form.pharmacyId)?.name || pharmacies.find(ph => ph.id === form.pharmacyId)?.displayName || "Unknown" } : null}
+                  onChange={(selected) => setForm({ ...form, pharmacyId: selected?.value || "" })}
+                  placeholder="-- Let Patient Choose / Use Default --"
+                  isSearchable
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      backgroundColor: "var(--bg-main)",
+                      borderColor: "var(--border)",
+                      borderRadius: "1rem",
+                      padding: "4px",
+                      color: "black",
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                    }),
+                    option: (base, state) => ({
+                      ...base,
+                      color: "black",
+                      backgroundColor: state.isFocused ? "#e5e7eb" : "white",
+                    }),
+                    singleValue: (base) => ({ ...base, color: "black" }),
+                  }}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">

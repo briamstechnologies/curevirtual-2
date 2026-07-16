@@ -238,30 +238,40 @@ router.post(
     try {
       const { doctorId, paId } = req.body;
 
-      const doctor = await prisma.user.findUnique({
-        where: { id: doctorId },
-      });
-
-      const pa = await prisma.user.findUnique({
-        where: { id: paId },
-      });
-
-      if (!doctor || doctor.role !== "DOCTOR") {
-        return res.status(400).json({
-          error: "Invalid doctor",
-        });
+      if (!doctorId || !paId) {
+        return res.status(400).json({ error: "Doctor ID and PA ID are required" });
       }
 
-      if (!pa || pa.role !== "PHYSICIAN_ASSISTANT") {
-        return res.status(400).json({
-          error: "Invalid physician assistant",
-        });
+      const doctorProfile = await prisma.doctorProfile.findFirst({
+        where: { OR: [{ id: doctorId }, { userId: doctorId }] }
+      });
+
+      const pa = await prisma.physicianAssistantProfile.findFirst({
+        where: { OR: [{ id: paId }, { userId: paId }] }
+      });
+
+      if (!doctorProfile) {
+        return res.status(400).json({ error: "Invalid doctor" });
       }
 
-      const assignment = await prisma.physicianAssistantDoctor.create({
-        data: {
-          doctorId,
-          paId,
+      if (!pa) {
+        return res.status(400).json({ error: "Invalid physician assistant" });
+      }
+
+      const assignment = await prisma.doctorPAAssignment.upsert({
+        where: {
+          doctorId_paId_assignmentStatus: {
+            doctorId: doctorProfile.id,
+            paId: pa.id,
+            assignmentStatus: "ACTIVE"
+          }
+        },
+        update: {},
+        create: {
+          doctorId: doctorProfile.id,
+          paId: pa.id,
+          assignmentStatus: "ACTIVE",
+          createdBy: req.user?.id || "ADMIN",
         },
       });
 
@@ -271,7 +281,6 @@ router.post(
       });
     } catch (err) {
       console.error("❌ Assign PA error:", err);
-
       res.status(500).json({
         error: "Failed to assign physician assistant",
       });
@@ -284,20 +293,28 @@ router.get(
   "/doctor/:doctorId/physician-assistants",
   async (req, res) => {
     try {
-      const assistants =
-        await prisma.physicianAssistantDoctor.findMany({
-          where: {
-            doctorId: req.params.doctorId,
+      const assistants = await prisma.doctorPAAssignment.findMany({
+        where: {
+          OR: [
+            { doctorId: req.params.doctorId },
+            { doctor: { userId: req.params.doctorId } }
+          ],
+          assignmentStatus: "ACTIVE"
+        },
+        include: {
+          pa: {
+            include: {
+              user: {
+                select: { firstName: true, lastName: true, email: true }
+              }
+            }
           },
-          include: {
-            assistant: true,
-          },
-        });
+        },
+      });
 
-      res.json(assistants);
+      res.json(assistants.map(a => a.pa));
     } catch (err) {
       console.error("❌ Fetch PA error:", err);
-
       res.status(500).json({
         error: "Failed to fetch physician assistants",
       });
@@ -338,33 +355,45 @@ router.get("/doctors", async (req, res) => {
   }
 });
 
-// ✅ POST /api/admin/assign-pa
+// ✅ POST /api/admin/assign-pa (duplicate, map to new logic)
 router.post("/assign-pa", async (req, res) => {
   try {
     const { paId, doctorId } = req.body;
 
     const doctorProfile = await prisma.doctorProfile.findFirst({
-      where: { userId: doctorId },
+      where: { OR: [{ id: doctorId }, { userId: doctorId }] }
     });
 
     if (!doctorProfile) {
       return res.status(404).json({ error: "Doctor profile nahi mila" });
     }
 
-    const pa = await prisma.physicianAssistant.findFirst({
-      where: { userId: paId },
+    const pa = await prisma.physicianAssistantProfile.findFirst({
+      where: { OR: [{ id: paId }, { userId: paId }] }
     });
 
     if (!pa) {
       return res.status(404).json({ error: "PA record nahi mila" });
     }
 
-    const updated = await prisma.physicianAssistant.update({
-      where: { id: pa.id },
-      data: { assignedDoctorId: doctorProfile.id },
+    const assignment = await prisma.doctorPAAssignment.upsert({
+      where: {
+        doctorId_paId_assignmentStatus: {
+          doctorId: doctorProfile.id,
+          paId: pa.id,
+          assignmentStatus: "ACTIVE"
+        }
+      },
+      update: {},
+      create: {
+        doctorId: doctorProfile.id,
+        paId: pa.id,
+        assignmentStatus: "ACTIVE",
+        createdBy: "ADMIN",
+      },
     });
 
-    res.json({ success: true, data: updated });
+    res.json({ success: true, data: assignment });
   } catch (err) {
     console.error("❌ Assign PA error:", err);
     res.status(500).json({ error: "Failed to assign PA" });

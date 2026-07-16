@@ -25,6 +25,21 @@ function inferUserId(req) {
   return null;
 }
 
+async function resolvePharmacyProfileId(userId) {
+  if (!userId) return null;
+  let profile = await prisma.pharmacyProfile.findUnique({
+    where: { userId: String(userId) },
+  });
+  if (!profile) {
+    const user = await prisma.user.findUnique({ where: { id: String(userId) } });
+    if (user && user.role === "PHARMACY") {
+      const { ensureDefaultProfile } = require("../lib/provisionProfile");
+      profile = await ensureDefaultProfile(user);
+    }
+  }
+  return profile;
+}
+
 /* ================================================================
    DASHBOARD STATS
 ================================================================ */
@@ -32,10 +47,7 @@ router.get("/stats", ...authenticatePharmacy, async (req, res) => {
   try {
     const pharmacyUserId = req.user?.id;
 
-    const pharmacyProfile = await prisma.pharmacyProfile.findUnique({
-      where: { userId: pharmacyUserId },
-      select: { id: true }
-    });
+    const pharmacyProfile = await resolvePharmacyProfileId(pharmacyUserId);
 
     if (!pharmacyProfile) {
       return res.json({
@@ -130,14 +142,34 @@ router.get("/profile", ...authenticatePharmacy, async (req, res) => {
       include: { user: true },
     });
 
-    if (!profile) {
-      profile = await prisma.pharmacyProfile.create({
-        data: { userId: String(userId) },
+    if (!profile || !profile.referenceId) {
+      const { ensureDefaultProfile } = require("../lib/provisionProfile");
+      const countryArg = req.query?.country || profile?.country || user?.country || "GH";
+      await ensureDefaultProfile(user, null, countryArg);
+      profile = await prisma.pharmacyProfile.findUnique({
+        where: { userId: String(userId) },
         include: { user: true },
       });
     }
 
-    return res.json({ success: true, data: profile });
+    const isApproved = user?.approvalStatus === "APPROVED" || profile?.verificationStatus === "VERIFIED" || profile?.verificationStatus === "APPROVED";
+    if (isApproved && profile && profile.verificationStatus !== "VERIFIED") {
+      await prisma.pharmacyProfile.update({
+        where: { id: profile.id },
+        data: { verificationStatus: "VERIFIED" },
+      }).catch(() => {});
+    }
+
+    const statusVal = isApproved ? "VERIFIED" : (profile?.verificationStatus || "PENDING");
+    const enrichedProfile = profile ? {
+      ...profile,
+      referenceId: profile.referenceId,
+      reference_id: profile.referenceId,
+      verificationStatus: statusVal,
+      verification_status: statusVal,
+    } : null;
+
+    return res.json({ success: true, data: enrichedProfile });
   } catch (err) {
     console.error("GET /pharmacy/profile error:", err);
     return res.status(500).json({ error: "Failed to load profile" });
@@ -254,14 +286,44 @@ router.get("/prescriptions", verifyToken, requireRole(["PHARMACY", "ADMIN", "SUP
     const userId = inferUserId(req);
     if (!userId) return res.status(400).json({ error: "userId is required" });
 
-    const pharm = await prisma.pharmacyProfile.findUnique({
-      where: { userId: String(userId) },
-      select: { id: true },
-    });
+    const pharm = await resolvePharmacyProfileId(userId);
     if (!pharm) return res.json({ success: true, data: [] });
 
+    // Fetch pending or escalated PA consultation logs to exclude their prescriptions
+    const pendingLogs = await prisma.consultationLog.findMany({
+      where: {
+        status: { in: ["PENDING_REVIEW", "Returned for Correction", "ESCALATED"] }
+      },
+      select: { patientId: true, doctorId: true }
+    });
+
+    const excludeFilters = pendingLogs.map(log => ({
+      AND: [
+        { patientId: log.patientId },
+        { doctorId: log.doctorId }
+      ]
+    }));
+
+    const reqStatus = req.query.status ? String(req.query.status).trim().toUpperCase() : null;
+    let statusFilter = undefined;
+    if (reqStatus) {
+      if (reqStatus === "INCOMING") {
+        statusFilter = { in: ["SENT", "PENDING"] };
+      } else {
+        statusFilter = reqStatus;
+      }
+    }
+
     const list = await prisma.prescription.findMany({
-      where: { pharmacyId: pharm.id },
+      where: {
+        pharmacyId: pharm.id,
+        ...(statusFilter ? { dispatchStatus: statusFilter } : {}),
+        ...(excludeFilters.length > 0 && {
+          NOT: {
+            OR: excludeFilters
+          }
+        })
+      },
       include: {
         doctor: { include: { user: true } },
         patient: { include: { user: true } },
@@ -438,8 +500,6 @@ router.get("/patient/selected", async (req, res) => {
       mapId: s.id,
       pharmacyId: s.pharmacyId,
       preferred: s.preferred,
-      pharmacyId: s.pharmacyId,
-      preferred: s.preferred,
       name: s.pharmacy.displayName || (s.pharmacy.user ? `${s.pharmacy.user.firstName} ${s.pharmacy.user.lastName}`.trim() : "Pharmacy"),
       address: s.pharmacy.address,
       email: s.pharmacy.user.email,
@@ -536,10 +596,7 @@ router.post("/prescriptions", verifyToken, requireRole(["PHARMACY", "ADMIN", "SU
     const userId = inferUserId(req);
     if (!userId) return res.status(400).json({ error: "userId is required" });
 
-    const pharm = await prisma.pharmacyProfile.findUnique({
-      where: { userId: String(userId) },
-      select: { id: true },
-    });
+    const pharm = await resolvePharmacyProfileId(userId);
     if (!pharm) return res.status(404).json({ error: "Pharmacy profile not found" });
 
     const { 

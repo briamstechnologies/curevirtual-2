@@ -41,10 +41,11 @@ router.get("/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Appointment not found" });
     }
 
-    const isDoctor = appointment.doctor.user.id === userId;
-    const isPatient = appointment.patient.user.id === userId;
+    const isDoctor = appointment.doctor?.user?.id === userId;
+    const isPatient = appointment.patient?.user?.id === userId;
+    const isStaff = ["PHYSICIAN_ASSISTANT", "ADMIN", "SUPERADMIN"].includes(req.user.role);
 
-    if (!isDoctor && !isPatient) {
+    if (!isDoctor && !isPatient && !isStaff) {
       return res
         .status(403)
         .json({ error: "You are not authorized to access this appointment" });
@@ -165,10 +166,11 @@ router.get("/:id/status", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Appointment not found" });
     }
 
-    const isDoctor = appointment.doctor.user.id === userId;
-    const isPatient = appointment.patient.user.id === userId;
+    const isDoctor = appointment.doctor?.user?.id === userId;
+    const isPatient = appointment.patient?.user?.id === userId;
+    const isStaff = ["PHYSICIAN_ASSISTANT", "ADMIN", "SUPERADMIN"].includes(req.user.role);
 
-    if (!isDoctor && !isPatient) {
+    if (!isDoctor && !isPatient && !isStaff) {
       return res
         .status(403)
         .json({ error: "Not authorized to view this appointment status" });
@@ -250,10 +252,11 @@ router.post("/:id/end-call", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Appointment not found" });
     }
 
-    const isDoctor = appointment.doctor.user.id === userId;
-    const isPatient = appointment.patient.user.id === userId;
+    const isDoctor = appointment.doctor?.user?.id === userId;
+    const isPatient = appointment.patient?.user?.id === userId;
+    const isStaff = ["PHYSICIAN_ASSISTANT", "ADMIN", "SUPERADMIN"].includes(req.user.role);
 
-    if (!isDoctor && !isPatient) {
+    if (!isDoctor && !isPatient && !isStaff) {
       return res.status(403).json({ error: "Not authorized to end this call" });
     }
 

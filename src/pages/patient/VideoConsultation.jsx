@@ -63,11 +63,24 @@ export default function VideoConsultation() {
 
   const loadAssignedDoctors = useCallback(async () => {
     try {
-      const res = await api.get("/patient/doctors", {
-        params: { patientUserId },
-      });
-      setDoctors(res.data?.data || res.data || []);
+      let list = [];
+      if (patientUserId) {
+        try {
+          const res = await api.get("/patient/doctors", {
+            params: { patientUserId },
+          });
+          list = res.data?.data || res.data || [];
+        } catch (e) {
+          console.warn("Notice: could not fetch assigned doctors, falling back to all doctors list:", e?.message);
+        }
+      }
+      if (!Array.isArray(list) || list.length === 0) {
+        const allRes = await api.get("/patient/doctors/all");
+        list = allRes.data?.data || allRes.data || [];
+      }
+      setDoctors(Array.isArray(list) ? list : []);
     } catch (err) {
+      console.error("Failed to load doctors:", err);
       setError("Failed to load clinical staff.");
     }
   }, [patientUserId]);
@@ -81,6 +94,7 @@ export default function VideoConsultation() {
       const data = res.data?.data || res.data || [];
       setConsultations(data.sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt)));
     } catch (err) {
+      console.error("[VideoConsultation] fetchConsultations error:", err);
       setError("Failed to sync consultation logs.");
     } finally {
       setLoading(false);
@@ -122,6 +136,7 @@ export default function VideoConsultation() {
       setConfirmOpen(false);
       fetchConsultations();
     } catch (err) {
+      console.error("[VideoConsultation] cancel error:", err);
       toast.error("Termination Failed.");
     } finally {
       setConfirmLoading(false);

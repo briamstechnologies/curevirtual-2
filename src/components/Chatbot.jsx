@@ -2,9 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { FaRobot, FaPaperPlane, FaTimes, FaUserMd, FaCommentMedical } from "react-icons/fa";
 import { useTheme } from "../context/ThemeContext";
 import api from "../Lib/api";
+import { useNavigate } from "react-router-dom";
 
 export default function Chatbot() {
   const { theme } = useTheme();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -137,6 +139,10 @@ export default function Chatbot() {
                   {msg.doctors.map((doc) => (
                     <div
                       key={doc.id}
+                      onClick={() => {
+                        navigate(`/patient/book-appointment?doctorId=${doc.id}`);
+                        setIsOpen(false);
+                      }}
                       className={`p-3 rounded-xl shadow-sm flex items-center gap-3 hover:border-[var(--brand-blue)] transition-all cursor-pointer group ${
                         theme === "dark"
                           ? "bg-gray-800/60 backdrop-blur-md border border-gray-600/50"

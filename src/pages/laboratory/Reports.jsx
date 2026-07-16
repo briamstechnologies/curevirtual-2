@@ -9,6 +9,10 @@ import {
   FiFilter,
   FiCheckCircle,
   FiClock,
+  FiEdit,
+  FiTrash2,
+  FiAlertCircle,
+  FiUploadCloud
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import api from "../../Lib/api";
@@ -51,6 +55,43 @@ export default function LaboratoryReports() {
 
     fetchReports();
   }, []);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this report?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      await api.delete(`/laboratory/orders/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Report deleted successfully");
+      setReports((prev) => prev.filter((r) => r.id !== id));
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete report");
+    }
+  };
+
+  const handleReupload = async (id, file) => {
+    if (!file) return;
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("report", file);
+      
+      await api.put(`/laboratory/orders/${id}/re-upload`, formData, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
+      });
+      toast.success("Report re-uploaded successfully");
+      // refresh reports
+      const res = await api.get("/laboratory/reports", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setReports(Array.isArray(res.data) ? res.data : res.data?.data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to re-upload report");
+    }
+  };
 
   // =========================================
   // FILTER REPORTS
@@ -114,7 +155,8 @@ export default function LaboratoryReports() {
               >
                 <option value="ALL">All Status</option>
                 <option value="COMPLETED">Completed</option>
-                <option value="PENDING">Pending</option>
+                <option value="PENDING">Pending Review</option>
+                <option value="CANCELLED">Returned/Rejected</option>
               </select>
             </div>
             <div className="flex items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] px-5">
@@ -194,23 +236,54 @@ export default function LaboratoryReports() {
                       </td>
                       <td className="py-5">
                         <span
-                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${report.status === "COMPLETED" ? "bg-green-500/10 text-green-500" : "bg-amber-500/10 text-amber-500"}`}
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                            report.status === "COMPLETED" ? "bg-green-500/10 text-green-500" :
+                            report.status === "CANCELLED" ? "bg-red-500/10 text-red-500" :
+                            "bg-amber-500/10 text-amber-500"
+                          }`}
                         >
-                          {report.status === "COMPLETED" ? <FiCheckCircle /> : <FiClock />}
-                          {report.status}
+                          {report.status === "COMPLETED" ? <FiCheckCircle /> : report.status === "CANCELLED" ? <FiAlertCircle /> : <FiClock />}
+                          {report.status === "CANCELLED" ? "RETURNED" : report.status}
                         </span>
+                        {report.status === "CANCELLED" && report.resultNotes && (
+                          <div className="mt-2 text-xs text-red-500 font-bold bg-red-500/10 p-2 rounded-lg">
+                            Reason: {report.resultNotes}
+                          </div>
+                        )}
                       </td>
                       <td className="py-5 text-right">
-                        <div className="flex justify-end gap-3">
-                          <button className="h-11 w-11 rounded-2xl bg-[var(--brand-blue)]/10 text-[var(--brand-blue)] flex items-center justify-center hover:scale-105 transition-all">
-                            <FiEye />
-                          </button>
+                        <div className="flex justify-end gap-2">
                           <button
                             onClick={() => handleDownload(report.reportUrl)}
-                            className="h-11 w-11 rounded-2xl bg-[var(--brand-purple)]/10 text-[var(--brand-purple)] flex items-center justify-center hover:scale-105 transition-all"
+                            title="View/Download Report"
+                            className="h-10 w-10 rounded-xl bg-[var(--brand-blue)]/10 text-[var(--brand-blue)] flex items-center justify-center hover:scale-105 transition-all"
                           >
-                            <FiDownload />
+                            <FiEye />
                           </button>
+                          
+                          {report.status !== "COMPLETED" && (
+                            <>
+                              <label
+                                title="Re-upload Report"
+                                className="h-10 w-10 rounded-xl bg-[var(--brand-purple)]/10 text-[var(--brand-purple)] flex items-center justify-center hover:scale-105 transition-all cursor-pointer"
+                              >
+                                <FiUploadCloud />
+                                <input 
+                                  type="file" 
+                                  accept=".pdf" 
+                                  className="hidden" 
+                                  onChange={(e) => handleReupload(report.id, e.target.files[0])} 
+                                />
+                              </label>
+                              <button
+                                onClick={() => handleDelete(report.id)}
+                                title="Delete Report"
+                                className="h-10 w-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center hover:scale-105 transition-all"
+                              >
+                                <FiTrash2 />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

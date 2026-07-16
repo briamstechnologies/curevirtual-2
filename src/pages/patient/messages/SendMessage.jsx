@@ -24,13 +24,22 @@ export default function PatientSendMessage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await api.get("/patient/doctors/all");
-        const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
-        // Expect user.id at doctor.user.id for messaging by userId
+        let list = [];
+        try {
+          const res = await api.get("/patient/doctors/all");
+          list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+        } catch (e) {}
+        
+        if (list.length === 0) {
+          const resContacts = await api.get("/messages/contacts/all");
+          const allUsers = Array.isArray(resContacts.data) ? resContacts.data : resContacts.data?.data || [];
+          list = allUsers.filter(u => u.role === "DOCTOR");
+        }
+
         setDoctors(
           list.map((d) => ({
             id: d.user?.id || d.id, // fallback
-            name: d.user ? `${d.user.firstName} ${d.user.lastName}`.trim() : (d.name || "Unnamed Doctor"),
+            name: d.user ? `Dr. ${d.user.firstName} ${d.user.lastName}`.trim() : (d.name ? (d.name.startsWith("Dr.") ? d.name : `Dr. ${d.name}`) : "Doctor Profile"),
             email: d.user?.email || d.email || "",
           }))
         );
@@ -54,7 +63,7 @@ export default function PatientSendMessage() {
     }
     setSending(true);
     try {
-      await api.post("/patient/messages/send", {
+      await api.post("/messages/send", {
         senderId: userId,     // patient userId
         receiverId,           // doctor userId
         content,

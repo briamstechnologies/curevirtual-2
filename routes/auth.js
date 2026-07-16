@@ -127,6 +127,7 @@ router.post("/register-success", async (req, res) => {
       gender,
       maritalStatus,
       specialization,
+      country,
     } = req.body || {};
 
     if (!supabaseId || !email) {
@@ -212,7 +213,7 @@ router.post("/register-success", async (req, res) => {
     // Provision default profile (Idempotent call)
     if (existingUser) {
       try {
-        await ensureDefaultProfile(existingUser, specialization);
+        await ensureDefaultProfile(existingUser, specialization, country);
         console.log("✅ Default profile ensured/created for:", existingUser.role);
       } catch (profileError) {
         console.error(

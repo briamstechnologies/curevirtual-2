@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function main() { const links = await prisma.doctorPatient.findMany({ include: { doctor: { include: { user: true } }, patient: { include: { user: true } } } }); console.log(JSON.stringify(links, null, 2)); } main().finally(() => prisma.$disconnect());

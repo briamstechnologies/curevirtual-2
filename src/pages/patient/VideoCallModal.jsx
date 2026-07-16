@@ -1,5 +1,4 @@
-
-import ZegoVideoCall from "../../components/ZegoVideoCall";
+import AgoraVideoCall from "../../components/AgoraVideoCall";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -16,8 +15,8 @@ export default function VideoCallModal({ consultation, onClose }) {
   return (
     <div className="fixed inset-0 bg-black flex justify-center items-center z-[200]">
       <div className="w-full h-full flex flex-col relative overflow-hidden">
-        {/* Zego Video Call */}
-        <ZegoVideoCall
+        {/* Agora Video Call */}
+        <AgoraVideoCall
           roomName={activeRoomName}
           userName={userName}
           userId={userId}

@@ -1,7 +1,7 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
-  output        = "../../../node_modules/.prisma/client"
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
@@ -36,7 +36,6 @@ model User {
   sentMessages        Message[]            @relation("MessagesSent")
   patient             PatientProfile?
   pharmacy            PharmacyProfile?
-  physicianAssistant  PhysicianAssistant?
   RegistrationRequest RegistrationRequest?
   subscriptions       Subscription[]
   supportAgent        SupportAgent?
@@ -45,6 +44,7 @@ model User {
   organization        Organization?        @relation(fields: [organizationId], references: [id])
   notifications       Notification[]
   transactions        Transaction[]
+  physicianAssistant  PhysicianAssistantProfile?
 
   @@index([organizationId])
   @@map("User")
@@ -90,10 +90,17 @@ model ActivityLog {
   @@schema("public")
 }
 
+
+
 model DoctorProfile {
   id                    String              @id @default(uuid())
   userId                String              @unique
+  email                 String?
+  referenceId           String?             @unique
+  country               String?
+  verificationStatus    String              @default("PENDING")
   specialization        String
+
   customProfession      String?
   qualifications        String
   licenseNumber         String              @unique
@@ -107,6 +114,7 @@ model DoctorProfile {
   emergencyContact      String?
   emergencyContactName  String?
   emergencyContactEmail String?
+  isOnline              Boolean             @default(false)
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   appointments          Appointment[]       @relation("DoctorAppointments")
@@ -119,32 +127,18 @@ model DoctorProfile {
   referralsSent         Referral[]          @relation("Referrer")
   referralsRecv         Referral[]          @relation("Referee")
   consultations         VideoConsultation[] @relation("DoctorConsultations")
+  paAssignments       DoctorPAAssignment[]
+  paConsultations     ConsultationLog[]
 
-
-  isOnline              Boolean             @default(false) 
-  lastSeenAt            DateTime?                        
-  physicianAssistants   PhysicianAssistant[]             
   @@map("DoctorProfile")
   @@schema("public")
 }
 
-model PhysicianAssistant {
-  id               String        @id @default(uuid())
-  userId           String        @unique
-  assignedDoctorId String
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  doctor           DoctorProfile @relation(fields: [assignedDoctorId], references: [id], onDelete: Cascade)
-
-  @@map("PhysicianAssistant")
-  @@schema("public")
-}
-
-
 model PharmacyProfile {
   id                 String             @id @default(uuid())
   userId             String             @unique
+  referenceId        String?            @unique
+  verificationStatus String             @default("PENDING")
   displayName        String?
   licenseNumber      String?
   phone              String?
@@ -172,6 +166,8 @@ model PharmacyProfile {
 
 model PatientProfile {
   id                    String               @id @default(uuid())
+  referenceId           String?              @unique
+  country               String?
   userId                String               @unique
   bloodGroup            BloodGroup
   height                Float?
@@ -205,6 +201,9 @@ model PatientProfile {
   selectedPharmacies    SelectedPharmacy[]
   consultations         VideoConsultation[]  @relation("PatientConsultations")
   medicineOrders        MedicineOrder[]
+  paConsultations       ConsultationLog[]
+  medicationSchedules   MedicationSchedule[]
+  healthRecords         PatientHealthRecord[]
 
   @@map("PatientProfile")
   @@schema("public")
@@ -262,6 +261,9 @@ model DoctorSchedule {
 model LaboratoryProfile {
   id                 String               @id @default(dbgenerated("(gen_random_uuid())::text"))
   userId             String               @unique
+  referenceId        String?              @unique
+  verificationStatus String?              @default("PENDING")
+  laboratoryName     String?
   displayName        String?
   licenseNumber      String?
   phone              String?
@@ -349,6 +351,57 @@ model Prescription {
   @@schema("public")
 }
 
+model MedicationSchedule {
+  id        String   @id @default(cuid())
+  patientId String
+  name      String
+  dose      String
+  time      String   // e.g., "08:00 AM"
+  days      String   // JSON string like '["Mon", "Tue"]'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patient   PatientProfile   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  logs      MedicationLog[]
+
+  @@index([patientId])
+  @@map("MedicationSchedule")
+  @@schema("public")
+}
+
+model MedicationLog {
+  id         String             @id @default(cuid())
+  scheduleId String
+  date       String             // YYYY-MM-DD format
+  taken      Boolean            @default(true)
+  takenAt    DateTime?          @default(now())
+
+  schedule   MedicationSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, date])
+  @@index([scheduleId])
+  @@map("MedicationLog")
+  @@schema("public")
+}
+
+model PatientHealthRecord {
+  id          String         @id @default(cuid())
+  patientId   String
+  type        String         // e.g. Cardiology, Hematology, Telehealth, General Checkup
+  provider    String         // e.g. Dr. Sarah Jenkins
+  date        String         // e.g. Oct 12, 2025 or YYYY-MM-DD
+  note        String
+  icon        String?        @default("clinical_notes")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  patient     PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@map("PatientHealthRecord")
+  @@schema("public")
+}
+
 model ClinicalEncounter {
   id            String          @id @default(uuid())
   appointmentId String          @unique
@@ -394,6 +447,7 @@ model LabOrder {
   priority     String             @default("ROUTINE")
   resultUrl    String?
   resultNotes  String?
+  revisionNotes String?
   doctor       DoctorProfile      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   encounter    ClinicalEncounter? @relation(fields: [encounterId], references: [id])
   laboratory   LaboratoryProfile? @relation(fields: [laboratoryId], references: [id])
@@ -507,12 +561,9 @@ model Subscription {
   @@schema("public")
 }
 
-
-
 model DoctorPatient {
   id        String         @id @default(uuid())
   doctorId  String
-  email     String? 
   patientId String
   createdAt DateTime       @default(now())
   doctor    DoctorProfile  @relation("DoctorPatient_Doctor", fields: [doctorId], references: [id], onDelete: Cascade)
@@ -1725,4 +1776,93 @@ enum one_time_token_type {
   phone_change_token
 
   @@schema("auth")
+}
+
+
+model PhysicianAssistantProfile {
+  id              String               @id @default(uuid())
+  userId              String               @unique
+  referenceId         String?              @unique
+  supervisingDoctorId String?
+  verificationStatus  String?              @default("PENDING")
+  country             String?
+  licenseNumber       String               @unique
+  licenseVerified     Boolean              @default(false)
+  specialty           String?
+  status          String               @default("ACTIVE")
+  isAllowedByDoctor         Boolean              @default(false)
+  canAccessAppointments     Boolean              @default(false)
+  canAccessMySchedule       Boolean              @default(false)
+  canAccessLabReports       Boolean              @default(false)
+  canAccessTelehealthBridge Boolean              @default(false)
+  canAccessSecureInbox      Boolean              @default(false)
+  createdAt                 DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments     DoctorPAAssignment[]
+  consultations   ConsultationLog[]
+
+  @@map("PhysicianAssistantProfile")
+  @@schema("public")
+}
+
+model DoctorPAAssignment {
+  id               String                    @id @default(uuid())
+  doctorId         String
+  paId             String
+  assignmentStatus String                    @default("ACTIVE")
+  assignedAt       DateTime                  @default(now())
+  removedAt        DateTime?
+  createdBy        String?
+  doctor           DoctorProfile             @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  pa               PhysicianAssistantProfile @relation(fields: [paId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([paId])
+  @@map("DoctorPAAssignment")
+  @@schema("public")
+}
+
+model ConsultationLog {
+  id                       String                    @id @default(uuid())
+  patientId                String
+  doctorId                 String?
+  paId                     String?
+  consultationType         String
+  severityLevel            String
+  consultationNotes        String?
+  status                   String                    @default("Pending PA Action")
+  requiresDoctorApproval   Boolean                   @default(false)
+  approvedByDoctor         Boolean                   @default(false)
+  approvedAt               DateTime?
+  escalated                Boolean                   @default(false)
+  escalationReason         String?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  patient                  PatientProfile            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor                   DoctorProfile?            @relation(fields: [doctorId], references: [id])
+  pa                       PhysicianAssistantProfile? @relation(fields: [paId], references: [id])
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([paId])
+  @@map("ConsultationLog")
+  @@schema("public")
+}
+
+model AuditTrail {
+  id         String   @id @default(uuid())
+  userId     String
+  role       String
+  action     String
+  entityType String?
+  entityId   String?
+  oldValue   String?
+  newValue   String?
+  timestamp  DateTime @default(now())
+  ipAddress  String?
+
+  @@index([userId])
+  @@map("AuditTrail")
+  @@schema("public")
 }

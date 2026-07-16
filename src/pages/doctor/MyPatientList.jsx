@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Sidebar from "../../components/Sidebar";
-import Topbar from "../../components/Topbar";
+import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
 import { toast } from "react-toastify";
 import { FaEye } from "react-icons/fa";
@@ -127,11 +126,8 @@ export default function MyPatientList() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[var(--bg-main)]/90 text-[var(--text-main)]">
-      <Sidebar role={role} />
-      <div className="flex-1 min-h-screen">
-        <Topbar userName={userName} />
-        <div className="p-6 space-y-6">
+    <DashboardLayout role={role} user={{ name: userName }}>
+      <div className="p-6 space-y-6 text-[var(--text-main)]">
           <h1 className="text-3xl font-bold text-[var(--text-main)]">My Patients</h1>
 
           {filterBar}
@@ -191,7 +187,6 @@ export default function MyPatientList() {
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }

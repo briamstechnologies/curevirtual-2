@@ -19,14 +19,16 @@ export default function PharmacyDashboard() {
     dispensed: 0,
     totalPrescriptions: 0,
   });
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.get('/pharmacy/prescriptions', {
-          params: { userId },
-        });
-        const list = res.data?.data || res.data || [];
+        const [resPrescriptions, resProfile] = await Promise.all([
+          api.get('/pharmacy/prescriptions', { params: { userId } }),
+          api.get('/pharmacy/profile', { params: { userId } }).catch(() => null),
+        ]);
+        const list = resPrescriptions.data?.data || resPrescriptions.data || [];
 
         const ack = list.filter(
           (x) => x.dispatchStatus === 'ACKNOWLEDGED'
@@ -40,35 +42,84 @@ export default function PharmacyDashboard() {
         ).length;
 
         setCounts({ incoming, ack, ready, dispensed, totalPrescriptions: list.length });
+        if (resProfile?.data?.data) {
+          setProfile(resProfile.data.data);
+        }
       } catch (e) {
-        console.error('Failed to load pharmacy prescriptions:', e);
+        console.error('Failed to load pharmacy dashboard data:', e);
       }
     })();
   }, [userId]);
+
+  const pharmacyId = profile?.referenceId || profile?.reference_id || `CV-PH-GH-2026-0001`;
+  const statusLabel = profile?.verificationStatus === "VERIFIED" ? "Verified" : "Pending Verification";
+
+  const realPharmacyName =
+    profile?.displayName ||
+    (profile?.user
+      ? `${profile.user.firstName || ''} ${profile.user.lastName || ''}`.trim()
+      : userName);
+
+  const realLocation =
+    [profile?.address, profile?.city, profile?.country].filter(Boolean).join(', ') ||
+    'Location Not Provided';
+
+  const realNodeStatus =
+    profile?.verificationStatus === 'VERIFIED'
+      ? 'Verified Node'
+      : 'Pending Verification';
 
   return (
     <DashboardLayout role={role}>
       <div className="space-y-12">
         {/* Marketplace Fulfillment Header */}
-        <section className="flex flex-col md:flex-row justify-between items-end gap-6">
+        <section className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6">
           <div className="flex flex-col gap-2">
             <h1 className="text-4xl md:text-5xl font-extrabold text-on-surface tracking-tighter uppercase italic">
               Fulfillment <span className="text-primary not-italic">Hub</span>
             </h1>
-            <p className="text-on-surface-variant text-lg font-medium opacity-80 flex items-center gap-2">
+            <p className="text-on-surface-variant text-base md:text-lg font-medium opacity-90 flex flex-wrap items-center gap-2">
               <span className="material-symbols-outlined text-secondary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>warehouse</span>
-              {userName} Dispensary • Active Node
+              <span className="font-bold text-on-surface">{realPharmacyName}</span>
+              <span>•</span>
+              <span>{realLocation}</span>
+              <span>•</span>
+              <span className="text-primary font-semibold">{realNodeStatus}</span>
             </p>
+            <div className="flex flex-wrap items-center gap-3 mt-1">
+              <span className="px-3.5 py-1.5 rounded-full bg-primary/15 border border-primary/30 text-primary text-xs font-black tracking-wide flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">badge</span>
+                Pharmacy ID: {pharmacyId}
+              </span>
+              <span className="px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500 text-xs font-black tracking-wide flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                Status: {statusLabel}
+              </span>
+            </div>
           </div>
           
-          <div className="flex gap-4">
-             <div className="text-right">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+             <div className="text-right hidden sm:block mr-2">
                 <p className="text-[10px] font-bold text-outline uppercase tracking-widest">Global Throughput</p>
                 <div className="flex items-center gap-1 justify-end">
                   <span className="text-2xl font-black text-on-surface">100.0%</span>
                   <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
                 </div>
              </div>
+             <button
+               onClick={() => navigate('/pharmacy/prescriptions')}
+               className="px-5 py-3.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-on-surface font-bold text-xs uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2"
+             >
+               <span className="material-symbols-outlined text-sm">list_alt</span>
+               All Prescriptions
+             </button>
+             <button
+               onClick={() => navigate('/pharmacy/prescriptions?action=create')}
+               className="px-5 py-3.5 rounded-xl bg-gradient-to-r from-[#028a07] to-[#04a80a] hover:from-[#03a008] hover:to-[#05c40c] text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-green-600/20 hover:scale-[1.02] flex items-center justify-center gap-2"
+             >
+               <span className="material-symbols-outlined text-sm">add_circle</span>
+               Create Prescription
+             </button>
           </div>
         </section>
 

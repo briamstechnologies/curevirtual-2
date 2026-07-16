@@ -66,6 +66,17 @@ export default function UsersList() {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("⚠️ IRREVERSIBLE ACTION: Permanently delete this subject's complete data from the registry?")) return;
+    try {
+      await api.delete(`/admin/users/${id}`);
+      toast.info("Subject Data Purged.");
+      await loadUsers();
+    } catch (err) {
+      toast.error("Deletion Failed.");
+    }
+  };
+
   return (
     <DashboardLayout role="ADMIN" user={user}>
       <div className="space-y-10 animate-in fade-in duration-700">
@@ -180,8 +191,16 @@ export default function UsersList() {
                           <button
                             onClick={() => handleSuspend(u.id)}
                             className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-[var(--text-main)] transition-all shadow-sm"
+                            title="Suspend"
                           >
                             <FaBan size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(u.id)}
+                            className="p-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                            title="Delete Data"
+                          >
+                            <FaTrash size={14} />
                           </button>
                           <button
                             onClick={() =>

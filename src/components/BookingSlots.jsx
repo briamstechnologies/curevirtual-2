@@ -8,10 +8,12 @@ export default function BookingSlots({ doctorId, date, onSlotSelect }) {
   const [loading, setLoading] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState(null);
 
+  const dateStr = typeof date === "string" ? date : date?.toISOString().split("T")[0];
+
   const fetchSlots = useCallback(async () => {
+    if (!doctorId || !dateStr) return;
     setLoading(true);
     try {
-      const dateStr = typeof date === "string" ? date : date.toISOString().split("T")[0];
       console.log("[BookingSlots] Fetching slots for doctorId:", doctorId, "date:", dateStr);
       const res = await api.get(`/schedule/slots?doctorId=${doctorId}&date=${dateStr}`);
       console.log("[BookingSlots] API response:", res.data);
@@ -22,13 +24,11 @@ export default function BookingSlots({ doctorId, date, onSlotSelect }) {
     } finally {
       setLoading(false);
     }
-  }, [doctorId, date]);
+  }, [doctorId, dateStr]);
 
   useEffect(() => {
-    if (doctorId && date) {
-      fetchSlots();
-    }
-  }, [doctorId, date, fetchSlots]);
+    fetchSlots();
+  }, [fetchSlots]);
 
   const handleSelect = (e, slot) => {
     e.preventDefault();

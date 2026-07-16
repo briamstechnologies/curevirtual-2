@@ -528,8 +528,8 @@ const submitRateLimit = rateLimit({
 // ─── Admin-only guard ─────────────────────────────────────────────────────────
 const requireAdmin = requireRole(['ADMIN', 'SUPERADMIN']);
 
-// ─── ✅ ALLOWED ROLES (LABORATORY added here) ─────────────────────────────────
-const ALLOWED_ROLES = ['DOCTOR', 'PHARMACY', 'LABORATORY'];
+// ─── ✅ ALLOWED ROLES (LABORATORY and PHYSICIAN_ASSISTANT added here) ─────────────────────────────────
+const ALLOWED_ROLES = ['DOCTOR', 'PHARMACY', 'LABORATORY', 'PHYSICIAN_ASSISTANT'];
 
 // ─── Helper: build stable storage path ───────────────────────────────────────
 function buildStoragePath(userId, role, originalName) {
@@ -930,6 +930,34 @@ router.patch('/:id/review', verifyToken, requireAdmin, async (req, res) => {
       where: { id: request.userId },
       data: { approvalStatus: action },
     });
+
+    if (action === 'APPROVED') {
+      if (request.role === 'DOCTOR') {
+        await prisma.doctorProfile.updateMany({
+          where: { userId: request.userId },
+          data: { verificationStatus: 'VERIFIED' },
+        });
+      } else if (request.role === 'PHARMACY') {
+        await prisma.pharmacyProfile.updateMany({
+          where: { userId: request.userId },
+          data: { verificationStatus: 'VERIFIED' },
+        });
+      } else if (request.role === 'LABORATORY') {
+        await prisma.laboratoryProfile.updateMany({
+          where: { userId: request.userId },
+          data: { verificationStatus: 'VERIFIED' },
+        });
+      } else if (request.role === 'PHYSICIAN_ASSISTANT') {
+        await prisma.physicianAssistantProfile.updateMany({
+          where: { userId: request.userId },
+          data: {
+            licenseVerified: true,
+            status: 'ACTIVE',
+            verificationStatus: 'VERIFIED',
+          },
+        });
+      }
+    }
 
     const userName = `${request.User.firstName} ${request.User.lastName}`.trim();
     const emailParams = {

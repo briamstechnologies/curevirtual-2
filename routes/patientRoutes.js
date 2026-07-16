@@ -69,9 +69,9 @@ router.get("/profile", async (req, res) => {
       },
     });
 
-    // Auto-create if missing (Robustness fix)
-    if (!patient && user.role === "PATIENT") {
-      patient = await ensureDefaultProfile(user);
+    // Auto-create or auto-patch if missing (Robustness fix)
+    if (user.role === "PATIENT" && (!patient || !patient.referenceId)) {
+      await ensureDefaultProfile(user);
       // Re-fetch with includes
       patient = await prisma.patientProfile.findUnique({
         where: { userId: String(userId) },
@@ -265,10 +265,21 @@ router.get("/stats", async (req, res) => {
       return res.status(400).json({ success: false, error: "Missing patient identity" });
     }
 
-    const patientProfile = await prisma.patientProfile.findUnique({
+    let patientProfile = await prisma.patientProfile.findUnique({
       where: { userId: patientUserId },
-      select: { id: true },
+      select: { id: true, referenceId: true },
     });
+
+    if (!patientProfile || !patientProfile.referenceId) {
+      const user = await prisma.user.findUnique({ where: { id: patientUserId } });
+      if (user) {
+        await ensureDefaultProfile(user);
+        patientProfile = await prisma.patientProfile.findUnique({
+          where: { userId: patientUserId },
+          select: { id: true, referenceId: true },
+        });
+      }
+    }
 
     if (!patientProfile) {
       return res.json({
@@ -280,6 +291,7 @@ router.get("/stats", async (req, res) => {
           totalPrescriptions: 0,
           totalConsultations: 0,
           totalDoctors: 0,
+          referenceId: null,
         },
       });
     }
@@ -336,6 +348,7 @@ router.get("/stats", async (req, res) => {
         totalPrescriptions,
         totalConsultations,
         totalDoctors: doctorSet.size,
+        referenceId: patientProfile.referenceId,
       },
     });
   } catch (err) {

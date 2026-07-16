@@ -59,8 +59,9 @@ export default function IncomingCallModal() {
     });
 
     const roomId = callData.roomName || `consult_${callData.consultationId}`;
+    const type = callData.callType || "video";
     setCallData(null);
-    navigate(`/video/room/${roomId}`);
+    navigate(`/video/room/${roomId}`, { state: { consultationId: callData.consultationId, callType: type } });
   };
 
   const handleReject = () => {
@@ -76,6 +77,8 @@ export default function IncomingCallModal() {
 
   if (!callData) return null;
 
+  const isAudio = callData.callType === "audio";
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[9999] animate-in fade-in duration-500">
       <div className="bg-[#1a1c1e] w-full max-w-sm rounded-[3rem] p-8 border border-white/10 shadow-2xl flex flex-col items-center text-center">
@@ -84,13 +87,13 @@ export default function IncomingCallModal() {
           <div className="w-32 h-32 rounded-full bg-green-500/10 flex items-center justify-center animate-pulse">
             <div className="w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center animate-ping absolute"></div>
             <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_30px_rgba(34,197,94,0.5)]">
-              <FaVideo className="text-white text-3xl" />
+              {isAudio ? <FaPhone className="text-white text-3xl" /> : <FaVideo className="text-white text-3xl" />}
             </div>
           </div>
         </div>
 
         <h3 className="text-[var(--brand-green)] text-[10px] font-black uppercase tracking-[0.4em] mb-2">
-          Incoming Consultation
+          Incoming {isAudio ? "Audio" : "Video"} Call
         </h3>
         <h2 className="text-white text-3xl font-black uppercase tracking-tighter mb-1">
           {callData.doctorName}

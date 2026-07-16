@@ -1,5 +1,4 @@
-// FILE: src/pages/ForgotPassword.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiMail, FiArrowLeft, FiSmartphone, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa";
@@ -17,21 +16,32 @@ export default function ForgotPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Detect recovery redirect from email link
+  useEffect(() => {
+    const handleRecoveryRedirect = async () => {
+      const hash = window.location.hash;
+      if (hash && (hash.includes("type=recovery") || hash.includes("access_token"))) {
+        setStep(3);
+      }
+    };
+    handleRecoveryRedirect();
+  }, []);
+
   // Step 1: Request Password Reset
   const handleRequestReset = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth/update-password`,
+        redirectTo: `${window.location.origin}/forgot-password`,
       });
       if (error) throw error;
 
-      toast.success("OTP sent to your email.");
+      toast.success("Password reset link sent to your email.");
       setStep(2);
     } catch (err) {
       console.error(err);
-      toast.error(err.message || "Failed to send OTP.");
+      toast.error(err.message || "Failed to send reset link.");
     } finally {
       setIsLoading(false);
     }

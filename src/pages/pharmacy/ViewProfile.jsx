@@ -104,10 +104,17 @@ export default function PharmacyViewProfile() {
                   </div>
                   <div>
                     <div className="text-xl font-semibold">{displayName}</div>
-                    <div className="text-sm text-[var(--text-soft)]">
-                      License: {profile.licenseNumber || "—"}
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5 mb-1">
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold">
+                        Pharmacy ID: {profile.referenceId || profile.reference_id || "CV-PH-GH-2026-0001"}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold">
+                        Status: {profile.verificationStatus === "VERIFIED" ? "Verified" : "Pending Verification"}
+                      </span>
                     </div>
-                    <div className="text-sm text-[var(--text-soft)]">Email: {email}</div>
+                    <div className="text-sm text-[var(--text-soft)]">
+                      License: {profile.licenseNumber || "—"} • Email: {email}
+                    </div>
                   </div>
                 </div>
 
@@ -132,6 +139,18 @@ export default function PharmacyViewProfile() {
                 >
                   <h2 className="text-lg font-semibold mb-3">Organization & Contact</h2>
                   <dl className="space-y-2 text-sm">
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-[var(--text-soft)]">Pharmacy ID</dt>
+                      <dd className="text-right font-bold text-blue-400">
+                        {profile.referenceId || profile.reference_id || "CV-PH-GH-2026-0001"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-[var(--text-soft)]">Verification Status</dt>
+                      <dd className="text-right font-bold text-amber-400">
+                        {profile.verificationStatus === "VERIFIED" ? "Verified" : "Pending Verification"}
+                      </dd>
+                    </div>
                     <div className="flex justify-between gap-4">
                       <dt className="text-[var(--text-soft)]">Display Name</dt>
                       <dd className="text-right max-w-[60%]">{displayName || "—"}</dd>

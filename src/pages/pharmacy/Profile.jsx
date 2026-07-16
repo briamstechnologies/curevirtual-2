@@ -12,6 +12,8 @@ export default function PharmacyProfile() {
 
   const [form, setForm] = useState({
     userId,
+    referenceId: "",
+    verificationStatus: "PENDING",
     firstName: "",
     lastName: "",
     displayName: "",
@@ -35,6 +37,8 @@ export default function PharmacyProfile() {
   const normalizeLoaded = useCallback(
     (p = {}) => ({
       userId,
+      referenceId: p.referenceId || p.reference_id || "",
+      verificationStatus: p.verificationStatus || p.verification_status || "PENDING",
       firstName: p.user?.firstName ?? "",
       lastName: p.user?.lastName ?? "",
       displayName: p.displayName ?? "",
@@ -155,6 +159,26 @@ export default function PharmacyProfile() {
                     value={form.lastName}
                     onChange={(e) => setForm({ ...form, lastName: e.target.value })}
                   />
+                </div>
+              </div>
+
+              {/* System Identifiers (Read-Only) */}
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 bg-[var(--bg-glass)] border border-[var(--border)] rounded-2xl p-4 mb-2">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
+                    Pharmacy Reference ID
+                  </label>
+                  <div className="text-sm font-black text-blue-400 mt-1">
+                    {form.referenceId || "CV-PH-GH-2026-0001"}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
+                    Verification Status
+                  </label>
+                  <div className="text-sm font-black text-amber-400 mt-1">
+                    {form.verificationStatus === "VERIFIED" ? "Verified" : "Pending Verification"}
+                  </div>
                 </div>
               </div>
 

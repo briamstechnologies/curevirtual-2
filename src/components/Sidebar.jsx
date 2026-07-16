@@ -1,6 +1,7 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import api from "../Lib/api";
+import { useSocket } from "../context/useSocket";
 
 export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileMenuOpen }) {
   const navigate = useNavigate();
@@ -12,6 +13,43 @@ export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileM
 
   const role = propRole || localStorage.getItem("role") || "PATIENT";
   const userId = localStorage.getItem("userId");
+  const { socket } = useSocket();
+  const [paPermissions, setPaPermissions] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    if (role === "PHYSICIAN_ASSISTANT") {
+      const fetchStatus = async () => {
+        try {
+          const res = await api.get("/doctor/pa-status");
+          if (mounted && res.data.permissions) {
+            setPaPermissions(res.data.permissions);
+          }
+        } catch (e) {
+          console.error("Failed to fetch PA status:", e);
+        }
+      };
+      fetchStatus();
+    }
+    return () => { mounted = false; };
+  }, [role]);
+
+  useEffect(() => {
+    if (role === "PHYSICIAN_ASSISTANT" && socket) {
+      const handleAccessUpdate = () => {
+        api.get("/doctor/pa-status").then(res => {
+          if (res.data.permissions) {
+            setPaPermissions(res.data.permissions);
+          }
+        }).catch(console.error);
+      };
+      
+      socket.on("pa_access_update", handleAccessUpdate);
+      return () => {
+        socket.off("pa_access_update", handleAccessUpdate);
+      };
+    }
+  }, [role, socket]);
 
   useEffect(() => {
     let mounted = true;
@@ -155,11 +193,50 @@ export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileM
           {(role === "DOCTOR" || role === "PHYSICIAN_ASSISTANT") && (
             <>
               <NavItem to="/doctor/dashboard" icon="dashboard" label="Provider Portal" />
-              <NavItem to="/doctor/appointments" icon="calendar_today" label="Appointments" />
-              <NavItem to="/doctor/schedule" icon="event_note" label="My Schedule" />
-              <NavItem to="/doctor/patients" icon="group" label="Patient Roster" />
-              <NavItem to="/doctor/video-consultation" icon="videocam" label="Telehealth Bridge" />
-              <NavItem to="/doctor/messages/inbox" icon="mail" label="Messenger" badge={unreadCount} />
+              
+              {(role === "DOCTOR" || paPermissions?.canAccessAppointments) && (
+                <NavItem to="/doctor/appointments" icon="calendar_today" label="Appointments" />
+              )}
+              
+              {(role === "DOCTOR" || role === "PHYSICIAN_ASSISTANT") && (
+                <NavItem to="/doctor/my-patients" icon="group" label="My Patients" />
+              )}
+              
+              {(role === "DOCTOR" || paPermissions?.canAccessMySchedule) && (
+                <NavItem to="/doctor/schedule" icon="event_note" label="My Schedule" />
+              )}
+              
+              {role === "DOCTOR" && (
+                <NavItem to="/doctor/pa-management" icon="supervisor_account" label="PA Management" />
+              )}
+              
+              {(role === "DOCTOR" || paPermissions?.canAccessLabReports) && (
+                <NavItem to="/doctor/lab-reports" icon="biotech" label="Lab Reports" />
+              )}
+              
+              {(role === "DOCTOR" || role === "PHYSICIAN_ASSISTANT") && (
+                <NavItem to="/doctor/prescriptions" icon="receipt_long" label="Prescriptions" />
+              )}
+              
+              {(role === "DOCTOR" || paPermissions?.canAccessTelehealthBridge) && (
+                <NavItem to="/doctor/video-consultation" icon="videocam" label="Telehealth Bridge" />
+              )}
+              
+              {(role === "DOCTOR" || paPermissions?.canAccessSecureInbox) && (
+                <NavItem
+                  to={role === "PHYSICIAN_ASSISTANT" ? "/pa/messages/inbox" : "/doctor/messages/inbox"}
+                  icon="mail"
+                  label="Secure Inbox"
+                  badge={unreadCount}
+                />
+              )}
+              
+              {role === "DOCTOR" && (
+                <NavItem to="/doctor/view-profile" icon="badge" label="My Identity" />
+              )}
+              {role === "PHYSICIAN_ASSISTANT" && (
+                <NavItem to="/pa/view-profile" icon="badge" label="My Identity" />
+              )}
             </>
           )}
 
@@ -167,12 +244,15 @@ export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileM
             <>
               <NavItem to="/patient/dashboard" icon="dashboard" label="My Dashboard" />
               <NavItem to="/patient/my-appointments" icon="calendar_today" label="Clinical Visits" />
+              <NavItem to="/patient/prescriptions" icon="receipt_long" label="My Prescriptions" />
               <NavItem to="/patient/meds" icon="medication" label="Meds Tracker" />
               <NavItem to="/patient/history" icon="history_edu" label="Health Narrative" />
               <NavItem to="/patient/messages" icon="mail" label="Secure Inbox" badge={unreadCount} />
               <NavItem to="/patient/video-consultation" icon="videocam" label="Join Room" />
+              <NavItem to="/patient/profile/view-profile" icon="badge" label="My Identity" />
               <DropdownItem icon="local_hospital" label="Network" id="patient-network">
                 <SubItem to="/patient/doctors/list" label="Find Doctors" />
+                <SubItem to="/patient/doctors/my" label="My Doctors" />
                 <SubItem to="/patient/pharmacy/list" label="Pharmacies" />
                 <SubItem to="/patient/my-pharmacy" label="My Pharmacies" />
                 <SubItem to="/patient/laboratory/list" label="Laboratories" />
@@ -185,7 +265,7 @@ export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileM
             <>
               <NavItem to="/pharmacy/dashboard" icon="dashboard" label="Fulfillment Hub" />
               <NavItem to="/pharmacy/prescriptions" icon="inventory" label="Order Flow" />
-              <NavItem to="/pharmacy/messages/inbox" icon="mail" label="Inquiries" badge={unreadCount} />
+              <NavItem to="/pharmacy/messages/inbox" icon="mail" label="Secure Inbox" badge={unreadCount} />
               <NavItem to="/pharmacy/view-profile" icon="store" label="Store Identity" />
             </>
           )}
@@ -196,7 +276,7 @@ export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileM
               <NavItem to="/laboratory/tests" icon="biotech" label="Test Menu" />
               <NavItem to="/laboratory/reports" icon="folder_shared" label="Reports Archive" />
               <NavItem to="/laboratory/patients" icon="group" label="Patient Queue" />
-              <NavItem to="/laboratory/messages/inbox" icon="mail" label="Inquiries" badge={unreadCount} />
+              <NavItem to="/laboratory/messages/inbox" icon="mail" label="Secure Inbox" badge={unreadCount} />
               <NavItem to="/laboratory/view-profile" icon="badge" label="Lab Identity" />
             </>
           )}

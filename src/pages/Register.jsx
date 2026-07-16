@@ -19,8 +19,9 @@ import "react-toastify/dist/ReactToastify.css";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../Lib/supabase";
 import api from "../Lib/api";
+import TermsAndConditionsModal from "../components/TermsAndConditionsModal";
 
-const ROLES_REQUIRING_APPROVAL = ["DOCTOR", "PHARMACY", "LABORATORY"];
+const ROLES_REQUIRING_APPROVAL = ["DOCTOR", "PHARMACY", "LABORATORY", "PHYSICIAN_ASSISTANT"];
 
 export default function Register() {
   const navigate = useNavigate();
@@ -37,6 +38,8 @@ export default function Register() {
     gender: "PREFER_NOT_TO_SAY",
     dateOfBirth: "",
     maritalStatus: "SINGLE",
+    country: "",
+    supervisingDoctorId: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -44,6 +47,9 @@ export default function Register() {
   const [otp, setOtp] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
   const { theme } = useTheme();
+
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const isResubmitting = localStorage.getItem("approvalStatus") === "REJECTED";
   const existingUserId = localStorage.getItem("userId");
@@ -112,6 +118,11 @@ export default function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
     if (submitting) return;
+
+    if (!acceptedTerms) {
+      toast.error("You must agree to the Terms and Conditions to proceed.");
+      return;
+    }
 
     if (form.password !== form.confirmPassword) {
       toast.error("Passwords do not match.");
@@ -216,6 +227,8 @@ export default function Register() {
           dateOfBirth: form.dateOfBirth,
           gender: form.gender,
           maritalStatus: form.maritalStatus,
+          country: form.country,
+          supervisingDoctorId: form.supervisingDoctorId || null,
           specialization:
             form.specialization === "Other" ? form.customProfession : form.specialization,
         })
@@ -227,6 +240,12 @@ export default function Register() {
           "Content-Type": "multipart/form-data",
         },
       });
+
+      const fullName = toTitleCase(`${form.firstName.trim()} ${form.lastName.trim()}`);
+      localStorage.setItem("userName", fullName);
+      localStorage.setItem("name", fullName);
+      localStorage.setItem("role", mappedRole);
+      localStorage.setItem("email", form.email.trim().toLowerCase());
 
       toast.success("Application submitted! Pending admin review.");
       setTimeout(() => navigate("/pending-approval"), 1500);
@@ -269,6 +288,8 @@ export default function Register() {
         dateOfBirth: form.dateOfBirth,
         gender: form.gender,
         maritalStatus: form.maritalStatus,
+        country: form.country,
+        supervisingDoctorId: form.supervisingDoctorId || null,
         specialization:
           form.specialization === "Other" ? form.customProfession : form.specialization,
       });
@@ -553,6 +574,30 @@ export default function Register() {
                 </div>
               </div>
 
+              {/* Country */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">
+                  Country
+                </label>
+                <div className="relative group">
+                  <select
+                    name="country"
+                    value={form.country}
+                    onChange={handleChange}
+                    required
+                    disabled={isResubmitting}
+                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-4 px-5 text-xs font-black focus:border-[var(--brand-green)] outline-none transition-all shadow-inner appearance-none"
+                  >
+                    <option value="" disabled>Select Country</option>
+                    <option value="GH">Ghana (GH)</option>
+                    <option value="NG">Nigeria (NG)</option>
+                    <option value="KE">Kenya (KE)</option>
+                    <option value="US">United States (US)</option>
+                    <option value="UK">United Kingdom (UK)</option>
+                  </select>
+                </div>
+              </div>
+
               {/* Email */}
               <div className="space-y-2">
                 <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">
@@ -579,8 +624,8 @@ export default function Register() {
               {!isResubmitting && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {[
-                    ["password", "Security Code"],
-                    ["confirmPassword", "Confirm Code"],
+                    ["password", "Password"],
+                    ["confirmPassword", "Confirm Password"],
                   ].map(([field, ph]) => (
                     <div key={field} className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)] ml-1">
@@ -620,7 +665,7 @@ export default function Register() {
                 <label className="text-[9px] font-black uppercase tracking-[0.4em] text-[var(--text-muted)] ml-1">
                   Define Your Role
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                   {[
                     { id: "PATIENT", label: "Patient", color: "var(--brand-orange)" },
                     { id: "DOCTOR", label: "Doctor", color: "var(--brand-green)" },
@@ -629,6 +674,11 @@ export default function Register() {
                       id: "LABORATORY",
                       label: "Laboratory",
                       color: "var(--brand-purple, #8B5CF6)",
+                    },
+                    {
+                      id: "PHYSICIAN_ASSISTANT",
+                      label: "Physician Assistant",
+                      color: "var(--brand-blue, #3B82F6)",
                     },
                   ].map((role) => (
                     <button
@@ -690,7 +740,6 @@ export default function Register() {
                         "ENT",
                         "Urology",
                         "Oncology",
-                        "Physician Assistant (PA)",
                         "Other",
                       ].map((s) => (
                         <option key={s} value={s}>
@@ -699,17 +748,6 @@ export default function Register() {
                       ))}
                     </select>
                   </div>
-                  {form.specialization === "Physician Assistant (PA)" && (
-                    <div className="p-4 rounded-2xl border border-[var(--brand-blue)]/30 bg-[var(--brand-blue)]/5 flex gap-4 animate-in fade-in slide-in-from-top-2">
-                      <div className="mt-1">
-                        <FiShield className="text-[var(--brand-blue)] text-lg" />
-                      </div>
-                      <p className="text-[9px] font-black text-[var(--brand-blue)] uppercase tracking-widest leading-relaxed">
-                        Physician Assistant (PA): Supports the doctor by handling routine
-                        consultations, follow-ups, monitoring, and clinical notes under supervision.
-                      </p>
-                    </div>
-                  )}
                   {form.specialization === "Other" && (
                     <div className="relative group mt-3 animate-in fade-in slide-in-from-top-1">
                       <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--brand-green)] text-xl">
@@ -783,6 +821,8 @@ export default function Register() {
                 </div>
               )}
 
+
+
               {/* License upload */}
               {needsApproval && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2 p-6 rounded-3xl border-2 border-dashed border-[var(--brand-blue)]/20 bg-[var(--brand-blue)]/5">
@@ -841,6 +881,27 @@ export default function Register() {
                 </div>
               )}
 
+              {/* TERMS & CONDITIONS AGREEMENT */}
+              <div className="flex items-start gap-3 p-2">
+                <input
+                  type="checkbox"
+                  id="accept-terms-register"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="w-5 h-5 rounded border-[var(--border)] text-[var(--brand-green)] focus:ring-[var(--brand-green)] mt-0.5 cursor-pointer accent-[var(--brand-green)]"
+                />
+                <label htmlFor="accept-terms-register" className="text-xs text-[var(--text-soft)] leading-snug cursor-pointer select-none">
+                  I acknowledge and agree to the{" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowTermsModal(true)}
+                    className="text-[var(--brand-blue)] font-black hover:underline cursor-pointer inline"
+                  >
+                    Terms & Conditions
+                  </button>
+                </label>
+              </div>
+
               <button
                 type="submit"
                 disabled={submitting}
@@ -878,6 +939,10 @@ export default function Register() {
         position="top-right"
         autoClose={2500}
         theme={theme === "dark" ? "dark" : "light"}
+      />
+      <TermsAndConditionsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
       />
     </div>
   );

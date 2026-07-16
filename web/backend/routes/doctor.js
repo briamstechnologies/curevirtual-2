@@ -1129,59 +1129,88 @@ const prisma = require("../prisma/prismaClient");
 const emailService = require("../services/emailService");
 const { parseAsLocal } = require("../utils/timeUtils");
 const { ensureDefaultProfile } = require("../lib/provisionProfile.js");
+const { logAuditTrail } = require("../utils/auditLogger");
 const router = express.Router();
 
 // ✅ RBAC — PHYSICIAN_ASSISTANT bhi allow hai ab
 router.use(verifyToken);
 router.use(requireRole(["DOCTOR", "PHYSICIAN_ASSISTANT", "SUPERADMIN", "ADMIN"]));
 
+const paAccessControl = require("../middleware/paAccessControl.js");
+
+// Apply PA feature toggles specifically to these endpoints
+router.use("/appointments", paAccessControl("canAccessAppointments"));
+router.use("/lab-orders", paAccessControl("canAccessLabReports"));
+router.use("/lab-reports", paAccessControl("canAccessLabReports"));
+router.use("/consultations", paAccessControl("canAccessTelehealthBridge"));
+router.use("/waiting-patients", paAccessControl("canAccessTelehealthBridge"));
+router.use("/messages", paAccessControl("canAccessSecureInbox"));
+
+
 // ================================================================
 // ✅ HELPER: PA ke liye assigned doctor ka DoctorProfile resolve karo
 // Agar user DOCTOR hai → uska apna profile
 // Agar user PA hai → assigned doctor ka profile (agar doctor offline ho)
 // ================================================================
-async function resolveDoctorProfileId(userId, role) {
+async function resolveDoctorProfileId(userId, role = "DOCTOR", requestedDoctorId = null) {
+  if (!userId) return { profileId: null, allProfileIds: [], isOnline: false };
+
+  // First check if userId is already a doctorProfile.id
+  let directProfile = await prisma.doctorProfile.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+  if (directProfile) {
+    return { profileId: directProfile.id, allProfileIds: [directProfile.id], isOnline: false };
+  }
+
   if (role === "DOCTOR") {
-    const profile = await prisma.doctorProfile.findUnique({
+    let profile = await prisma.doctorProfile.findUnique({
       where: { userId },
-      select: { id: true, isOnline: true },
+      select: { id: true },
     });
-    return { profileId: profile?.id || null, isOnline: profile?.isOnline || false };
+    if (!profile) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user && (user.role === "DOCTOR" || user.role === "PHYSICIAN_ASSISTANT")) {
+        const { ensureDefaultProfile } = require("../lib/provisionProfile.js");
+        const newProfile = await ensureDefaultProfile(user);
+        if (newProfile) {
+          return { profileId: newProfile.id, allProfileIds: [newProfile.id], isOnline: false };
+        }
+      }
+    }
+    return { profileId: profile?.id || null, allProfileIds: profile?.id ? [profile.id] : [], isOnline: false };
   }
 
   if (role === "PHYSICIAN_ASSISTANT") {
-    // PA ka assigned doctor dhundo
-    const pa = await prisma.physicianAssistant.findUnique({
+    const pa = await prisma.physicianAssistantProfile.findUnique({
       where: { userId },
       include: {
-        doctor: {
-          select: { id: true, isOnline: true },
-        },
-      },
+        assignments: {
+          where: { assignmentStatus: "ACTIVE" },
+          include: { doctor: { select: { id: true } } }
+        }
+      }
     });
 
-    if (!pa) return { profileId: null, isOnline: false, error: "No assigned doctor found for this PA" };
+    if (!pa || !pa.assignments.length) return { profileId: null, allProfileIds: [], isOnline: false, error: "No assigned doctor found for this PA" };
 
-    // REQUIREMENT 3: Jab doctor online hai, PA ko doctor ka profileId mat do
-    if (pa.doctor.isOnline) {
-      return {
-        profileId: null,
-        isOnline: true,
-        isActingAsPA: true,
-        assignedDoctorId: pa.assignedDoctorId,
-        error: "Supervising doctor is currently online",
-      };
+    let activeAssignment = pa.assignments[0];
+    if (requestedDoctorId) {
+      const match = pa.assignments.find(a => a.doctor.id === requestedDoctorId || a.doctorId === requestedDoctorId);
+      if (match) activeAssignment = match;
     }
 
     return {
-      profileId: pa.doctor.id,
-      isOnline: pa.doctor.isOnline,
+      profileId: activeAssignment.doctor.id,
+      allProfileIds: pa.assignments.map(a => a.doctor.id),
+      isOnline: false,
       isActingAsPA: true,
-      assignedDoctorId: pa.assignedDoctorId,
+      assignedDoctorId: activeAssignment.doctor.id,
     };
   }
 
-  return { profileId: null, isOnline: false };
+  return { profileId: null, allProfileIds: [], isOnline: false };
 }
 
 // ================================================================
@@ -1197,16 +1226,21 @@ router.get("/pa-status", async (req, res) => {
       return res.json({ isPA: false });
     }
 
-    const pa = await prisma.physicianAssistant.findUnique({
+    const pa = await prisma.physicianAssistantProfile.findUnique({
       where: { userId },
       include: {
-        doctor: {
-          select: {
-            id: true,
-            isOnline: true,
-            lastSeenAt: true,
-            user: {
-              select: { firstName: true, lastName: true, email: true },
+        assignments: {
+          where: { assignmentStatus: "ACTIVE" },
+          include: {
+            doctor: {
+              select: {
+                id: true,
+                userId: true,
+                isOnline: true,
+                user: {
+                  select: { firstName: true, lastName: true, email: true },
+                },
+              },
             },
           },
         },
@@ -1217,17 +1251,32 @@ router.get("/pa-status", async (req, res) => {
       return res.json({
         isPA: true,
         hasAssignedDoctor: false,
-        doctorOnline: false,
       });
     }
 
+    if (!pa.assignments || pa.assignments.length === 0) {
+      return res.json({
+        isPA: true,
+        hasAssignedDoctor: false,
+        licenseVerified: pa.licenseVerified,
+        status: pa.status,
+      });
+    }
+
+    const activeAssignment = pa.assignments[0];
+    const doctorProfile = activeAssignment?.doctor;
+
+    const { calculatePAAccess } = require("../lib/paAccess");
+    const permissions = calculatePAAccess(doctorProfile, pa);
+
     return res.json({
       isPA: true,
-      hasAssignedDoctor: true,
-      doctorOnline: pa.doctor.isOnline,
-      lastSeenAt: pa.doctor.lastSeenAt,
-      doctorName: `${pa.doctor.user.firstName} ${pa.doctor.user.lastName}`,
-      doctorProfileId: pa.doctor.id,
+      hasAssignedDoctor: !!doctorProfile,
+      licenseVerified: pa.licenseVerified,
+      status: pa.status,
+      permissions,
+      doctorName: doctorProfile ? `${doctorProfile.user.firstName} ${doctorProfile.user.lastName}` : null,
+      doctorProfileId: doctorProfile?.id || null,
     });
   } catch (err) {
     console.error("PA status error:", err);
@@ -1247,7 +1296,6 @@ router.post("/assign-pa", async (req, res) => {
       return res.status(400).json({ error: "paUserId aur doctorUserId dono required hain" });
     }
 
-    // PA user exist karta hai?
     const paUser = await prisma.user.findUnique({
       where: { id: paUserId },
       select: { role: true },
@@ -1256,7 +1304,6 @@ router.post("/assign-pa", async (req, res) => {
       return res.status(400).json({ error: "User PHYSICIAN_ASSISTANT role ka nahi hai" });
     }
 
-    // Doctor profile exist karta hai?
     const doctorProfile = await prisma.doctorProfile.findUnique({
       where: { userId: doctorUserId },
       select: { id: true },
@@ -1265,15 +1312,40 @@ router.post("/assign-pa", async (req, res) => {
       return res.status(404).json({ error: "Doctor profile nahi mila" });
     }
 
-    // Upsert PA assignment
-    const assignment = await prisma.physicianAssistant.upsert({
+    const pa = await prisma.physicianAssistantProfile.findUnique({
       where: { userId: paUserId },
-      update: { assignedDoctorId: doctorProfile.id },
+    });
+    if (!pa) {
+      return res.status(404).json({ error: "Physician Assistant profile not found" });
+    }
+
+    const assignment = await prisma.doctorPAAssignment.upsert({
+      where: {
+        doctorId_paId_assignmentStatus: {
+          doctorId: doctorProfile.id,
+          paId: pa.id,
+          assignmentStatus: "ACTIVE"
+        }
+      },
+      update: {},
       create: {
-        userId: paUserId,
-        assignedDoctorId: doctorProfile.id,
+        doctorId: doctorProfile.id,
+        paId: pa.id,
+        assignmentStatus: "ACTIVE",
+        createdBy: req.user?.id || "ADMIN",
       },
     });
+
+    await logAuditTrail(
+      req.user?.id || "SYSTEM",
+      req.user?.role || "ADMIN",
+      "PA_ASSIGNED",
+      "DoctorPAAssignment",
+      assignment.id,
+      null,
+      assignment,
+      req.ip
+    );
 
     return res.json({ message: "PA successfully assigned to doctor", data: assignment });
   } catch (err) {
@@ -1291,12 +1363,12 @@ router.get("/waiting-patients", async (req, res) => {
     const role = req.user?.role;
     if (!userId) return res.status(400).json({ error: "doctorId is required" });
 
-    const { profileId } = await resolveDoctorProfileId(userId, role);
-    if (!profileId) return res.json([]);
+    const { profileId, allProfileIds } = await resolveDoctorProfileId(userId, role);
+    if (!profileId || allProfileIds.length === 0) return res.json([]);
 
     const waiting = await prisma.appointment.findMany({
       where: {
-        doctorId: profileId,
+        doctorId: { in: allProfileIds },
         status: { in: ["CHECKED_IN", "WAITING"] },
       },
       include: {
@@ -1330,9 +1402,9 @@ router.get("/stats", async (req, res) => {
     const role = req.user?.role;
     if (!userId) return res.status(400).json({ error: "doctorId is required" });
 
-    const { profileId } = await resolveDoctorProfileId(userId, role);
+    const { profileId, allProfileIds } = await resolveDoctorProfileId(userId, role);
 
-    if (!profileId) {
+    if (!profileId || allProfileIds.length === 0) {
       return res.json({
         totalAppointments: 0, completedAppointments: 0, pendingAppointments: 0,
         totalPrescriptions: 0,
@@ -1348,26 +1420,26 @@ router.get("/stats", async (req, res) => {
       totalAppointments, completedAppointments, pendingAppointments,
       totalPrescriptions, totalMessages, distinctPatients,
     ] = await Promise.all([
-      prisma.appointment.count({ where: { doctorId: profileId } }),
-      prisma.appointment.count({ where: { doctorId: profileId, status: "COMPLETED" } }),
-      prisma.appointment.count({ where: { doctorId: profileId, status: "PENDING" } }),
-      prisma.prescription.count({ where: { doctorId: profileId } }),
+      prisma.appointment.count({ where: { doctorId: { in: allProfileIds } } }),
+      prisma.appointment.count({ where: { doctorId: { in: allProfileIds }, status: "COMPLETED" } }),
+      prisma.appointment.count({ where: { doctorId: { in: allProfileIds }, status: "PENDING" } }),
+      prisma.prescription.count({ where: { doctorId: { in: allProfileIds } } }),
       prisma.message.count({
         where: { OR: [{ senderId: userId }, { receiverId: userId }] },
       }),
       prisma.appointment.findMany({
-        where: { doctorId: profileId },
+        where: { doctorId: { in: allProfileIds } },
         distinct: ["patientId"],
         select: { patientId: true },
       }),
     ]);
 
     const [urgentLabs, unsignedNotes, lateAppointments] = await Promise.all([
-      prisma.labOrder.count({ where: { doctorId: profileId, status: "ORDERED" } }),
-      prisma.clinicalEncounter.count({ where: { doctorId: profileId, status: "DRAFT" } }),
+      prisma.labOrder.count({ where: { doctorId: { in: allProfileIds }, status: "ORDERED" } }),
+      prisma.clinicalEncounter.count({ where: { doctorId: { in: allProfileIds }, status: "DRAFT" } }),
       prisma.appointment.count({
         where: {
-          doctorId: profileId,
+          doctorId: { in: allProfileIds },
           status: { in: ["WAITING", "CHECKED_IN"] },
           appointmentDate: { lt: new Date() },
         },
@@ -1375,14 +1447,19 @@ router.get("/stats", async (req, res) => {
     ]);
 
     // Fetch assigned Physician Assistants for this doctor
-    const pas = await prisma.physicianAssistant.findMany({
-      where: { assignedDoctorId: profileId },
+    const assignments = await prisma.doctorPAAssignment.findMany({
+      where: { doctorId: { in: allProfileIds }, assignmentStatus: "ACTIVE" },
       include: {
-        user: {
-          select: { firstName: true, lastName: true, email: true }
+        pa: {
+          include: {
+            user: {
+              select: { firstName: true, lastName: true, email: true }
+            }
+          }
         }
       }
     });
+    const pas = assignments.map(a => a.pa);
 
     return res.json({
       totalAppointments, completedAppointments, pendingAppointments,
@@ -1403,6 +1480,163 @@ router.get("/stats", async (req, res) => {
 });
 
 // ================================================================
+// ✅ GET /api/doctor/consultations/pending
+// Fetch pending and escalated consultations requiring doctor's review
+// ================================================================
+router.get("/consultations/pending", requireRole(["DOCTOR", "SUPERADMIN", "ADMIN"]), async (req, res) => {
+  try {
+    const doctorUserId = req.user.id;
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+    });
+
+    if (!doctorProfile) {
+      return res.status(404).json({ error: "Doctor profile not found" });
+    }
+
+    const pendingLogs = await prisma.consultationLog.findMany({
+      where: {
+        doctorId: doctorProfile.id,
+        OR: [
+          { status: { in: ["PENDING_REVIEW", "ESCALATED"] } },
+          { requiresDoctorApproval: true }
+        ]
+      },
+      include: {
+        patient: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
+        },
+        pa: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    return res.json(pendingLogs);
+  } catch (err) {
+    console.error("❌ GET /api/doctor/consultations/pending error:", err);
+    return res.status(500).json({ error: "Failed to fetch pending consultations" });
+  }
+});
+
+// ================================================================
+// ✅ POST /api/doctor/consultations/:consultationId/approve
+// Doctor approves or returns PA clinical notes
+// ================================================================
+router.post("/consultations/:consultationId/approve", requireRole(["DOCTOR", "SUPERADMIN", "ADMIN"]), async (req, res) => {
+  try {
+    const { consultationId } = req.params;
+    const { action, correctionNotes } = req.body || {};
+
+    if (!["APPROVE", "RETURN"].includes(action)) {
+      return res.status(400).json({ error: "Invalid action. Must be APPROVE or RETURN." });
+    }
+
+    const doctorUserId = req.user.id;
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+    });
+
+    if (!doctorProfile) {
+      return res.status(404).json({ error: "Doctor profile not found" });
+    }
+
+    const consultation = await prisma.consultationLog.findUnique({
+      where: { id: consultationId },
+      include: { pa: { include: { user: true } } },
+    });
+
+    if (!consultation) {
+      return res.status(404).json({ error: "Consultation log not found" });
+    }
+
+    // Verify this doctor is supervising the consultation
+    if (consultation.doctorId !== doctorProfile.id) {
+      return res.status(403).json({ error: "You are not the supervising doctor for this consultation." });
+    }
+
+    const oldStatus = consultation.status;
+    let newStatus;
+    let updateData = {};
+
+    if (action === "APPROVE") {
+      newStatus = "Approved by Doctor";
+      updateData = {
+        status: newStatus,
+        requiresDoctorApproval: false,
+        approvedByDoctor: doctorProfile.id,
+        approvedAt: new Date(),
+      };
+    } else {
+      newStatus = "Returned for Correction";
+      updateData = {
+        status: newStatus,
+        consultationNotes: correctionNotes ? `${consultation.consultationNotes || ''}\n\n[Correction Request]: ${correctionNotes}` : consultation.consultationNotes,
+      };
+    }
+
+    const updatedLog = await prisma.consultationLog.update({
+      where: { id: consultationId },
+      data: updateData,
+    });
+
+    // Notify PA
+    if (consultation.pa && req.app.get("io")) {
+      const io = req.app.get("io");
+      io.to(consultation.pa.userId).emit("consultation_status_changed", {
+        consultationId,
+        status: newStatus,
+        message: action === "APPROVE" ? "Your clinical notes have been approved." : "Your clinical notes have been returned for correction.",
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: consultation.pa.userId,
+          type: "INFO",
+          title: action === "APPROVE" ? "Consultation Approved" : "Consultation Returned",
+          message: action === "APPROVE" ? "Your clinical notes have been approved." : `Correction requested: ${correctionNotes || ''}`,
+          link: `/pa/consultations`,
+        }
+      });
+    }
+
+    // Log Audit Trail
+    await logAuditTrail(
+      doctorUserId,
+      req.user.role,
+      action === "APPROVE" ? "DOCTOR_APPROVED" : "DOCTOR_REJECTED",
+      "ConsultationLog",
+      consultationId,
+      { status: oldStatus },
+      updatedLog,
+      req.ip
+    );
+
+    return res.json({ message: `Consultation log successfully ${action.toLowerCase()}d`, data: updatedLog });
+  } catch (err) {
+    console.error("Approve consultation error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ================================================================
 // GET /api/doctor/profile?userId=...
 // ================================================================
 router.get("/profile", async (req, res) => {
@@ -1413,13 +1647,19 @@ router.get("/profile", async (req, res) => {
 
     // PA ka case — assigned doctor ka profile return karo
     if (role === "PHYSICIAN_ASSISTANT") {
-      const pa = await prisma.physicianAssistant.findUnique({
+      const pa = await prisma.physicianAssistantProfile.findUnique({
         where: { userId },
         include: {
-          doctor: { include: { user: true } },
+          assignments: {
+            where: { assignmentStatus: "ACTIVE" },
+            include: { doctor: { include: { user: true } } }
+          }
         },
       });
-      if (pa) return res.json({ data: pa.doctor, isActingAsPA: true });
+      if (pa && pa.assignments.length > 0) {
+        return res.json({ data: pa.assignments[0].doctor, isActingAsPA: true });
+      }
+      return res.status(404).json({ error: "No assigned doctor found for this PA" });
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -1429,12 +1669,23 @@ router.get("/profile", async (req, res) => {
       where: { userId },
       include: { user: true },
     });
-    if (!profile && user.role === "DOCTOR") {
+    if ((!profile || !profile.referenceId) && user.role === "DOCTOR") {
       profile = await ensureDefaultProfile(user);
     }
 
     if (!profile) return res.status(404).json({ error: "Profile not found" });
-    return res.json({ data: profile });
+    const isApproved = user?.approvalStatus === "APPROVED" || profile.verificationStatus === "VERIFIED" || profile.verificationStatus === "APPROVED";
+    if (isApproved && profile.verificationStatus !== "VERIFIED") {
+      await prisma.doctorProfile.update({
+        where: { id: profile.id },
+        data: { verificationStatus: "VERIFIED" }
+      }).catch(() => {});
+    }
+    const resultProfile = {
+      ...profile,
+      verificationStatus: isApproved ? "VERIFIED" : profile.verificationStatus,
+    };
+    return res.json({ data: resultProfile });
   } catch (e) {
     console.error("❌ doctor profile GET error:", e);
     return res.status(500).json({ error: "Failed to load profile" });
@@ -1519,8 +1770,9 @@ router.put("/profile", async (req, res) => {
 
     return res.json({ data: updated });
   } catch (e) {
+    require('fs').appendFileSync('profile_error.log', new Date().toISOString() + ' ERROR: ' + e.message + '\n' + e.stack + '\n');
     console.error("❌ doctor profile PUT error:", e);
-    return res.status(500).json({ error: "Failed to save profile" });
+    return res.status(500).json({ error: e.message || "Failed to save profile" });
   }
 });
 
@@ -1551,20 +1803,11 @@ router.get("/my-patients", async (req, res) => {
     const role = req.user?.role;
     if (!userId) return res.status(400).json({ error: "doctorId is required" });
 
-    const { profileId } = await resolveDoctorProfileId(userId, role);
-    if (!profileId) return res.json([]);
+    const { profileId, allProfileIds } = await resolveDoctorProfileId(userId, role);
+    if (!profileId || allProfileIds.length === 0) return res.json([]);
 
-    const distinct = await prisma.appointment.findMany({
-      where: { doctorId: profileId },
-      distinct: ["patientId"],
-      select: { patientId: true },
-    });
-
-    const patientIds = distinct.map((d) => d.patientId);
-    if (patientIds.length === 0) return res.json([]);
-
-    const patients = await prisma.patientProfile.findMany({
-      where: { id: { in: patientIds } },
+    // Fetch all PatientProfiles + linked User so doctor can select any patient for new sessions
+    let patients = await prisma.patientProfile.findMany({
       select: {
         id: true, bloodGroup: true, height: true, weight: true,
         allergies: true, medications: true, medicalHistory: true,
@@ -1740,11 +1983,11 @@ router.get("/appointments", async (req, res) => {
   if (!userId) return res.status(400).json({ error: "doctorId is required" });
 
   try {
-    const { profileId } = await resolveDoctorProfileId(userId, role);
-    if (!profileId) return res.status(404).json({ error: "Doctor profile not found" });
+    const { profileId, allProfileIds } = await resolveDoctorProfileId(userId, role);
+    if (!profileId || allProfileIds.length === 0) return res.json([]);
 
     const appointments = await prisma.appointment.findMany({
-      where: { doctorId: profileId },
+      where: { doctorId: { in: allProfileIds } },
       include: {
         doctor: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } } } },
         patient: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, gender: true, dateOfBirth: true } } } },
@@ -1816,7 +2059,7 @@ router.get("/prescriptions", async (req, res) => {
     if (!userId) return res.status(400).json({ error: "Doctor ID required" });
 
     const { profileId } = await resolveDoctorProfileId(userId, role);
-    if (!profileId) return res.status(404).json({ error: "Doctor profile not found" });
+    if (!profileId) return res.json([]);
 
     const prescriptions = await prisma.prescription.findMany({
       where: { doctorId: profileId },
@@ -2002,7 +2245,7 @@ router.get("/messages/inbox", async (req, res) => {
     let receiverIds = [userId];
 
     if (role === "PHYSICIAN_ASSISTANT") {
-      const pa = await prisma.physicianAssistant.findUnique({
+      const pa = await prisma.physicianAssistantProfile.findUnique({
         where: { userId },
         include: { doctor: { select: { userId: true } } },
       });
@@ -2101,6 +2344,32 @@ router.post("/messages/send", async (req, res) => {
 });
 
 // ================================================================
+// GET /api/doctor/laboratories — All laboratories list
+// ================================================================
+router.get("/laboratories", async (req, res) => {
+  try {
+    const labs = await prisma.laboratoryProfile.findMany({
+      select: {
+        id: true,
+        user: { select: { firstName: true, lastName: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const formatted = labs.map((lab) => ({
+      id: lab.id,
+      name: `${lab.user.firstName} ${lab.user.lastName}`.trim(),
+      email: lab.user.email,
+    }));
+
+    res.json({ success: true, data: formatted });
+  } catch (error) {
+    console.error("❌ Error fetching laboratories:", error);
+    res.status(500).json({ error: "Failed to load laboratories" });
+  }
+});
+
+// ================================================================
 // GET /api/doctor/ — All doctors list
 // ================================================================
 router.get("/", async (req, res) => {
@@ -2128,6 +2397,365 @@ router.get("/", async (req, res) => {
   } catch (error) {
     console.error("❌ Error fetching doctors:", error);
     res.status(500).json({ error: "Failed to load doctors" });
+  }
+});
+
+// ================================================================
+// POST /api/doctor/lab-orders — Assign Lab Test
+// ================================================================
+router.post("/lab-orders", async (req, res) => {
+  try {
+    const doctorUserId = req.user?.id || req.body.doctorId || req.query.doctorId;
+    const role = req.user?.role || "DOCTOR";
+    let { patientId, laboratoryId, testName, priority, notes } = req.body;
+
+    if (!patientId || !laboratoryId || !testName) {
+      return res.status(400).json({ error: "patientId, laboratoryId, and testName are required" });
+    }
+
+    const resolution = await resolveDoctorProfileId(doctorUserId, role);
+    if (!resolution || !resolution.profileId) {
+      return res.status(403).json({ error: resolution?.error || "Doctor profile not found" });
+    }
+    const doctorProfileId = resolution.profileId;
+
+    // Resolve patientProfileId if patientId is a userId
+    let resolvedPatientId = patientId;
+    const patientDirect = await prisma.patientProfile.findUnique({ where: { id: patientId } });
+    if (!patientDirect) {
+      const patientByUserId = await prisma.patientProfile.findUnique({ where: { userId: patientId } });
+      if (patientByUserId) resolvedPatientId = patientByUserId.id;
+    }
+
+    // Resolve laboratoryProfileId if laboratoryId is a userId
+    let resolvedLabId = laboratoryId;
+    const labDirect = await prisma.laboratoryProfile.findUnique({ where: { id: laboratoryId } });
+    if (!labDirect) {
+      const labByUserId = await prisma.laboratoryProfile.findUnique({ where: { userId: laboratoryId } });
+      if (labByUserId) resolvedLabId = labByUserId.id;
+    }
+
+    const order = await prisma.labOrder.create({
+      data: {
+        doctorId: doctorProfileId,
+        patientId: resolvedPatientId,
+        laboratoryId: resolvedLabId,
+        testName,
+        priority: priority || "ROUTINE",
+        notes: notes || null,
+        status: "ORDERED",
+      },
+    });
+
+    return res.status(201).json({ success: true, message: "✅ Lab order assigned", data: order });
+  } catch (err) {
+    console.error("❌ POST /doctor/lab-orders error:", err);
+    return res.status(500).json({ error: "Failed to create lab order" });
+  }
+});
+
+// ================================================================
+// GET /api/doctor/lab-orders — Fetch Assigned Lab Tests
+// ================================================================
+router.get("/lab-orders", async (req, res) => {
+  try {
+    const { patientId } = req.query;
+    const doctorUserId = req.query.doctorId || req.user?.id;
+    const role = req.user?.role || "DOCTOR";
+
+    const where = {};
+    if (patientId) {
+      where.patientId = patientId;
+    } else if (doctorUserId) {
+      const { profileId } = await resolveDoctorProfileId(doctorUserId, role);
+      if (profileId) where.doctorId = profileId;
+    }
+
+    const orders = await prisma.labOrder.findMany({
+      where,
+      include: {
+        patient: { include: { user: true } },
+        laboratory: { include: { user: true } },
+      },
+      orderBy: { orderedAt: "desc" },
+    });
+
+    return res.json({ success: true, data: orders });
+  } catch (err) {
+    console.error("❌ GET /doctor/lab-orders error:", err);
+    return res.status(500).json({ error: "Failed to fetch assigned lab tests" });
+  }
+});
+
+// ================================================================
+// PUT & PATCH /api/doctor/lab-orders/:id — Edit Assigned Lab Test
+// ================================================================
+const updateLabOrderHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { testName, priority, notes, status, laboratoryId } = req.body;
+
+    const existing = await prisma.labOrder.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: "Assigned lab test not found" });
+    }
+
+    const updated = await prisma.labOrder.update({
+      where: { id },
+      data: {
+        ...(testName !== undefined && { testName }),
+        ...(priority !== undefined && { priority }),
+        ...(notes !== undefined && { notes }),
+        ...(status !== undefined && { status }),
+        ...(laboratoryId !== undefined && { laboratoryId }),
+      },
+      include: {
+        patient: { include: { user: true } },
+        laboratory: { include: { user: true } },
+      },
+    });
+
+    return res.json({ success: true, message: "Test updated successfully", data: updated });
+  } catch (err) {
+    console.error("❌ PUT/PATCH /doctor/lab-orders/:id error:", err);
+    return res.status(500).json({ error: "Test update nahi ho saka, dubara koshish karein" });
+  }
+};
+
+router.put("/lab-orders/:id", updateLabOrderHandler);
+router.patch("/lab-orders/:id", updateLabOrderHandler);
+
+// ================================================================
+// DELETE /api/doctor/lab-orders/:id — Delete Assigned Lab Test
+// ================================================================
+router.delete("/lab-orders/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.labOrder.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: "Assigned lab test not found" });
+    }
+
+    await prisma.labOrder.delete({ where: { id } });
+    return res.json({ success: true, message: "Test deleted successfully" });
+  } catch (err) {
+    console.error("❌ DELETE /doctor/lab-orders/:id error:", err);
+    return res.status(500).json({ error: "Test delete nahi ho saka, dubara koshish karein" });
+  }
+});
+
+// ================================================================
+// DELETE /api/doctor/protocol-actions/:id — Delete Protocol Action
+// ================================================================
+router.delete("/protocol-actions/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Check if it matches an appointment protocol session or lab order
+    const appt = await prisma.appointment.findUnique({ where: { id } });
+    if (appt) {
+      await prisma.appointment.delete({ where: { id } });
+      return res.json({ success: true, message: "Protocol action deleted successfully" });
+    }
+    const labOrder = await prisma.labOrder.findUnique({ where: { id } });
+    if (labOrder) {
+      await prisma.labOrder.delete({ where: { id } });
+      return res.json({ success: true, message: "Protocol action deleted successfully" });
+    }
+    return res.json({ success: true, message: "Protocol action deleted successfully" });
+  } catch (err) {
+    console.error("❌ DELETE /doctor/protocol-actions/:id error:", err);
+    return res.status(500).json({ error: "Protocol action delete nahi ho saka, dubara koshish karein" });
+  }
+});
+
+
+// ================================================================
+// GET /api/doctor/lab-reports — Fetch Pending/Completed Reports
+// ================================================================
+router.get("/lab-reports", async (req, res) => {
+  try {
+    const doctorUserId = req.query.doctorId || req.user?.id;
+    const role = req.user?.role || "DOCTOR";
+
+    const { profileId } = await resolveDoctorProfileId(doctorUserId, role);
+    if (!profileId) return res.json({ success: true, data: [] });
+
+    const reports = await prisma.labOrder.findMany({
+      where: {
+        doctorId: profileId,
+        resultUrl: { not: null },
+      },
+      include: {
+        patient: { include: { user: true } },
+        laboratory: { include: { user: true } },
+      },
+      orderBy: { orderedAt: "desc" },
+    });
+
+    return res.json({ success: true, data: reports });
+  } catch (err) {
+    console.error("❌ GET /doctor/lab-reports error:", err);
+    return res.status(500).json({ error: "Failed to fetch lab reports" });
+  }
+});
+
+// ================================================================
+// PATCH /api/doctor/lab-reports/:id/review — Approve/Reject
+// ================================================================
+router.patch("/lab-reports/:id/review", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, notes } = req.body;
+
+    if (!["APPROVE", "REJECT"].includes(action)) {
+      return res.status(400).json({ error: "Invalid action. Must be APPROVE or REJECT." });
+    }
+
+    if (action === "REJECT" && !notes) {
+      return res.status(400).json({ error: "Notes are required when rejecting a report." });
+    }
+
+    const order = await prisma.labOrder.findUnique({ where: { id } });
+    if (!order) return res.status(404).json({ error: "Lab report not found" });
+
+    const status = action === "APPROVE" ? "COMPLETED" : "IN_PROGRESS";
+
+    const updated = await prisma.labOrder.update({
+      where: { id },
+      data: {
+        status,
+        resultNotes: action === "REJECT" ? `REVISION REQUESTED: ${notes}` : null,
+        ...(action === "APPROVE" && { completedAt: new Date() }),
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: action === "APPROVE" ? "✅ Report forwarded to patient" : "✅ Report returned to lab",
+      data: updated,
+    });
+  } catch (err) {
+    console.error("❌ PATCH /doctor/lab-reports/:id/review error:", err);
+    return res.status(500).json({ error: "Failed to review lab report" });
+  }
+});
+
+// PATCH /api/doctor/status
+router.patch("/status", async (req, res) => {
+  try {
+    const { isOnline } = req.body;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    // Update doctor's online status
+    const updatedProfile = await prisma.doctorProfile.update({
+      where: { userId },
+      data: { isOnline },
+      select: { id: true, isOnline: true }
+    });
+
+    // Get doctor profile ID to find assigned PAs
+    const doctorProfile = updatedProfile;
+
+    if (doctorProfile) {
+      const pas = await prisma.doctorPAAssignment.findMany({
+        where: { doctorId: doctorProfile.id, assignmentStatus: "ACTIVE" },
+        include: { pa: { select: { userId: true } } }
+      });
+      
+      const paUserIds = pas.map(a => a.pa.userId);
+      const io = req.app.get("io");
+      if (io && io.activeUsers && paUserIds.length > 0) {
+        for (const [socketId, user] of io.activeUsers.entries()) {
+          if (user.role === "PHYSICIAN_ASSISTANT" && paUserIds.includes(user.userId)) {
+             io.to(socketId).emit("pa_access_update", { doctorIsOnline: isOnline });
+          }
+        }
+      }
+    }
+
+    return res.json({ success: true, isOnline });
+  } catch (err) {
+    console.error("PATCH /doctor/status error:", err);
+    return res.status(500).json({ error: "Failed to update online status" });
+  }
+});
+
+// PATCH /api/doctor/pa/:paId/permissions
+router.patch("/pa/:paId/permissions", async (req, res) => {
+  try {
+    const { paId } = req.params;
+    const { permissions } = req.body;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    // Verify doctor
+    const doctor = await prisma.doctorProfile.findUnique({
+      where: { userId },
+    });
+    if (!doctor) return res.status(404).json({ error: "Doctor profile not found" });
+
+    const {
+      canAccessAppointments = false,
+      canAccessMySchedule = false,
+      canAccessLabReports = false,
+      canAccessTelehealthBridge = false,
+      canAccessSecureInbox = false
+    } = permissions || {};
+
+    // Update PA profile permission
+    const updatedPA = await prisma.physicianAssistantProfile.update({
+      where: { id: paId },
+      data: {
+        canAccessAppointments,
+        canAccessMySchedule,
+        canAccessLabReports,
+        canAccessTelehealthBridge,
+        canAccessSecureInbox
+      },
+      select: { userId: true }
+    });
+
+    // Emit socket event to the PA
+    const io = req.app.get("io");
+    if (io && io.activeUsers && updatedPA.userId) {
+      for (const [socketId, user] of io.activeUsers.entries()) {
+        if (user.role === "PHYSICIAN_ASSISTANT" && user.userId === updatedPA.userId) {
+           io.to(socketId).emit("pa_access_update", { doctorIsOnline: doctor.isOnline });
+        }
+      }
+    }
+
+    return res.json({ success: true, permissions });
+  } catch (err) {
+    console.error("PATCH /doctor/pa/permissions error:", err);
+    return res.status(500).json({ error: "Failed to update PA permissions" });
+  }
+});
+
+// GET /api/doctor/my-pas
+router.get("/my-pas", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const doctor = await prisma.doctorProfile.findUnique({ where: { userId } });
+    if (!doctor) return res.json([]);
+
+    const pasRows = await prisma.$queryRawUnsafe(
+      `SELECT p.id, p."userId", p."isAllowedByDoctor", p."verificationStatus", p."licenseNumber", u."firstName", u."lastName", u.email,
+              p."canAccessAppointments", p."canAccessMySchedule", p."canAccessLabReports", p."canAccessTelehealthBridge", p."canAccessSecureInbox"
+       FROM "PhysicianAssistantProfile" p
+       JOIN "User" u ON p."userId" = u.id
+       JOIN "DoctorPAAssignment" a ON a."paId" = p.id
+       WHERE a."doctorId" = $1 AND a."assignmentStatus" = 'ACTIVE'`,
+      doctor.id
+    );
+
+    return res.json(pasRows || []);
+  } catch (err) {
+    console.error("GET /doctor/my-pas error:", err);
+    return res.status(500).json({ error: "Failed to fetch PAs" });
   }
 });
 

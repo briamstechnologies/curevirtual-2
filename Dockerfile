@@ -53,4 +53,4 @@ EXPOSE 5001
 
 # 5. Start command
 # Ensure karein ki server.js sahi folder mein call ho raha hai
-CMD ["node", "web/backend/server.js"]
+CMD ["npm", "start"]

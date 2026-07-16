@@ -4,6 +4,7 @@ const express = require("express");
 const xss = require("xss");
 const { verifyToken, requireRole } = require("../middleware/rbac.js");
 const prisma = require("../prisma/prismaClient");
+const { supabaseAdmin } = require("../lib/supabaseAdmin");
 const router = express.Router();
 
 // ✅ Utility: Add to activity log
@@ -39,14 +40,41 @@ router.get(
           role: true,
           createdAt: true,
           updatedAt: true,
+          physicianAssistant: {
+            select: {
+              assignments: {
+                where: { assignmentStatus: "ACTIVE" },
+                select: {
+                  doctor: {
+                    select: {
+                      user: {
+                        select: { id: true, firstName: true, lastName: true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
         orderBy: { createdAt: "desc" },
       });
 
-      const formattedUsers = users.map((u) => ({
-        ...u,
-        name: `${u.firstName} ${u.lastName}`.trim(),
-      }));
+      const formattedUsers = users.map((u) => {
+        let assignedDoctors = [];
+        if (u.role === "PHYSICIAN_ASSISTANT" && u.physicianAssistant?.assignments?.length > 0) {
+          assignedDoctors = u.physicianAssistant.assignments.map(a => ({
+            id: a.doctor.user.id,
+            name: `Dr. ${a.doctor.user.firstName} ${a.doctor.user.lastName}`
+          }));
+        }
+
+        return {
+          ...u,
+          name: `${u.firstName} ${u.lastName}`.trim(),
+          assignedDoctors,
+        };
+      });
 
       res.json(formattedUsers);
     } catch (err) {
@@ -196,6 +224,18 @@ router.delete(
   async (req, res) => {
     try {
       const id = req.params.id;
+
+      // Delete from Supabase Auth first
+      if (supabaseAdmin) {
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(id);
+        } catch (authErr) {
+          console.warn("Supabase auth deletion failed or user not found:", authErr.message);
+        }
+      }
+
+      // Also clean up any lingering unconfirmed users with same email if needed,
+      // but Prisma cascade will handle normal deletion
       const deleted = await prisma.user.delete({
         where: { id },
       });
@@ -269,14 +309,33 @@ router.post(
       }
 
       // 3) PhysicianAssistant record upsert karo
-      const assignment = await prisma.physicianAssistant.upsert({
+      const pa = await prisma.physicianAssistantProfile.findUnique({
         where: { userId: paId },
-        update: { assignedDoctorId: doctorProfile.id },
-        create: {
-          userId: paId,
-          assignedDoctorId: doctorProfile.id,
-        },
       });
+      if (!pa) {
+        return res.status(404).json({ error: "Physician Assistant profile not found" });
+      }
+
+      let assignment = await prisma.doctorPAAssignment.findFirst({
+        where: {
+          doctorId: doctorProfile.id,
+          paId: pa.id,
+          assignmentStatus: "ACTIVE"
+        }
+      });
+
+      if (!assignment) {
+        assignment = await prisma.doctorPAAssignment.create({
+          data: {
+            doctorId: doctorProfile.id,
+            paId: pa.id,
+            assignmentStatus: "ACTIVE",
+            createdBy: req.user?.id || "ADMIN",
+          }
+        });
+      } else {
+        return res.json({ message: "Already assigned to this doctor", data: assignment });
+      }
 
       // 4) Activity log
       await addLog(
@@ -290,6 +349,62 @@ router.post(
     } catch (err) {
       console.error("Error assigning PA:", err);
       res.status(500).json({ error: "Failed to assign PA" });
+    }
+  }
+);
+
+// ✅ POST: Remove Physician Assistant from a Doctor
+router.post(
+  "/remove-pa",
+  verifyToken,
+  requireRole(["SUPERADMIN", "ADMIN"]),
+  async (req, res) => {
+    try {
+      const { paId, doctorId } = req.body;
+
+      if (!paId || !doctorId) {
+        return res.status(400).json({ error: "paId aur doctorId dono required hain" });
+      }
+
+      // 1) PA Profile and Doctor Profile
+      const doctorProfile = await prisma.doctorProfile.findUnique({
+        where: { userId: doctorId },
+        select: { id: true },
+      });
+      const paProfile = await prisma.physicianAssistantProfile.findUnique({
+        where: { userId: paId },
+        select: { id: true },
+      });
+
+      if (!doctorProfile || !paProfile) {
+        return res.status(404).json({ error: "Doctor ya PA profile nahi mili" });
+      }
+
+      // 2) Mark assignment as REMOVED
+      const assignment = await prisma.doctorPAAssignment.findFirst({
+        where: {
+          doctorId: doctorProfile.id,
+          paId: paProfile.id,
+          assignmentStatus: "ACTIVE"
+        }
+      });
+
+      if (!assignment) {
+        return res.status(404).json({ error: "Active assignment nahi mili" });
+      }
+
+      await prisma.doctorPAAssignment.update({
+        where: { id: assignment.id },
+        data: {
+          assignmentStatus: "REMOVED",
+          removedAt: new Date()
+        }
+      });
+
+      res.json({ message: "PA successfully removed from doctor" });
+    } catch (err) {
+      console.error("Error removing PA:", err);
+      res.status(500).json({ error: "Failed to remove PA" });
     }
   }
 );

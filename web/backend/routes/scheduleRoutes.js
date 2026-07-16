@@ -9,6 +9,8 @@ const DEFAULT_TIMEZONE = "Asia/Karachi";
 
 // Middleware
 router.use(verifyToken);
+const paAccessControl = require("../middleware/paAccessControl");
+router.use(paAccessControl("canAccessMySchedule"));
 
 // Helper: Check for time conflicts
 function hasTimeConflict(start1, end1, start2, end2) {
@@ -25,6 +27,33 @@ function hasTimeConflict(start1, end1, start2, end2) {
   return s1 < e2 && s2 < e1;
 }
 
+// Helper: Resolve doctor profile for Doctor or PA
+async function resolveScheduleDoctorProfile(userIdOrProfileId) {
+  let profile = await prisma.doctorProfile.findUnique({
+    where: { userId: userIdOrProfileId },
+  });
+  if (profile) return profile;
+
+  profile = await prisma.doctorProfile.findUnique({
+    where: { id: userIdOrProfileId },
+  });
+  if (profile) return profile;
+
+  const pa = await prisma.physicianAssistantProfile.findUnique({
+    where: { userId: userIdOrProfileId },
+    include: {
+      assignments: {
+        where: { assignmentStatus: "ACTIVE" },
+        include: { doctor: true }
+      }
+    }
+  });
+  if (pa && pa.assignments.length > 0) {
+    return pa.assignments[0].doctor;
+  }
+  return null;
+}
+
 // =============================================================================
 // DOCTOR: Manage Schedule (Recurring)
 // =============================================================================
@@ -35,14 +64,7 @@ router.get("/", async (req, res) => {
     const { doctorId } = req.query;
     if (!doctorId) return res.status(400).json({ error: "Doctor ID required" });
 
-    // Try finding by userId first (common case), then id
-    let doctorProfile = await prisma.doctorProfile.findUnique({
-      where: { userId: doctorId },
-    });
-    if (!doctorProfile)
-      doctorProfile = await prisma.doctorProfile.findUnique({
-        where: { id: doctorId },
-      });
+    const doctorProfile = await resolveScheduleDoctorProfile(doctorId);
 
     // If we can't find a doctor profile, return empty array gracefully
     if (!doctorProfile) return res.json({ success: true, data: [] });
@@ -68,13 +90,7 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    let doctorProfile = await prisma.doctorProfile.findUnique({
-      where: { userId: doctorId },
-    });
-    if (!doctorProfile)
-      doctorProfile = await prisma.doctorProfile.findUnique({
-        where: { id: doctorId },
-      });
+    const doctorProfile = await resolveScheduleDoctorProfile(doctorId);
     if (!doctorProfile) return res.status(404).json({ error: "Doctor profile not found" });
 
     // 🔧 UTC CONVERSION LOGIC (Fixed for "Always Store UTC")
@@ -210,13 +226,7 @@ router.get("/slots", async (req, res) => {
       return res.status(400).json({ success: false, error: "Invalid date value" });
     }
 
-    let doctorProfile = await prisma.doctorProfile.findUnique({
-      where: { userId: doctorId },
-    });
-    if (!doctorProfile)
-      doctorProfile = await prisma.doctorProfile.findUnique({
-        where: { id: doctorId },
-      });
+    const doctorProfile = await resolveScheduleDoctorProfile(doctorId);
     if (!doctorProfile) return res.status(404).json({ success: false, error: "Doctor not found" });
 
     const doctorTz = doctorProfile.timezone || DEFAULT_TIMEZONE;
@@ -263,7 +273,13 @@ router.get("/slots", async (req, res) => {
       // ✅ FIX: Do NOT call fromZonedTime here. The values are already UTC.
       // We just ensure they are formatted as a proper ISO string.
       const startSlotUTC = new Date(`${date}T${rule.startTime}:00.000Z`);
-      const endSlotUTC = new Date(`${date}T${rule.endTime}:00.000Z`);
+      let endSlotUTC = new Date(`${date}T${rule.endTime}:00.000Z`);
+
+      // 🕒 FIX: If the end time is less than or equal to start time (e.g. 00:00), 
+      // it means it crossed midnight into the next day.
+      if (endSlotUTC <= startSlotUTC) {
+        endSlotUTC = new Date(endSlotUTC.getTime() + 24 * 60 * 60 * 1000); // add 1 day
+      }
 
       console.log(`[Slot DEBUG] Rule: ${rule.startTime}-${rule.endTime} (UTC) -> Generating for ${date}`);
 
@@ -316,13 +332,7 @@ router.post("/book", async (req, res) => {
     }
 
     // Resolve Profiles
-    let doctorProfile = await prisma.doctorProfile.findUnique({
-      where: { userId: doctorId },
-    });
-    if (!doctorProfile)
-      doctorProfile = await prisma.doctorProfile.findUnique({
-        where: { id: doctorId },
-      });
+    const doctorProfile = await resolveScheduleDoctorProfile(doctorId);
     if (!doctorProfile) return res.status(404).json({ error: "Doctor not found" });
 
     let patientProfile = await prisma.patientProfile.findUnique({
@@ -359,7 +369,7 @@ router.post("/book", async (req, res) => {
         startTime: startDate,
         endTime: new Date(startDate.getTime() + 15 * 60000),
         reason,
-        status: "APPROVED",
+        status: "PENDING",
       },
     });
 

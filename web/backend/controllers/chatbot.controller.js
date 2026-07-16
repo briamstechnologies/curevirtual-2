@@ -5,7 +5,7 @@ const xss = require("xss");
 exports.handleChat = async (req, res) => {
   try {
     const { message } = req.body;
-    
+
     // 1. Validate & Sanitize Input
     if (!message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ error: "Message is required and must be a valid string." });
@@ -14,7 +14,7 @@ exports.handleChat = async (req, res) => {
     const sanitizedMessage = xss(message.trim());
 
     if (sanitizedMessage.length > 500) {
-        return res.status(400).json({ error: "Message is too long. Max 500 characters." });
+      return res.status(400).json({ error: "Message is too long. Max 500 characters." });
     }
 
     // 2. Get AI Analysis
@@ -23,12 +23,17 @@ exports.handleChat = async (req, res) => {
 
     let doctors = [];
 
-    // 3. Find Doctors based on identified specialty
-    if (aiData.specialty) {
+    // 3. Find Doctors based on identified specialty (only if explicitly requested by user)
+    if (aiData.requestDoctorList && aiData.specialty) {
+      let searchSpecialty = aiData.specialty;
+      if (searchSpecialty.toLowerCase().includes("general") || searchSpecialty.toLowerCase().includes("practice")) {
+        searchSpecialty = "General";
+      }
+
       doctors = await prisma.doctorProfile.findMany({
         where: {
           specialization: {
-            contains: aiData.specialty, // Flexible matching
+            contains: searchSpecialty, // Flexible matching
             mode: 'insensitive', // Enabled for PostgreSQL production
           },
         },
@@ -55,7 +60,7 @@ exports.handleChat = async (req, res) => {
     if (error.code) console.error("- Prisma Code:", error.code);
     if (error.stack) console.error("- Stack Trace:", error.stack);
 
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Internal server error",
       details: error.message,
       code: error.code

@@ -1,8 +1,7 @@
 // FILE: src/pages/doctor/DoctorSchedule.jsx
 import React, { useState, useEffect } from "react";
 import api from "../../Lib/api";
-import Sidebar from "../../components/Sidebar";
-import Topbar from "../../components/Topbar";
+import DashboardLayout from "../../layouts/DashboardLayout";
 import { toast } from "react-toastify";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -123,13 +122,11 @@ const DoctorSchedule = () => {
     setEditingId(null);
   };
 
-  return (
-    <div className="flex min-h-screen bg-[var(--bg-main)] text-[var(--text-main)]">
-      <Sidebar role="DOCTOR" />
-      <div className="flex-1 flex flex-col">
-        <Topbar userName={userName} />
+  const role = localStorage.getItem("role") || "DOCTOR";
 
-        <div className="flex-1 p-6">
+  return (
+    <DashboardLayout role={role} user={{ name: userName }}>
+      <div className="flex-1 p-6 text-[var(--text-main)]">
           <h1 className="text-3xl font-bold text-[var(--text-main)] mb-6 tracking-wide">
             My Schedule
           </h1>
@@ -330,8 +327,7 @@ const DoctorSchedule = () => {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

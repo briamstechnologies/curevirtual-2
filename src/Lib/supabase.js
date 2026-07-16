@@ -57,5 +57,34 @@ export async function uploadLicenseDocument(file, userId, role) {
     .createSignedUrl(fileName, 86400); // 24 hours
 
   if (signedError) throw signedError;
-  return signedData.signed;
+  return signedData.signedUrl || signedData.signed;
 }
+
+/**
+ * Upload a laboratory report to Supabase Storage 'license-documents' bucket.
+ * Returns a long-term signed URL (1 year) for access by patients and doctors.
+ *
+ * @param {File}   file      - Browser File object
+ * @param {string} labUserId - Logged-in lab user ID
+ * @returns {Promise<string>} signedUrl valid for 1 year
+ */
+export async function uploadLabReport(file, labUserId) {
+  if (!supabase) throw new Error('Supabase client not initialized');
+
+  const ext = file.name.split('.').pop();
+  const fileName = `lab-reports/${labUserId}/${Date.now()}_report.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('license-documents')
+    .upload(fileName, file, { upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  const { data: signedData, error: signedError } = await supabase.storage
+    .from('license-documents')
+    .createSignedUrl(fileName, 31536000); // 1 year
+
+  if (signedError) throw signedError;
+  return signedData.signedUrl || signedData.signed;
+}
+

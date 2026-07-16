@@ -263,30 +263,92 @@ router.post("/assign-pa", async (req, res) => {
     const { paId, doctorId } = req.body;
 
     const doctorProfile = await prisma.doctorProfile.findFirst({
-      where: { userId: doctorId },
+      where: { OR: [{ id: doctorId }, { userId: doctorId }] }
     });
 
     if (!doctorProfile) {
       return res.status(404).json({ error: "Doctor profile nahi mila" });
     }
 
-    const pa = await prisma.physicianAssistant.findFirst({
-      where: { userId: paId },
+    const pa = await prisma.physicianAssistantProfile.findFirst({
+      where: { OR: [{ id: paId }, { userId: paId }] }
     });
 
     if (!pa) {
       return res.status(404).json({ error: "PA record nahi mila" });
     }
 
-    const updated = await prisma.physicianAssistant.update({
-      where: { id: pa.id },
-      data: { assignedDoctorId: doctorProfile.id },
+    let assignment = await prisma.doctorPAAssignment.findFirst({
+      where: {
+        doctorId: doctorProfile.id,
+        paId: pa.id,
+        assignmentStatus: "ACTIVE"
+      }
     });
 
-    res.json({ success: true, data: updated });
+    if (!assignment) {
+      assignment = await prisma.doctorPAAssignment.create({
+        data: {
+          doctorId: doctorProfile.id,
+          paId: pa.id,
+          assignmentStatus: "ACTIVE",
+          createdBy: "ADMIN",
+        }
+      });
+    }
+
+    res.json({ success: true, data: assignment });
   } catch (err) {
     console.error("❌ Assign PA error:", err);
     res.status(500).json({ error: "Failed to assign PA" });
+  }
+});
+
+// ✅ POST /api/admin/remove-pa
+router.post("/remove-pa", async (req, res) => {
+  try {
+    const { paId, doctorId } = req.body;
+
+    const doctorProfile = await prisma.doctorProfile.findFirst({
+      where: { OR: [{ id: doctorId }, { userId: doctorId }] }
+    });
+
+    if (!doctorProfile) {
+      return res.status(404).json({ error: "Doctor profile nahi mila" });
+    }
+
+    const pa = await prisma.physicianAssistantProfile.findFirst({
+      where: { OR: [{ id: paId }, { userId: paId }] }
+    });
+
+    if (!pa) {
+      return res.status(404).json({ error: "PA record nahi mila" });
+    }
+
+    const assignment = await prisma.doctorPAAssignment.findFirst({
+      where: {
+        doctorId: doctorProfile.id,
+        paId: pa.id,
+        assignmentStatus: "ACTIVE"
+      }
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ error: "Active assignment nahi mili" });
+    }
+
+    await prisma.doctorPAAssignment.update({
+      where: { id: assignment.id },
+      data: {
+        assignmentStatus: "REMOVED",
+        removedAt: new Date()
+      }
+    });
+
+    res.json({ success: true, message: "PA successfully removed from doctor" });
+  } catch (err) {
+    console.error("❌ Remove PA error:", err);
+    res.status(500).json({ error: "Failed to remove PA" });
   }
 });
 

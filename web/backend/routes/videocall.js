@@ -4,6 +4,26 @@ const router = express.Router();
 const crypto = require("crypto");
 const prisma = require("../prisma/prismaClient");
 const { verifyToken } = require("../middleware/rbac.js");
+const { generateAgoraToken } = require("../lib/agoraToken.js");
+
+/* ============================
+   Agora Token Generation
+============================ */
+router.get("/agora-token", verifyToken, (req, res) => {
+  try {
+    const { channelName, uid } = req.query;
+    if (!channelName) {
+      return res.status(400).json({ error: "channelName is required" });
+    }
+    
+    // We treat the uid as a string because we use alphanumeric strings for unique User IDs
+    const token = generateAgoraToken(channelName, String(uid || req.user.id));
+    res.json({ token, channelName, uid: String(uid || req.user.id) });
+  } catch (err) {
+    console.error("❌ GET /agora-token error:", err);
+    res.status(500).json({ error: "Failed to generate Agora token" });
+  }
+});
 
 /* ============================
    Helpers: Profile Resolution
@@ -369,6 +389,108 @@ router.patch("/reschedule/:id", verifyToken, async (req, res) => {
   } catch (err) {
     console.error("❌ Error rescheduling consultation:", err);
     return res.status(500).json({ error: "Failed to reschedule consultation" });
+  }
+});
+
+/* ==========================================
+   7) UPDATE CONSULTATION DETAILS (EDIT)
+   PUT /api/videocall/:id
+========================================== */
+router.put("/:id", verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { scheduledAt, durationMins, notes, status, title } = req.body || {};
+
+    const existing = await prisma.videoConsultation.findUnique({
+      where: { id: String(id) },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: "Consultation not found" });
+    }
+
+    const data = {};
+    if (scheduledAt) {
+      const when = new Date(scheduledAt);
+      if (!Number.isNaN(when.getTime())) {
+        data.scheduledAt = when;
+      }
+    }
+    if (durationMins != null && !isNaN(Number(durationMins))) {
+      data.durationMins = Number(durationMins);
+    }
+    if (notes !== undefined) {
+      data.notes = notes;
+    }
+    if (title !== undefined) {
+      data.title = title;
+    }
+    if (status) {
+      const valid = ["SCHEDULED", "ONGOING", "COMPLETED", "CANCELLED", "FAILED"];
+      if (valid.includes(String(status).toUpperCase())) {
+        data.status = String(status).toUpperCase();
+      }
+    }
+
+    const updated = await prisma.videoConsultation.update({
+      where: { id: String(id) },
+      data,
+      include: {
+        doctor: { include: { user: true } },
+        patient: { include: { user: true } },
+      },
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error("❌ Error updating consultation:", err);
+    return res.status(500).json({ error: err.message || "Failed to update consultation" });
+  }
+});
+
+/* ==========================================
+   8) DELETE CONSULTATION
+   DELETE /api/videocall/:id
+========================================== */
+router.delete("/:id", verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.videoConsultation.findUnique({
+      where: { id: String(id) },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: "Consultation not found" });
+    }
+
+    // If ONGOING, emit socket termination event to end call on both ends
+    if (existing.status === "ONGOING") {
+      try {
+        const io = req.app?.get("io");
+        if (io) {
+          const roomName = existing.roomName || `consult_${id}`;
+          io.emit("call:terminated", {
+            consultationId: id,
+            roomName,
+            reason: "Consultation deleted by doctor",
+          });
+          io.to(roomName).emit("call:terminated", {
+            consultationId: id,
+            roomName,
+            reason: "Consultation deleted by doctor",
+          });
+        }
+      } catch (socketErr) {
+        console.warn("Notice: socket emit on delete ongoing consultation:", socketErr?.message);
+      }
+    }
+
+    await prisma.videoConsultation.delete({
+      where: { id: String(id) },
+    });
+
+    return res.json({ success: true, message: "Consultation deleted successfully" });
+  } catch (err) {
+    console.error("❌ Error deleting consultation:", err);
+    return res.status(500).json({ error: err.message || "Failed to delete consultation" });
   }
 });
 

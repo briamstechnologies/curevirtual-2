@@ -21,7 +21,7 @@ function deriveName(user) {
 }
 
 // ✅ Get all contacts
-router.get("/contacts/all", verifyToken, async (req, res) => {
+router.get(["/contacts", "/contacts/all"], verifyToken, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       select: { id: true, firstName: true, lastName: true, role: true, email: true },
@@ -43,7 +43,12 @@ router.get("/unread-count", verifyToken, async (req, res) => {
     });
     return res.json({ data: { count } });
   } catch (err) {
-    console.error("❌ Unread count error:", err);
+    // If connection pool is busy/timeout, gracefully return count 0 without noisy crashes
+    if (err.code === "P2024" || err.message?.includes("connection pool")) {
+      console.warn("⚠️ Unread count connection pool busy, returning 0 fallback");
+      return res.json({ data: { count: 0 } });
+    }
+    console.error("❌ Unread count error:", err.message || err);
     return res.status(500).json({ error: "Failed to fetch unread count" });
   }
 });
@@ -67,7 +72,7 @@ router.patch("/:id/read", verifyToken, async (req, res) => {
 // ✅ Inbox
 router.get("/inbox", verifyToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.query.userId || req.user.id;
     const messages = await prisma.message.findMany({
       where: { OR: [{ senderId: userId }, { receiverId: userId }] },
       orderBy: [{ conversationId: "asc" }, { createdAt: "desc" }],

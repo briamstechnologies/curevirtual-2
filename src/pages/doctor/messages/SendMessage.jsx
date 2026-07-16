@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Select from "react-select";
 import { FaPaperPlane } from "react-icons/fa";
 import DashboardLayout from "../../../layouts/DashboardLayout";
 import api from "../../../Lib/api";
@@ -30,7 +31,8 @@ export default function DoctorSendMessage() {
             id: p?.user?.id ?? p?.userId ?? p?.id,
             name: p?.user?.name ?? p?.name ?? "Patient",
           }))
-          .filter((p) => !!p.id);
+          .filter((p) => !!p.id)
+          .sort((a, b) => a.name.localeCompare(b.name));
 
         setPatients(normalized);
       } catch (err) {
@@ -88,19 +90,34 @@ export default function DoctorSendMessage() {
             {loading ? (
               <p className="text-sm">Loading patients...</p>
             ) : (
-              <select
-                className="w-full border border-gray-300 text-black rounded-md p-2"
-                value={receiverId}
-                onChange={(e) => setReceiverId(e.target.value)}
-                required
-              >
-                <option value="">-- Choose Patient --</option>
-                {patients.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              <Select
+                options={patients.map((p) => ({ value: p.id, label: p.name }))}
+                value={
+                  receiverId
+                    ? {
+                        value: receiverId,
+                        label: patients.find((p) => p.id === receiverId)?.name || "Unknown",
+                      }
+                    : null
+                }
+                onChange={(selectedOption) => setReceiverId(selectedOption?.value || "")}
+                placeholder="-- Search & Choose Patient --"
+                isSearchable
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    borderRadius: "0.5rem",
+                    borderColor: "#d1d5db",
+                    color: "black",
+                  }),
+                  option: (base, state) => ({
+                    ...base,
+                    color: "black",
+                    backgroundColor: state.isFocused ? "#e5e7eb" : "white",
+                  }),
+                  singleValue: (base) => ({ ...base, color: "black" }),
+                }}
+              />
             )}
           </div>
 

@@ -8,25 +8,43 @@ const { verifyToken, requireRole, verifyOwnerOrAdmin } = require("../middleware/
 /** Helpers */
 async function getPatientProfileByUserId(patientUserId) {
   if (!patientUserId) return null;
-  return prisma.patientProfile.findUnique({ where: { userId: String(patientUserId) } });
+  let profile = await prisma.patientProfile.findUnique({ where: { userId: String(patientUserId) } });
+  if (!profile) {
+    profile = await prisma.patientProfile.findUnique({ where: { id: String(patientUserId) } });
+  }
+  if (!profile) {
+    const user = await prisma.user.findUnique({ where: { id: String(patientUserId) } });
+    if (user && user.role === "PATIENT") {
+      const { ensureDefaultProfile } = require("../lib/provisionProfile");
+      profile = await ensureDefaultProfile(user);
+    }
+  }
+  return profile;
 }
 function buildDoctorFilters(q) {
   const {
     search,                 // name or specialization
     specialization,
     minExperience,
+    minExp,
     maxExperience,
+    maxExp,
     minFee,
     maxFee,
     language,               // substring match inside CSV/longText
+    verificationStatus,
   } = q;
 
   const where = {};
+
   if (specialization) where.specialization = { contains: String(specialization), mode: "insensitive" };
-  if (minExperience || maxExperience) {
+
+  const minE = minExperience ?? minExp;
+  const maxE = maxExperience ?? maxExp;
+  if (minE !== undefined || maxE !== undefined) {
     where.yearsOfExperience = {};
-    if (minExperience) where.yearsOfExperience.gte = Number(minExperience);
-    if (maxExperience) where.yearsOfExperience.lte = Number(maxExperience);
+    if (minE !== undefined && minE !== "") where.yearsOfExperience.gte = Number(minE);
+    if (maxE !== undefined && maxE !== "") where.yearsOfExperience.lte = Number(maxE);
   }
   if (minFee || maxFee) {
     where.consultationFee = {};
@@ -36,17 +54,20 @@ function buildDoctorFilters(q) {
   if (language) {
     where.languages = { contains: String(language), mode: "insensitive" };
   }
+  if (verificationStatus) {
+    where.verificationStatus = String(verificationStatus);
+  }
   if (search) {
     // Search firstName/lastName (from user) OR specialization
     where.OR = [
       { specialization: { contains: String(search), mode: "insensitive" } },
-      { 
-        user: { 
+      {
+        user: {
           OR: [
             { firstName: { contains: String(search), mode: "insensitive" } },
             { lastName: { contains: String(search), mode: "insensitive" } },
           ]
-        } 
+        }
       },
     ];
   }
@@ -64,7 +85,7 @@ router.get("/patient/doctors/all", async (req, res) => {
     const doctors = await prisma.doctorProfile.findMany({
       where,
       orderBy: [{ yearsOfExperience: "desc" }, { consultationFee: "asc" }],
-      include: { 
+      include: {
         user: true,
         schedules: {
           where: { isActive: true }
@@ -89,24 +110,24 @@ router.get("/patient/doctors", verifyToken, async (req, res) => {
     const { patientUserId } = req.query;
     if (!patientUserId) return res.status(400).json({ error: "patientUserId is required" });
     const patient = await getPatientProfileByUserId(patientUserId);
-    if (!patient) return res.status(404).json({ error: "Patient profile not found" });
+    if (!patient) return res.json({ data: [] });
 
     const links = await prisma.doctorPatient.findMany({
       where: { patientId: patient.id },
-      include: { 
-        doctor: { 
-          include: { 
+      include: {
+        doctor: {
+          include: {
             user: true,
             schedules: {
               where: { isActive: true }
             }
-          } 
-        } 
+          }
+        }
       },
       orderBy: { createdAt: "desc" },
     });
 
-    const doctors = links.map((l) => l.doctor);
+    const doctors = links.map((l) => l.doctor).filter((d) => d && d.user);
     return res.json({ data: doctors });
   } catch (err) {
     console.error("❌ list assigned doctors:", err);

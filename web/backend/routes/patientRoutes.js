@@ -97,7 +97,13 @@ router.get("/profile", async (req, res) => {
 
     if (!patient) return res.status(404).json({ success: false, message: "Profile not found" });
 
-    return res.json({ success: true, data: patient });
+    const mrn = patient.referenceId || patient.medicalRecordNumber || `PAK-PT-${String(patient.id || "").slice(0, 6).toUpperCase()}`;
+    const enrichedPatient = {
+      ...patient,
+      medicalRecordNumber: mrn,
+    };
+
+    return res.json({ success: true, data: enrichedPatient });
   } catch (err) {
     console.error("GET /api/patient/profile error:", err);
     return res.status(500).json({ success: false, error: "Failed to fetch profile" });
@@ -291,10 +297,18 @@ router.get("/stats", async (req, res) => {
       return res.status(400).json({ success: false, error: "Missing patient identity" });
     }
 
-    const patientProfile = await prisma.patientProfile.findUnique({
+    let patientProfile = await prisma.patientProfile.findUnique({
       where: { userId: patientUserId },
-      select: { id: true },
+      select: { id: true, referenceId: true },
     });
+
+    if (patientProfile && !patientProfile.referenceId) {
+      const user = await prisma.user.findUnique({ where: { id: patientUserId } });
+      if (user) {
+        const { ensureDefaultProfile } = require("../lib/provisionProfile.js");
+        patientProfile = await ensureDefaultProfile(user);
+      }
+    }
 
     if (!patientProfile) {
       return res.json({
@@ -362,6 +376,7 @@ router.get("/stats", async (req, res) => {
         totalPrescriptions,
         totalConsultations,
         totalDoctors: doctorSet.size,
+        referenceId: patientProfile.referenceId || "",
       },
     });
   } catch (err) {
@@ -1561,6 +1576,357 @@ router.post("/pharmacy/order", async (req, res) => {
   } catch (err) {
     console.error("Failed to order from pharmacy:", err);
     res.status(500).json({ error: "Failed to order from pharmacy" });
+  }
+});
+
+/* ==================================================
+   MEDICATION TRACKER
+   ================================================== */
+
+/**
+ * GET /api/patient/medications/today
+ * Fetch all medications scheduled for today and their taken status
+ */
+router.get("/medications/today", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(400).json({ error: "User identity missing" });
+
+    const patientProfileId = await getPatientProfileIdByUserId(userId);
+    if (!patientProfileId) return res.status(404).json({ error: "Patient profile not found" });
+
+    const todayDate = new Date().toISOString().split('T')[0];
+
+    const schedules = await prisma.medicationSchedule.findMany({
+      where: { patientId: patientProfileId },
+      include: {
+        logs: {
+          where: { date: todayDate }
+        }
+      }
+    });
+
+    const formatted = schedules.map(s => {
+      let daysArr = [];
+      try { daysArr = JSON.parse(s.days); } catch(e) { daysArr = s.days.split(',').map(d=>d.trim()); }
+      return {
+        id: s.id,
+        name: s.name,
+        dose: s.dose,
+        time: s.time,
+        days: daysArr,
+        taken: s.logs.length > 0 ? s.logs[0].taken : false
+      };
+    });
+    
+    res.json({ success: true, data: formatted });
+  } catch (err) {
+    console.error("Failed to fetch today meds:", err);
+    res.status(500).json({ error: "Failed to fetch medications" });
+  }
+});
+
+/**
+ * POST /api/patient/medications
+ * Add a new medication schedule
+ */
+router.post("/medications", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { name, dose, time, days } = req.body;
+    
+    const patientProfileId = await getPatientProfileIdByUserId(userId);
+    if (!patientProfileId) return res.status(404).json({ error: "Patient profile not found" });
+
+    const newMed = await prisma.medicationSchedule.create({
+      data: {
+        patientId: patientProfileId,
+        name,
+        dose,
+        time,
+        days: JSON.stringify(days || ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
+      }
+    });
+
+    res.json({ success: true, data: newMed });
+  } catch (err) {
+    console.error("Failed to add medication:", err);
+    res.status(500).json({ error: "Failed to add medication" });
+  }
+});
+
+/**
+ * POST /api/patient/medications/:id/toggle
+ * Toggle taken status for today
+ */
+router.post("/medications/:id/toggle", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const scheduleId = req.params.id;
+    const todayDate = new Date().toISOString().split('T')[0];
+
+    const patientProfileId = await getPatientProfileIdByUserId(userId);
+    if (!patientProfileId) return res.status(404).json({ error: "Patient profile not found" });
+
+    const schedule = await prisma.medicationSchedule.findFirst({
+      where: { id: scheduleId, patientId: patientProfileId }
+    });
+    if (!schedule) return res.status(403).json({ error: "Not authorized" });
+
+    let log = await prisma.medicationLog.findUnique({
+      where: {
+        scheduleId_date: { scheduleId, date: todayDate }
+      }
+    });
+
+    if (log) {
+      log = await prisma.medicationLog.update({
+        where: { id: log.id },
+        data: { taken: !log.taken, takenAt: new Date() }
+      });
+    } else {
+      log = await prisma.medicationLog.create({
+        data: {
+          scheduleId,
+          date: todayDate,
+          taken: true,
+          takenAt: new Date()
+        }
+      });
+    }
+
+    res.json({ success: true, data: { ...schedule, taken: log.taken } });
+  } catch (err) {
+    console.error("Failed to toggle medication:", err);
+    res.status(500).json({ error: "Failed to toggle medication" });
+  }
+});
+
+/* ==================================================
+   HEALTH HISTORY
+   ================================================== */
+
+/**
+ * GET /api/patient/health-history
+ * Fetch patient health history records + clinical encounters
+ */
+router.get("/health-history", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(400).json({ error: "User identity missing" });
+
+    const patientProfileId = await getPatientProfileIdByUserId(userId);
+    if (!patientProfileId) return res.status(404).json({ error: "Patient profile not found" });
+
+    // Fetch manual records with fallback
+    let manualRecords = [];
+    try {
+      if (prisma.patientHealthRecord) {
+        manualRecords = await prisma.patientHealthRecord.findMany({
+          where: { patientId: patientProfileId },
+          orderBy: { createdAt: "desc" },
+        });
+      } else {
+        throw new Error("Fallback to raw query");
+      }
+    } catch (e) {
+      manualRecords = await prisma.$queryRaw`
+        SELECT * FROM "public"."PatientHealthRecord"
+        WHERE "patientId" = ${patientProfileId}
+        ORDER BY "createdAt" DESC
+      `;
+    }
+
+    // Fetch clinical encounters
+    let encounters = [];
+    try {
+      encounters = await prisma.clinicalEncounter.findMany({
+        where: { patientId: patientProfileId },
+        include: {
+          doctor: {
+            include: { user: true }
+          }
+        },
+        orderBy: { createdAt: "desc" }
+      });
+    } catch (e) {
+      console.warn("Could not fetch clinical encounters:", e.message);
+    }
+
+    // Format manual records
+    const formattedManual = (manualRecords || []).map(r => ({
+      id: r.id,
+      type: r.type,
+      provider: r.provider,
+      date: r.date,
+      note: r.note,
+      icon: r.icon || "clinical_notes",
+      source: "MANUAL",
+      createdAt: r.createdAt
+    }));
+
+    // Format encounter records
+    const formattedEncounters = (encounters || []).map(e => {
+      const docName = e.doctor?.user 
+        ? `Dr. ${e.doctor.user.firstName || ""} ${e.doctor.user.lastName || ""}`.trim()
+        : "Clinical Encounter";
+      const dateStr = new Date(e.createdAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric"
+      });
+      return {
+        id: e.id,
+        type: "Clinical Consultation",
+        provider: docName,
+        date: dateStr,
+        note: e.assessment || e.plan || e.subjective || "Clinical encounter completed.",
+        icon: "medical_services",
+        source: "ENCOUNTER",
+        createdAt: e.createdAt
+      };
+    });
+
+    // Fetch approved lab reports
+    let labOrders = [];
+    try {
+      labOrders = await prisma.labOrder.findMany({
+        where: {
+          patientId: patientProfileId,
+          status: "COMPLETED",
+          resultUrl: { not: null }
+        },
+        include: {
+          laboratory: { include: { user: true } },
+          doctor: { include: { user: true } }
+        },
+        orderBy: { orderedAt: "desc" }
+      });
+    } catch (e) {
+      console.warn("Could not fetch lab orders:", e.message);
+    }
+
+    const formattedLabs = (labOrders || []).map(l => {
+      const labName = l.laboratory?.user
+        ? `${l.laboratory.user.firstName || ""} ${l.laboratory.user.lastName || ""}`.trim()
+        : "Laboratory";
+      const dateStr = new Date(l.completedAt || l.orderedAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric"
+      });
+      return {
+        id: l.id,
+        type: `Lab Report: ${l.testName}`,
+        provider: labName,
+        date: dateStr,
+        note: l.resultNotes || "Lab test report approved by doctor.",
+        icon: "biotech",
+        source: "LAB",
+        resultUrl: l.resultUrl,
+        createdAt: l.completedAt || l.orderedAt
+      };
+    });
+
+    // Merge and sort newest first
+    const combined = [...formattedManual, ...formattedEncounters, ...formattedLabs].sort((a, b) => 
+      new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    res.json({ success: true, data: combined });
+  } catch (err) {
+    console.error("Failed to fetch health history:", err);
+    res.status(500).json({ error: "Failed to fetch health history" });
+  }
+});
+
+/**
+ * GET /api/patient/lab-reports
+ * Fetch only APPROVED/COMPLETED lab reports for the patient
+ */
+router.get("/lab-reports", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(400).json({ error: "User identity missing" });
+
+    const patientProfileId = await getPatientProfileIdByUserId(userId);
+    if (!patientProfileId) return res.status(404).json({ error: "Patient profile not found" });
+
+    const reports = await prisma.labOrder.findMany({
+      where: {
+        patientId: patientProfileId,
+        status: "COMPLETED",
+        resultUrl: { not: null }
+      },
+      include: {
+        doctor: { include: { user: true } },
+        laboratory: { include: { user: true } }
+      },
+      orderBy: { orderedAt: "desc" }
+    });
+
+    return res.json({ success: true, data: reports });
+  } catch (err) {
+    console.error("Failed to fetch patient lab reports:", err);
+    return res.status(500).json({ error: "Failed to fetch lab reports" });
+  }
+});
+
+/**
+ * POST /api/patient/health-history
+ * Create a new health history record
+ */
+router.post("/health-history", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { type, provider, date, note, icon } = req.body;
+
+    const patientProfileId = await getPatientProfileIdByUserId(userId);
+    if (!patientProfileId) return res.status(404).json({ error: "Patient profile not found" });
+
+    const recId = `phr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const recType = type || "Medical Record";
+    const recProvider = provider || "General Provider";
+    const recDate = date || new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+    const recNote = note || "";
+    const recIcon = icon || "clinical_notes";
+
+    let newRecord = null;
+    try {
+      if (prisma.patientHealthRecord) {
+        newRecord = await prisma.patientHealthRecord.create({
+          data: {
+            patientId: patientProfileId,
+            type: recType,
+            provider: recProvider,
+            date: recDate,
+            note: recNote,
+            icon: recIcon
+          }
+        });
+      } else {
+        throw new Error("Fallback to raw insert");
+      }
+    } catch (e) {
+      await prisma.$executeRaw`
+        INSERT INTO "public"."PatientHealthRecord" ("id", "patientId", "type", "provider", "date", "note", "icon", "createdAt", "updatedAt")
+        VALUES (${recId}, ${patientProfileId}, ${recType}, ${recProvider}, ${recDate}, ${recNote}, ${recIcon}, NOW(), NOW())
+      `;
+      newRecord = {
+        id: recId,
+        patientId: patientProfileId,
+        type: recType,
+        provider: recProvider,
+        date: recDate,
+        note: recNote,
+        icon: recIcon
+      };
+    }
+
+    res.json({ success: true, data: newRecord });
+  } catch (err) {
+    console.error("Failed to add health history record:", err);
+    res.status(500).json({ error: "Failed to add health history record" });
   }
 });
 

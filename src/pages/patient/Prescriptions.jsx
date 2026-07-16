@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import api from "../../Lib/api";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
+import DashboardLayout from "../../layouts/DashboardLayout";
 import { FaEye, FaDownload } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -122,12 +123,9 @@ export default function PatientPrescriptions() {
   // UI Rendering
   // --------------------------------------------------------
   return (
-    <div className="flex bg-[var(--bg-main)]/90 text-[var(--text-main)] min-h-screen">
-      <Sidebar role={role || "PATIENT"} />
-      <div className="flex-1">
-        <Topbar userName={userName} />
-
-        <div className="flex justify-between items-center mb-6">
+    <DashboardLayout role={role || "PATIENT"}>
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
           <img
             src="/images/logo/Asset3.png"
             alt="CureVirtual"
@@ -136,7 +134,7 @@ export default function PatientPrescriptions() {
               e.currentTarget.src = PLACEHOLDER_LOGO;
             }} // fallback if missing
           />
-          <h1 className="text-3xl font-bold">My Prescriptions</h1>
+          <h1 className="text-3xl font-bold text-on-surface">My Prescriptions</h1>
         </div>
 
         {error && <p className="text-red-400 mb-4">{error}</p>}
@@ -154,6 +152,7 @@ export default function PatientPrescriptions() {
                   <th className="p-3">Frequency</th>
                   <th className="p-3">Duration</th>
                   <th className="p-3">Date</th>
+                  <th className="p-3">Status</th>
                   <th className="p-3 text-center">Actions</th>
                 </tr>
               </thead>
@@ -174,7 +173,18 @@ export default function PatientPrescriptions() {
                       <td className="p-3">{p.frequency}</td>
                       <td className="p-3">{p.duration}</td>
                       <td className="p-3">
-                        {p.createdAt ? new Date(p.createdAt).toLocaleString() : "—"}
+                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="p-3">
+                        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md ${
+                          p.dispatchStatus === "DISPENSED" ? "bg-green-500/20 text-green-500" :
+                          p.dispatchStatus === "REJECTED" ? "bg-red-500/20 text-red-500" :
+                          p.dispatchStatus === "READY" ? "bg-purple-500/20 text-purple-500" :
+                          p.dispatchStatus === "ACKNOWLEDGED" ? "bg-blue-500/20 text-blue-500" :
+                          "bg-yellow-500/20 text-yellow-500"
+                        }`}>
+                          {p.dispatchStatus || "PENDING"}
+                        </span>
                       </td>
                       <td className="p-3 flex justify-center gap-4">
                         <button
@@ -202,157 +212,126 @@ export default function PatientPrescriptions() {
 
       {/* ===== MODAL (View + Download) ===== */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-[var(--bg-main)]/95 flex items-center justify-center z-50">
-          <div className="bg-[var(--bg-card)] p-8 rounded-2xl shadow-xl w-full max-w-lg relative">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-container-lowest p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-lg relative border border-outline-variant/30">
             <button
               onClick={() => setModalOpen(false)}
-              className="absolute top-3 right-4 text-[var(--text-soft)] text-xl"
+              className="absolute top-4 right-4 text-outline hover:text-primary transition-colors text-xl p-2 rounded-full hover:bg-surface-container"
             >
               ✖
             </button>
-            <img
-              src="/images/logo/Asset3.png"
-              alt="CureVirtual"
-              style={{ width: 120, height: "auto" }}
-              onError={(e) => {
-                e.currentTarget.src = PLACEHOLDER_LOGO;
-              }} // fallback if missing
-            />
-            <h2 className="text-2xl font-semibold mb-4 text-[var(--text-main)]">
-              Prescription Details
-            </h2>
+            <div className="mb-4 flex items-center gap-4 border-b border-outline-variant/50 pb-4">
+              <img
+                src="/images/logo/Asset3.png"
+                alt="CureVirtual"
+                style={{ width: 100, height: "auto" }}
+                onError={(e) => {
+                  e.currentTarget.src = PLACEHOLDER_LOGO;
+                }}
+              />
+              <h2 className="text-xl md:text-2xl font-bold text-on-surface">
+                Prescription Details
+              </h2>
+            </div>
 
             {/* Export Target */}
-            <div ref={pdfRef} className="space-y-3 bg-white rounded-xl p-5 text-[#111827]">
-              {/* Header in exported area (light mode for print quality) */}
-              <div className="flex items-center justify-between border-b pb-3">
+            <div ref={pdfRef} className="space-y-3 bg-white rounded-2xl p-5 text-gray-900 shadow-sm border border-gray-100">
+              {/* Header in exported area */}
+              <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                 <div className="flex items-center gap-3">
                   <img
                     src="/images/logo/Asset3.png"
                     alt="CureVirtual"
-                    style={{ width: 120, height: "auto" }}
+                    style={{ width: 100, height: "auto" }}
                     onError={(e) => {
                       e.currentTarget.src = PLACEHOLDER_LOGO;
-                    }} // fallback if missing
+                    }}
                   />
                   <div>
-                    <h3 className="text-lg font-bold">Prescription</h3>
-                    <p className="text-sm text-gray-600">
-                      Issued:{" "}
-                      {selectedPrescription?.createdAt
-                        ? new Date(selectedPrescription.createdAt).toLocaleString()
-                        : "—"}
+                    <h2 className="font-bold text-lg text-green-700">Rx Document</h2>
+                    <p className="text-xs text-gray-500 font-mono">
+                      Ref: {selectedPrescription?.id?.slice(-8).toUpperCase()}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm">
-                    Dr:{" "}
-                    <span className="font-semibold">
-                      {[
-                        selectedPrescription?.doctor?.user?.firstName,
-                        selectedPrescription?.doctor?.user?.lastName,
-                      ]
-                        .filter(Boolean)
-                        .join(" ") || "N/A"}
-                    </span>
+                  <p className="font-bold text-sm">
+                    Date:{" "}
+                    {selectedPrescription?.createdAt
+                      ? new Date(selectedPrescription.createdAt).toLocaleDateString()
+                      : "—"}
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2">
-                <p>
-                  <span className="font-semibold">Patient:</span>{" "}
-                  {[
-                    selectedPrescription?.patient?.user?.firstName,
-                    selectedPrescription?.patient?.user?.lastName,
-                  ]
-                    .filter(Boolean)
-                    .join(" ") || "—"}
-                </p>
-                <p>
-                  <span className="font-semibold">Patient ID:</span>{" "}
-                  {selectedPrescription?.patient?.userId || "—"}
-                </p>
-
-                <p>
-                  <span className="font-semibold">Medication:</span>{" "}
-                  {selectedPrescription?.medication}
-                </p>
-                <p>
-                  <span className="font-semibold">Dosage:</span> {selectedPrescription?.dosage}
-                </p>
-                <p>
-                  <span className="font-semibold">Frequency:</span>{" "}
-                  {selectedPrescription?.frequency}
-                </p>
-                <p>
-                  <span className="font-semibold">Duration:</span> {selectedPrescription?.duration}
-                </p>
-
-                {/* Extra rows (render only if present) */}
-                {selectedPrescription?.diagnosis && (
-                  <p>
-                    <span className="font-semibold">Diagnosis:</span>{" "}
-                    {selectedPrescription.diagnosis}
+              {/* Body */}
+              <div className="space-y-4 pt-2">
+                <div>
+                  <h4 className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+                    Prescribed By
+                  </h4>
+                  <p className="font-semibold text-sm">
+                    Dr.{" "}
+                    {[
+                      selectedPrescription?.doctor?.user?.firstName,
+                      selectedPrescription?.doctor?.user?.lastName,
+                    ]
+                      .filter(Boolean)
+                      .join(" ") || "Unknown"}
                   </p>
-                )}
-                {selectedPrescription?.route && (
-                  <p>
-                    <span className="font-semibold">Route:</span> {selectedPrescription.route}
+                </div>
+                <div className="bg-green-50/50 p-4 rounded-xl border border-green-100/50">
+                  <h4 className="text-[10px] uppercase font-bold text-green-600/70 tracking-wider mb-1">
+                    Medication
+                  </h4>
+                  <p className="font-black text-xl text-green-900 mb-2">
+                    {selectedPrescription?.medication}
                   </p>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-700">
+                    <p>
+                      <span className="font-semibold">Dosage:</span>{" "}
+                      {selectedPrescription?.dosage}
+                    </p>
+                    <p>
+                      <span className="font-semibold">Frequency:</span>{" "}
+                      {selectedPrescription?.frequency}
+                    </p>
+                    <p>
+                      <span className="font-semibold">Duration:</span>{" "}
+                      {selectedPrescription?.duration}
+                    </p>
+                  </div>
+                </div>
+                {selectedPrescription?.notes && (
+                  <div>
+                    <h4 className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+                      Doctor's Notes
+                    </h4>
+                    <p className="text-sm italic text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100 mt-1">
+                      "{selectedPrescription.notes}"
+                    </p>
+                  </div>
                 )}
-                {selectedPrescription?.refills != null && (
-                  <p>
-                    <span className="font-semibold">Refills:</span> {selectedPrescription.refills}
-                  </p>
-                )}
-                {(selectedPrescription?.startDate || selectedPrescription?.endDate) && (
-                  <p>
-                    <span className="font-semibold">Course:</span>{" "}
-                    {selectedPrescription.startDate
-                      ? new Date(selectedPrescription.startDate).toLocaleDateString()
-                      : "—"}{" "}
-                    —{" "}
-                    {selectedPrescription.endDate
-                      ? new Date(selectedPrescription.endDate).toLocaleDateString()
-                      : "—"}
-                  </p>
-                )}
-                {selectedPrescription?.instructions && (
-                  <p>
-                    <span className="font-semibold">Instructions:</span>{" "}
-                    {selectedPrescription.instructions}
-                  </p>
-                )}
-
-                <p>
-                  <span className="font-semibold">Notes:</span> {selectedPrescription?.notes || "—"}
-                </p>
-              </div>
-
-              <div className="pt-3 border-t">
-                <p className="text-xs text-gray-500">
-                  *This document is generated electronically and valid without signature.
-                </p>
               </div>
             </div>
 
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                onClick={handleDownloadPdf}
-                disabled={pdfBusy}
-                className="inline-flex items-center gap-2 bg-[#027906] hover:bg-[#045d07] text-[var(--text-main)] px-4 py-2 rounded-md transition disabled:opacity-60"
-              >
+            <button
+              onClick={handleDownloadPdf}
+              disabled={pdfBusy}
+              className="w-full mt-6 flex justify-center items-center gap-2 px-6 py-4 bg-[#027906] text-white rounded-2xl font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-green-900/20 disabled:opacity-50 disabled:scale-100"
+            >
+              {pdfBusy ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
                 <FaDownload />
-                {pdfBusy ? "Generating..." : "Download PDF"}
-              </button>
-            </div>
+              )}
+              {pdfBusy ? "Generating PDF..." : "Download Original PDF"}
+            </button>
           </div>
         </div>
       )}
 
-      <ToastContainer position="top-right" autoClose={2200} />
-    </div>
+      <ToastContainer position="bottom-right" theme="dark" />
+    </DashboardLayout>
   );
 }

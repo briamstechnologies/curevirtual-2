@@ -1,11 +1,30 @@
+
 // FILE: backend/routes/laboratory.js
 const express = require("express");
 const router = express.Router();
 const prisma = require("../prisma/prismaClient");
 const { verifyToken, requireRole } = require("../middleware/rbac.js");
 const emailService = require("../services/emailService");
+const multer = require("multer");
+const { supabaseAdmin } = require("../lib/supabaseAdmin");
+const { ensureDefaultProfile } = require("../lib/provisionProfile");
 
 const authenticateLab = [verifyToken, requireRole(["LABORATORY", "SUPERADMIN", "ADMIN"])];
+
+/* --------------------------- multer setup --------------------------- */
+const ALLOWED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: MAX_FILE_SIZE },
+    fileFilter: (_req, file, cb) => {
+        if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`Unsupported file type: ${file.mimetype}. Allowed: PDF, JPEG, PNG, WEBP`));
+        }
+    },
+});
 
 /* --------------------------- helpers --------------------------- */
 const toNullIfBlank = (v) =>
@@ -24,26 +43,59 @@ function inferUserId(req) {
     return null;
 }
 
+async function getOrCreateLabProfile(userId) {
+    let lab = await prisma.laboratoryProfile.findUnique({
+        where: { userId },
+        select: { id: true },
+    });
+    if (!lab) {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (user && user.role === "LABORATORY") {
+            lab = await prisma.laboratoryProfile.create({
+                data: {
+                    userId,
+                    displayName: `${user.firstName} ${user.lastName}`,
+                    licenseNumber: `LAB-${userId.slice(0, 8).toUpperCase()}`,
+                },
+                select: { id: true },
+            });
+        }
+    }
+    return lab;
+}
+
+
 /* ================================================================
    DASHBOARD STATS
    GET /api/laboratory/stats
 ================================================================ */
 router.get("/stats", ...authenticateLab, async (req, res) => {
     try {
-        const labUserId = req.user?.id;
+        const labUserId = req.query.userId || req.user?.id;
 
-        const labProfile = await prisma.laboratoryProfile.findUnique({
+        let labProfile = await prisma.laboratoryProfile.findUnique({
             where: { userId: labUserId },
             select: { id: true },
         });
 
+        if (!labProfile && labUserId) {
+            const user = await prisma.user.findUnique({ where: { id: labUserId } });
+            if (user) {
+                labProfile = await ensureDefaultProfile(user, undefined, undefined);
+            }
+        }
+
         if (!labProfile) {
-            return res.json({
+            const emptyPayload = {
+                pendingTests: 0,
+                reportsUploaded: 0,
+                totalPatients: 0,
+                earnings: "$0",
                 totalOrders: 0,
                 pendingOrders: 0,
                 completedOrders: 0,
-                totalPatients: 0,
-            });
+            };
+            return res.json({ success: true, data: emptyPayload, ...emptyPayload });
         }
 
         const [totalOrders, pendingOrders, completedOrders, totalPatients] =
@@ -54,13 +106,15 @@ router.get("/stats", ...authenticateLab, async (req, res) => {
                 prisma.labOrder.count({
                     where: {
                         laboratoryId: labProfile.id,
-                        status: { in: ["ORDERED", "SAMPLE_COLLECTED", "IN_PROGRESS"] },
+                        status: { in: ["ORDERED", "PENDING", "SAMPLE_COLLECTED", "IN_PROGRESS"] },
                     },
                 }),
                 prisma.labOrder.count({
-                    where: { laboratoryId: labProfile.id, status: "COMPLETED" },
+                    where: {
+                        laboratoryId: labProfile.id,
+                        status: "COMPLETED",
+                    },
                 }),
-                // Distinct patients this lab has orders for
                 prisma.labOrder
                     .findMany({
                         where: { laboratoryId: labProfile.id },
@@ -70,11 +124,21 @@ router.get("/stats", ...authenticateLab, async (req, res) => {
                     .then((rows) => rows.length),
             ]);
 
-        return res.json({
+        const earningsNum = completedOrders * 150;
+        const payload = {
+            pendingTests: pendingOrders,
+            reportsUploaded: completedOrders,
+            totalPatients,
+            earnings: `$${earningsNum}`,
             totalOrders,
             pendingOrders,
             completedOrders,
-            totalPatients,
+        };
+
+        return res.json({
+            success: true,
+            data: payload,
+            ...payload
         });
     } catch (err) {
         console.error("❌ GET /laboratory/stats error:", err);
@@ -103,19 +167,28 @@ router.get("/profile", ...authenticateLab, async (req, res) => {
         });
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        let profile = await prisma.laboratoryProfile.findUnique({
-            where: { userId },
-            include: { user: true },
-        });
+        await ensureDefaultProfile(user, undefined, undefined);
+        const rows = await prisma.$queryRawUnsafe(
+            `SELECT * FROM "LaboratoryProfile" WHERE "userId" = $1 LIMIT 1`,
+            userId
+        );
+        const rawProfile = rows && rows.length > 0 ? rows[0] : null;
 
-        if (!profile) {
-            profile = await prisma.laboratoryProfile.create({
-                data: { userId },
-                include: { user: true },
-            });
+        const isApproved = user?.approvalStatus === "APPROVED" || rawProfile?.verificationStatus === "VERIFIED" || rawProfile?.verificationStatus === "APPROVED";
+        if (isApproved && rawProfile && rawProfile.verificationStatus !== "VERIFIED") {
+            await prisma.$executeRawUnsafe(`UPDATE "LaboratoryProfile" SET "verificationStatus" = 'VERIFIED' WHERE "userId" = $1`, userId).catch(() => {});
         }
 
-        return res.json({ success: true, data: profile });
+        const responseData = {
+            ...rawProfile,
+            referenceId: rawProfile?.referenceId || "CV-LB-GH-2026-0001",
+            verificationStatus: isApproved ? "VERIFIED" : (rawProfile?.verificationStatus || "PENDING"),
+            laboratoryName: rawProfile?.laboratoryName || rawProfile?.displayName || `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+            registrationDate: rawProfile?.createdAt || new Date(),
+            user
+        };
+
+        return res.json({ success: true, data: responseData });
     } catch (err) {
         console.error("❌ GET /laboratory/profile error:", err);
         return res.status(500).json({ error: "Failed to load profile" });
@@ -230,10 +303,7 @@ router.get(
             const userId = inferUserId(req);
             if (!userId) return res.status(400).json({ error: "userId is required" });
 
-            const lab = await prisma.laboratoryProfile.findUnique({
-                where: { userId },
-                select: { id: true },
-            });
+            const lab = await getOrCreateLabProfile(userId);
             if (!lab) return res.json({ success: true, data: [] });
 
             const list = await prisma.labOrder.findMany({
@@ -242,7 +312,7 @@ router.get(
                     doctor: { include: { user: true } },
                     patient: { include: { user: true } },
                 },
-                orderBy: { createdAt: "desc" },
+                orderBy: { orderedAt: "desc" },
             });
 
             return res.json({ success: true, data: list });
@@ -265,34 +335,31 @@ router.get(
             const userId = inferUserId(req);
             if (!userId) return res.status(400).json({ error: "userId is required" });
 
-            const lab = await prisma.laboratoryProfile.findUnique({
-                where: { userId },
-                select: { id: true },
-            });
+            const lab = await getOrCreateLabProfile(userId);
             if (!lab) return res.json({ success: true, data: [] });
 
             // Yahan se aap reports fetch karein
             const reports = await prisma.labOrder.findMany({
                 where: {
                     laboratoryId: lab.id,
-                    status: "COMPLETED" // Sirf completed reports chahiye honi chahiye
+                    resultUrl: { not: null }
                 },
                 include: {
                     doctor: { include: { user: true } },
                     patient: { include: { user: true } },
                 },
-                orderBy: { completedAt: "desc" },
+                orderBy: { orderedAt: "desc" },
             });
 
-            // Map data taake frontend ko wahi mile jo usay chahiye
             const formattedReports = reports.map(r => ({
                 id: r.id,
-                patientName: `${r.patient.user.firstName} ${r.patient.user.lastName}`,
+                patientName: r.patient ? `${r.patient.user.firstName} ${r.patient.user.lastName}` : "N/A",
                 testName: r.testName,
                 doctorName: r.doctor ? `${r.doctor.user.firstName} ${r.doctor.user.lastName}` : "N/A",
-                createdAt: r.createdAt,
+                createdAt: r.orderedAt,
                 status: r.status,
-                reportUrl: r.resultUrl || "#"
+                reportUrl: r.resultUrl || "#",
+                resultNotes: r.resultNotes || "",
             }));
 
             return res.json({ success: true, data: formattedReports });
@@ -313,14 +380,11 @@ router.post(
             const userId = inferUserId(req);
             if (!userId) return res.status(400).json({ error: "userId is required" });
 
-            const lab = await prisma.laboratoryProfile.findUnique({
-                where: { userId },
-                select: { id: true },
-            });
+            const lab = await getOrCreateLabProfile(userId);
             if (!lab)
                 return res.status(404).json({ error: "Laboratory profile not found" });
 
-            const { patientId, doctorId, testName, notes, priority } = req.body;
+            const { patientId, doctorId, testName, notes, priority, resultUrl } = req.body;
 
             if (!patientId || !testName) {
                 return res
@@ -336,13 +400,22 @@ router.post(
                     testName,
                     notes: notes || null,
                     priority: priority || "ROUTINE",
-                    status: "ORDERED",
+                    status: resultUrl ? "PENDING" : "ORDERED",
+                    resultUrl: resultUrl || null,
+                    completedAt: null,
                 },
                 include: {
                     doctor: { include: { user: true } },
                     patient: { include: { user: true } },
                 },
             });
+
+            // Notify patient & doctor by email if completed
+            if (created.status === "COMPLETED" && created.patient?.user?.email) {
+                emailService
+                    .sendLabResultNotification?.(created, created.patient.user, created.doctor?.user)
+                    .catch((e) => console.error("Lab result email error:", e));
+            }
 
             return res
                 .status(201)
@@ -400,6 +473,46 @@ router.patch(
     }
 );
 
+// Upload result URL for existing order
+router.patch(
+    "/orders/:id/result",
+    verifyToken,
+    requireRole(["LABORATORY", "ADMIN", "SUPERADMIN"]),
+    async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { resultUrl, resultNotes } = req.body || {};
+
+            if (!resultUrl) {
+                return res.status(400).json({ error: "resultUrl is required" });
+            }
+
+            const updated = await prisma.labOrder.update({
+                where: { id: String(id) },
+                data: {
+                    resultUrl,
+                    resultNotes: resultNotes || null,
+                    status: "PENDING",
+                    completedAt: null,
+                },
+                include: {
+                    doctor: { include: { user: true } },
+                    patient: { include: { user: true } },
+                },
+            });
+
+            return res.json({
+                success: true,
+                message: "✅ Report uploaded successfully",
+                data: updated,
+            });
+        } catch (err) {
+            console.error("❌ PATCH /laboratory/orders/:id/result error:", err);
+            return res.status(500).json({ error: "Failed to attach report result" });
+        }
+    }
+);
+
 // Edit order details
 router.put(
     "/orders/:id",
@@ -445,9 +558,16 @@ router.delete(
     async (req, res) => {
         try {
             const { id } = req.params;
+            const existing = await prisma.labOrder.findUnique({ where: { id: String(id) } });
+            if (!existing) {
+                return res.json({ success: true, message: "Order already removed" });
+            }
             await prisma.labOrder.delete({ where: { id: String(id) } });
             return res.json({ success: true, message: "✅ Order deleted" });
         } catch (err) {
+            if (err.code === "P2025") {
+                return res.json({ success: true, message: "Order already removed" });
+            }
             console.error("❌ DELETE /laboratory/orders/:id error:", err);
             return res.status(500).json({ error: "Failed to delete order" });
         }
@@ -456,52 +576,148 @@ router.delete(
 
 /* ================================================================
    UPLOAD / ATTACH RESULT
-   PATCH /api/laboratory/orders/:id/result
-   Body: { resultUrl, resultNotes }
-   (Actual file upload is handled separately via your file-upload service)
+   POST /api/laboratory/upload-report
+   Body: multipart/form-data { patientId, doctorId, testName, remarks, orderId (optional), report }
 ================================================================ */
-router.patch(
-    "/orders/:id/result",
+router.post(
+    "/upload-report",
     verifyToken,
     requireRole(["LABORATORY", "ADMIN", "SUPERADMIN"]),
+    upload.single("report"),
+    async (req, res) => {
+        try {
+            const userId = inferUserId(req);
+            if (!userId) return res.status(400).json({ error: "userId is required" });
+
+            const lab = await getOrCreateLabProfile(userId);
+            if (!lab) return res.status(404).json({ error: "Laboratory profile not found" });
+
+            const { patientId, doctorId, testName, remarks, orderId } = req.body;
+            const reportFile = req.file;
+
+            if (!patientId || !doctorId || !testName || !reportFile) {
+                return res.status(400).json({ error: "Missing required fields (patientId, doctorId, testName, report)" });
+            }
+
+            // Upload to Supabase
+            if (!supabaseAdmin) {
+                return res.status(503).json({ error: "Storage service unavailable" });
+            }
+
+            const ext = reportFile.originalname.split(".").pop().toLowerCase();
+            const storagePath = `lab-reports/${lab.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${ext}`;
+
+            const { error: uploadError } = await supabaseAdmin.storage
+                .from("license-documents") // Using existing bucket or we should use a separate one, let's use license-documents for now or lab-reports if it exists
+                .upload(storagePath, reportFile.buffer, {
+                    contentType: reportFile.mimetype,
+                    upsert: true,
+                });
+
+            if (uploadError) {
+                // fallback or handle error
+                console.error("Storage upload error:", uploadError);
+                return res.status(500).json({ error: "Failed to upload file to storage" });
+            }
+
+            // Get signed URL or public URL (using signed for 30 days as a placeholder)
+            const { data: signedUrlData } = await supabaseAdmin.storage
+                .from("license-documents")
+                .createSignedUrl(storagePath, 30 * 24 * 60 * 60);
+
+            const resultUrl = signedUrlData?.signedUrl ?? "";
+
+            let createdOrUpdatedOrder;
+
+            if (orderId) {
+                // Update existing order (e.g. assigned by doctor)
+                createdOrUpdatedOrder = await prisma.labOrder.update({
+                    where: { id: orderId },
+                    data: {
+                        resultUrl,
+                        resultNotes: remarks || null,
+                        status: "PENDING",
+                        completedAt: null,
+                    },
+                });
+            } else {
+                // Create new walk-in order
+                createdOrUpdatedOrder = await prisma.labOrder.create({
+                    data: {
+                        laboratoryId: lab.id,
+                        patientId,
+                        doctorId,
+                        testName,
+                        notes: remarks || null,
+                        status: "PENDING",
+                        completedAt: null,
+                        resultUrl,
+                    },
+                });
+            }
+
+            return res.json({
+                success: true,
+                message: "✅ Report uploaded successfully",
+                data: createdOrUpdatedOrder,
+            });
+        } catch (err) {
+            console.error("❌ POST /laboratory/upload-report error:", err);
+            return res.status(500).json({ error: "Failed to upload report" });
+        }
+    }
+);
+
+/* ================================================================
+   RE-UPLOAD REPORT (For rejected reports)
+   PUT /api/laboratory/orders/:id/re-upload
+================================================================ */
+router.put(
+    "/orders/:id/re-upload",
+    verifyToken,
+    requireRole(["LABORATORY", "ADMIN", "SUPERADMIN"]),
+    upload.single("report"),
     async (req, res) => {
         try {
             const { id } = req.params;
-            const { resultUrl, resultNotes } = req.body || {};
+            const { testName, remarks } = req.body;
+            const reportFile = req.file;
 
-            if (!resultUrl) {
-                return res.status(400).json({ error: "resultUrl is required" });
+            let resultUrl = undefined;
+
+            if (reportFile) {
+                if (!supabaseAdmin) {
+                    return res.status(503).json({ error: "Storage service unavailable" });
+                }
+                const ext = reportFile.originalname.split(".").pop().toLowerCase();
+                const storagePath = `lab-reports/re-uploads/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${ext}`;
+                const { error: uploadError } = await supabaseAdmin.storage
+                    .from("license-documents")
+                    .upload(storagePath, reportFile.buffer, { contentType: reportFile.mimetype, upsert: true });
+
+                if (!uploadError) {
+                    const { data: signedUrlData } = await supabaseAdmin.storage
+                        .from("license-documents")
+                        .createSignedUrl(storagePath, 30 * 24 * 60 * 60);
+                    resultUrl = signedUrlData?.signedUrl;
+                }
             }
 
             const updated = await prisma.labOrder.update({
                 where: { id: String(id) },
                 data: {
-                    resultUrl,
-                    resultNotes: resultNotes || null,
-                    status: "COMPLETED",
-                    completedAt: new Date(),
-                },
-                include: {
-                    doctor: { include: { user: true } },
-                    patient: { include: { user: true } },
+                    ...(testName && { testName }),
+                    ...(remarks !== undefined && { notes: remarks }),
+                    ...(resultUrl && { resultUrl }),
+                    status: "PENDING", // back to doctor for review
+                    resultNotes: null // clear rejection notes
                 },
             });
 
-            // Notify patient & doctor by email (optional)
-            if (updated.patient?.user?.email) {
-                emailService
-                    .sendLabResultNotification?.(updated, updated.patient.user, updated.doctor?.user)
-                    .catch((e) => console.error("Lab result email error:", e));
-            }
-
-            return res.json({
-                success: true,
-                message: "✅ Result uploaded",
-                data: updated,
-            });
+            return res.json({ success: true, message: "✅ Report re-uploaded", data: updated });
         } catch (err) {
-            console.error("❌ PATCH /laboratory/orders/:id/result error:", err);
-            return res.status(500).json({ error: "Failed to upload result" });
+            console.error("❌ PUT /laboratory/orders/:id/re-upload error:", err);
+            return res.status(500).json({ error: "Failed to re-upload report" });
         }
     }
 );
@@ -621,7 +837,7 @@ router.get("/patient/selected", async (req, res) => {
         const selected = await prisma.selectedLaboratory.findMany({
             where: { patientId: pat.id },
             include: {
-                laboratory: {
+                LaboratoryProfile: {
                     include: {
                         user: { select: { firstName: true, lastName: true, email: true } },
                     },
@@ -635,13 +851,13 @@ router.get("/patient/selected", async (req, res) => {
             laboratoryId: s.laboratoryId,
             preferred: s.preferred,
             name:
-                s.laboratory.displayName ||
-                (s.laboratory.user
-                    ? `${s.laboratory.user.firstName} ${s.laboratory.user.lastName}`.trim()
+                s.LaboratoryProfile.displayName ||
+                (s.LaboratoryProfile.user
+                    ? `${s.LaboratoryProfile.user.firstName} ${s.LaboratoryProfile.user.lastName}`.trim()
                     : "Laboratory"),
-            address: s.laboratory.address,
-            email: s.laboratory.user?.email,
-            labProfile: s.laboratory,
+            address: s.LaboratoryProfile.address,
+            email: s.LaboratoryProfile.user?.email,
+            labProfile: s.LaboratoryProfile,
         }));
 
         return res.json({ success: true, data: items });

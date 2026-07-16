@@ -25,6 +25,8 @@
     "@prisma/client": "^6.3.0",
     "@sendgrid/mail": "^8.1.6",
     "@supabase/supabase-js": "^2.90.1",
+    "agora-access-token": "^2.0.4",
+    "agora-token": "^2.0.5",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",

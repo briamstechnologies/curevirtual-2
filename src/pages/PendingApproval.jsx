@@ -32,10 +32,9 @@ export default function PendingApproval() {
     navigate("/login");
   };
 
-  // Updated to handle LABORATORY as well
-  let roleLabel = "Doctor";
-  if (role === "PHARMACY") roleLabel = "Pharmacist";
-  else if (role === "LABORATORY") roleLabel = "Laboratory";
+  const roleLabel = role 
+    ? (role === "PHARMACY" ? "Pharmacist" : role.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()))
+    : "Doctor";
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[var(--bg-main)]">

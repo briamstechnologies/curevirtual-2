@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import api from "../../Lib/api";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import BookingSlots from "../../components/BookingSlots";
 import CheckoutForm from "../../components/payments/CheckoutForm";
 
 const BookAppointment = () => {
+  const [searchParams] = useSearchParams();
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [formData, setFormData] = useState({
@@ -18,9 +20,9 @@ const BookAppointment = () => {
   });
   const [loading, setLoading] = useState(false);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
-  
+
   // Payment workflow states
-  const [bookingStep, setBookingStep] = useState('select'); // 'select', 'payment', 'success'
+  const [bookingStep, setBookingStep] = useState("select"); // 'select', 'payment', 'success'
   const [checkoutData, setCheckoutData] = useState(null);
 
   const patientId = localStorage.getItem("userId");
@@ -30,15 +32,17 @@ const BookAppointment = () => {
     const fetchDoctors = async () => {
       try {
         setLoadingDoctors(true);
-        // Use the patient-accessible endpoint (no DOCTOR role restriction)
         const res = await api.get("/patient/doctors/all");
         const data = Array.isArray(res.data) ? res.data : res.data.data || [];
-        console.log(
-          "[BookAppointment] Loaded doctors:",
-          data.length,
-          data.map((d) => ({ id: d.id, name: d.user?.firstName }))
-        );
         setDoctors(data);
+        const paramId = searchParams.get("doctorId");
+        if (paramId) {
+          const doc = data.find((d) => d.id === paramId);
+          if (doc) {
+            setSelectedDoctor(doc);
+            setFormData((prev) => ({ ...prev, doctorId: doc.id }));
+          }
+        }
       } catch (err) {
         console.error(
           "[BookAppointment] Failed to load doctors:",
@@ -49,9 +53,8 @@ const BookAppointment = () => {
         setLoadingDoctors(false);
       }
     };
-
     fetchDoctors();
-  }, []);
+  }, [searchParams]);
 
   const handleDoctorChange = (doctorId) => {
     const doctor = doctors.find((d) => d.id === doctorId);
@@ -84,20 +87,19 @@ const BookAppointment = () => {
         patientId,
         reason: formData.reason,
       });
-      
+
       const appointmentId = res.data?.appointment?.id;
       const fee = selectedDoctor?.consultationFee || 0; // Fallback to 0 for testing
 
       if (appointmentId) {
         setCheckoutData({ appointmentId, doctorFee: fee });
-        
+
         // AUTO-SUCCESS FOR TESTING (Bypassing payment step)
         handlePaymentSuccess();
         toast.success("Appointment booked successfully (Test Mode)!");
       } else {
         throw new Error("Invalid booking response");
       }
-      
     } catch (err) {
       console.error("Booking error:", err);
       toast.error(err.response?.data?.error || "Failed to book appointment");
@@ -107,7 +109,7 @@ const BookAppointment = () => {
   };
 
   const handlePaymentSuccess = () => {
-    setBookingStep('success');
+    setBookingStep("success");
     setFormData({ doctorId: "", appointmentDate: "", selectedSlotId: "", reason: "" });
     setSelectedDoctor(null);
     setCheckoutData(null);
@@ -116,7 +118,7 @@ const BookAppointment = () => {
   const handlePaymentCancel = () => {
     // In a real system, you might want an endpoint to free the slot if canceled,
     // or just let it expire via a background cron job identifying pending payments.
-    setBookingStep('select');
+    setBookingStep("select");
     setCheckoutData(null);
     toast.warning("Payment cancelled. The reserved slot will expire.");
   };
@@ -133,8 +135,7 @@ const BookAppointment = () => {
           </h1>
 
           <div className="max-w-2xl mx-auto bg-[var(--bg-glass)] p-8 rounded-xl shadow-lg border border-[var(--border)]">
-            
-            {bookingStep === 'select' && (
+            {bookingStep === "select" && (
               <form onSubmit={handleInitializeBooking} className="space-y-5">
                 {/* Doctor Selection */}
                 <div>
@@ -234,25 +235,34 @@ const BookAppointment = () => {
               </form>
             )}
 
-            {bookingStep === 'payment' && checkoutData && (
-              <CheckoutForm 
+            {bookingStep === "payment" && checkoutData && (
+              <CheckoutForm
                 appointmentId={checkoutData.appointmentId}
                 onSuccess={handlePaymentSuccess}
                 onCancel={handlePaymentCancel}
               />
             )}
 
-            {bookingStep === 'success' && (
+            {bookingStep === "success" && (
               <div className="text-center py-10">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500 text-white mb-6">
                   <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-[var(--text-main)] mb-2">Booking Confirmed!</h2>
-                <p className="text-[var(--text-soft)] mb-6">Your appointment is scheduled. Check your dashboard for details.</p>
-                <button 
-                  onClick={() => setBookingStep('select')}
+                <h2 className="text-2xl font-bold text-[var(--text-main)] mb-2">
+                  Booking Confirmed!
+                </h2>
+                <p className="text-[var(--text-soft)] mb-6">
+                  Your appointment is scheduled. Check your dashboard for details.
+                </p>
+                <button
+                  onClick={() => setBookingStep("select")}
                   className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition"
                 >
                   Book Another Appointment
@@ -261,7 +271,7 @@ const BookAppointment = () => {
             )}
 
             {/* Selected Doctor Info (Only show while selecting) */}
-            {selectedDoctor && bookingStep === 'select' && (
+            {selectedDoctor && bookingStep === "select" && (
               <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                 <h3 className="font-semibold text-blue-400 mb-2">Selected Doctor</h3>
                 <p className="text-[var(--text-soft)]">

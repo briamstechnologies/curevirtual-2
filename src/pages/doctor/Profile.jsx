@@ -26,6 +26,7 @@ export default function DoctorProfile() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [profileData, setProfileData] = useState(null);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -55,6 +56,7 @@ export default function DoctorProfile() {
       const res = await api.get("/doctor/profile", { params: { userId } });
       const p = res.data?.data;
       if (p) {
+        setProfileData(p);
         setForm({
           firstName: p.user?.firstName || "",
           middleName: p.user?.middleName || "",
@@ -124,13 +126,27 @@ export default function DoctorProfile() {
   return (
     <DashboardLayout role={role} user={{ name: userName }}>
       <div className="space-y-8">
-        <div>
-          <h2 className="text-[10px] font-black text-[var(--brand-green)] uppercase tracking-[0.3em] mb-1">
-            Professional Account
-          </h2>
-          <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tighter uppercase">
-            Doctor Profile
-          </h1>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-[10px] font-black text-[var(--brand-green)] uppercase tracking-[0.3em] mb-1">
+              Professional Account
+            </h2>
+            <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tighter uppercase">
+              Doctor Profile
+            </h1>
+          </div>
+          {profileData && (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="px-3.5 py-1.5 rounded-full bg-primary/15 border border-primary/30 text-primary text-xs font-black tracking-wide flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">badge</span>
+                Doctor ID: {profileData.referenceId || profileData.reference_id || "CV-DR-GH-2026-0001"}
+              </span>
+              <span className="px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500 text-xs font-black tracking-wide flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                Status: {profileData.verificationStatus === "VERIFIED" ? "Verified" : "Pending Verification"}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="card !p-8 max-w-5xl">

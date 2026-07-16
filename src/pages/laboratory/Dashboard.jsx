@@ -9,9 +9,11 @@ import {
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../layouts/DashboardLayout";
+import api from "../../Lib/api";
 
 export default function LaboratoryDashboard() {
   const labName = localStorage.getItem("userName") || "CureVirtual Lab";
+  const [profileData, setProfileData] = useState(null);
 
   const [stats, setStats] = useState([
     {
@@ -47,7 +49,52 @@ export default function LaboratoryDashboard() {
   const [pendingRequests, setPendingRequests] = useState([]);
 
   useEffect(() => {
-    // fetchData();
+    const userId = localStorage.getItem("userId");
+    if (userId) {
+      api.get("/laboratory/profile", { params: { userId } })
+        .then((res) => {
+          if (res.data?.data) {
+            setProfileData(res.data.data);
+          }
+        })
+        .catch(() => {});
+
+      api.get("/laboratory/stats", { params: { userId } })
+        .then((res) => {
+          const d = res.data?.data || res.data || {};
+          setStats([
+            {
+              label: "Pending Tests",
+              value: String(d.pendingTests ?? d.pendingOrders ?? 0),
+              icon: <FiClock />,
+              color: "text-amber-500",
+              bg: "bg-amber-500/10",
+            },
+            {
+              label: "Reports Uploaded",
+              value: String(d.reportsUploaded ?? d.completedOrders ?? 0),
+              icon: <FiCheckCircle />,
+              color: "text-[var(--brand-green)]",
+              bg: "bg-[var(--brand-green)]/10",
+            },
+            {
+              label: "Total Patients",
+              value: String(d.totalPatients ?? 0),
+              icon: <FiUsers />,
+              color: "text-[var(--brand-blue)]",
+              bg: "bg-[var(--brand-blue)]/10",
+            },
+            {
+              label: "Earnings",
+              value: String(d.earnings ?? "$0"),
+              icon: <FiDollarSign />,
+              color: "text-[var(--brand-purple)]",
+              bg: "bg-[var(--brand-purple)]/10",
+            },
+          ]);
+        })
+        .catch(() => {});
+    }
   }, []);
 
   return (
@@ -59,12 +106,24 @@ export default function LaboratoryDashboard() {
             <h1 className="text-3xl font-black text-[var(--text-main)] uppercase tracking-tighter">
               Welcome,{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-purple)] to-[var(--brand-blue)]">
-                {labName}
+                {profileData?.laboratoryName || profileData?.displayName || labName}
               </span>
             </h1>
-            <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.3em] mt-1">
+            <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.3em] mt-1 mb-3">
               Laboratory Command Center
             </p>
+            {profileData && (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="px-3.5 py-1.5 rounded-full bg-primary/15 border border-primary/30 text-primary text-xs font-black tracking-wide flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm">badge</span>
+                  Laboratory ID: {profileData.referenceId || "CV-LB-GH-2026-0001"}
+                </span>
+                <span className="px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500 text-xs font-black tracking-wide flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                  Status: {profileData.verificationStatus === "VERIFIED" ? "Verified" : "Pending Verification"}
+                </span>
+              </div>
+            )}
           </div>
           <Link
             to="/laboratory/tests"

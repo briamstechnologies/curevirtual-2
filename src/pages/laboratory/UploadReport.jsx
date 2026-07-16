@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FiUploadCloud, FiFileText, FiUser, FiCheckCircle } from "react-icons/fi";
 import { toast } from "react-toastify";
 import api from "../../Lib/api";
@@ -6,10 +6,33 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 
 export default function UploadReport() {
   const [formData, setFormData] = useState({
-    patientName: "",
+    patientId: "",
+    doctorId: "",
     testName: "",
     remarks: "",
   });
+
+  const [patients, setPatients] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+
+  useEffect(() => {
+    const fetchLists = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
+        const [patientsRes, doctorsRes] = await Promise.all([
+          api.get("/laboratory/patients-list", { headers }),
+          api.get("/laboratory/doctors-list", { headers }),
+        ]);
+        setPatients(patientsRes.data?.data || []);
+        setDoctors(doctorsRes.data?.data || []);
+      } catch (error) {
+        console.error("Failed to fetch patients/doctors", error);
+        toast.error("Failed to load patients or doctors list");
+      }
+    };
+    fetchLists();
+  }, []);
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -38,7 +61,8 @@ export default function UploadReport() {
 
     try {
       const data = new FormData();
-      data.append("patientName", formData.patientName);
+      data.append("patientId", formData.patientId);
+      data.append("doctorId", formData.doctorId);
       data.append("testName", formData.testName);
       data.append("remarks", formData.remarks);
       data.append("report", selectedFile);
@@ -53,7 +77,7 @@ export default function UploadReport() {
       });
 
       toast.success("Report uploaded successfully!");
-      setFormData({ patientName: "", testName: "", remarks: "" });
+      setFormData({ patientId: "", doctorId: "", testName: "", remarks: "" });
       setSelectedFile(null);
     } catch (error) {
       console.error(error);
@@ -80,19 +104,48 @@ export default function UploadReport() {
             {/* PATIENT NAME */}
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest mb-2 block">
-                Patient Name
+                Select Patient
               </label>
               <div className="relative">
                 <FiUser className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                <input
-                  type="text"
-                  name="patientName"
-                  value={formData.patientName}
+                <select
+                  name="patientId"
+                  value={formData.patientId}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] py-4 pl-14 pr-5 outline-none"
-                  placeholder="Enter patient name"
-                />
+                  className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] py-4 pl-14 pr-5 outline-none appearance-none"
+                >
+                  <option value="" disabled>Select a patient</option>
+                  {patients.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.email ? `(${p.email})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* DOCTOR NAME */}
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest mb-2 block">
+                Select Doctor (To Review Report)
+              </label>
+              <div className="relative">
+                <FiUser className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <select
+                  name="doctorId"
+                  value={formData.doctorId}
+                  onChange={handleChange}
+                  required
+                  className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] py-4 pl-14 pr-5 outline-none appearance-none"
+                >
+                  <option value="" disabled>Select a doctor</option>
+                  {doctors.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} {d.email ? `(${d.email})` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

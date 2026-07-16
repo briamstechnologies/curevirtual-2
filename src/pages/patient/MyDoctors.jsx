@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
 import api from "../../Lib/api";
@@ -95,6 +96,7 @@ export default function MyDoctors() {
   const role = "PATIENT";
   const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "Patient";
   const patientUserId = localStorage.getItem("userId");
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
@@ -168,6 +170,7 @@ export default function MyDoctors() {
                     <th className="p-3">Experience</th>
 
                     <th className="p-3 text-center">Profile</th>
+                    <th className="p-3 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -190,6 +193,16 @@ export default function MyDoctors() {
                             className="hover:scale-110 transition"
                           >
                             <FaEye className="text-blue-400" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex justify-center">
+                          <button
+                            onClick={() => navigate('/patient/my-appointments', { state: { prefillDoctorId: d.id } })}
+                            className="px-3 py-1.5 bg-[var(--brand-green)] text-white text-xs rounded-full font-bold hover:opacity-90 transition"
+                          >
+                            Book Appointment
                           </button>
                         </div>
                       </td>

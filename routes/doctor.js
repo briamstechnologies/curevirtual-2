@@ -9,7 +9,7 @@ const router = express.Router();
 
 // Apply RBAC to all doctor routes
 router.use(verifyToken);
-router.use(requireRole(["DOCTOR", "SUPERADMIN", "ADMIN"]));
+router.use(requireRole(["DOCTOR", "PHYSICIAN_ASSISTANT", "SUPERADMIN", "ADMIN"]));
 
 /**
  * GET /api/doctor/waiting-patients?doctorId=<User.id>
@@ -348,21 +348,8 @@ router.get("/my-patients", async (req, res) => {
       return res.json([]); // No profile yet → no patients
     }
 
-    // Distinct patientIds from appointments with this doctor
-    const distinct = await prisma.appointment.findMany({
-      where: { doctorId: doctorProfile.id },
-      distinct: ["patientId"],
-      select: { patientId: true },
-    });
-
-    const patientIds = distinct.map((d) => d.patientId);
-    if (patientIds.length === 0) {
-      return res.json([]);
-    }
-
-    // Fetch PatientProfile + linked User
+    // Fetch all PatientProfiles + linked User so doctor can select any patient for new sessions
     const patients = await prisma.patientProfile.findMany({
-      where: { id: { in: patientIds } },
       select: {
         id: true,
         bloodGroup: true,

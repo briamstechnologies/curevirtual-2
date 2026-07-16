@@ -40,7 +40,13 @@ export default function PatientDashboard() {
             <h1 className="text-4xl md:text-5xl font-extrabold text-on-surface tracking-tighter">
               Welcome back, {userName.split(" ")[0]}
             </h1>
-            <p className="text-on-surface-variant text-lg font-medium opacity-80">
+            {stats.referenceId && (
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full w-fit">
+                <span className="material-symbols-outlined text-sm">badge</span>
+                <span className="font-bold text-sm tracking-wider">{stats.referenceId}</span>
+              </div>
+            )}
+            <p className="text-on-surface-variant text-lg font-medium opacity-80 mt-2">
               Your sanctuary is ready. Here's your health overview for today.
             </p>
           </div>

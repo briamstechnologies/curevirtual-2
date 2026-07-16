@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
@@ -348,6 +348,7 @@ export default function PharmacyPrescriptions() {
   const urlStatus = searchParams.get("status") || "";
 
   const [status, setStatus] = useState(urlStatus);
+  const [searchQuery, setSearchQuery] = useState("");
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState(null);
@@ -358,6 +359,30 @@ export default function PharmacyPrescriptions() {
   useEffect(() => {
     setStatus(urlStatus);
   }, [urlStatus]);
+
+  const filteredList = useMemo(() => {
+    return list.filter((item) => {
+      if (status && status !== "") {
+        const itemStatus = (item.dispatchStatus || "").toUpperCase();
+        const targetStatus = status.toUpperCase();
+        if (targetStatus === "INCOMING") {
+          if (itemStatus !== "SENT" && itemStatus !== "PENDING") return false;
+        } else if (itemStatus !== targetStatus) {
+          return false;
+        }
+      }
+
+      if (searchQuery.trim() !== "") {
+        const q = searchQuery.toLowerCase().trim();
+        const patientName = `${item.patient?.user?.firstName || ""} ${item.patient?.user?.lastName || ""}`.toLowerCase();
+        const doctorName = `${item.doctor?.user?.firstName || ""} ${item.doctor?.user?.lastName || ""}`.toLowerCase();
+        const med = (item.medication || "").toLowerCase();
+        return patientName.includes(q) || doctorName.includes(q) || med.includes(q);
+      }
+
+      return true;
+    });
+  }, [list, status, searchQuery]);
 
   const load = async () => {
     try {
@@ -420,7 +445,7 @@ export default function PharmacyPrescriptions() {
       <div className="flex-1 min-h-screen">
         <Topbar userName={userName} />
         <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
             <div className="flex items-center gap-4">
               <img
                 src="/images/logo/Asset3.png"
@@ -430,52 +455,114 @@ export default function PharmacyPrescriptions() {
                   e.currentTarget.src = PLACEHOLDER_LOGO;
                 }}
               />
-              <h1 className="text-3xl font-bold text-[var(--text-main)]">
-                {status === "INCOMING" || status === "SENT"
-                  ? "Incoming Prescriptions"
-                  : status === "ACKNOWLEDGED"
-                    ? "Acknowledged"
-                    : status === "READY"
-                      ? "Ready for Pickup"
-                      : status === "DISPENSED"
-                        ? "Dispensed"
-                        : "All Prescriptions"}
-              </h1>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main)] tracking-tight">
+                  {status === "INCOMING" || status === "SENT"
+                    ? "Incoming Prescriptions"
+                    : status === "ACKNOWLEDGED"
+                      ? "Acknowledged Orders"
+                      : status === "READY"
+                        ? "Ready for Dispatch"
+                        : status === "DISPENSED"
+                          ? "Dispensed Orders"
+                          : "All Prescriptions"}
+                </h1>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  Real-time pharmacy prescription fulfillment & order flow
+                </p>
+              </div>
             </div>
 
-            <button
-              onClick={() => setCreateOpen(true)}
-              className="bg-[#027906] hover:bg-[#34d407] text-white font-bold uppercase tracking-[0.2em] text-[10px] py-3 px-6 rounded-lg mt-8 shadow-green-500/0 transition-all hover:scale-105"
-            >
-              <FaPlus /> Create Prescription
-            </button>
+            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+              <button
+                onClick={() => setStatus("")}
+                className={`flex-1 sm:flex-none px-6 py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 ${
+                  !status
+                    ? "bg-gradient-to-r from-primary to-emerald-600 text-white hover:brightness-110 shadow-primary/20 ring-2 ring-primary/30"
+                    : "bg-surface-container border border-outline/20 text-on-surface hover:bg-surface-container-high hover:border-primary/50"
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">list_alt</span>
+                All Prescriptions
+              </button>
+              <button
+                onClick={() => setCreateOpen(true)}
+                className="flex-1 sm:flex-none bg-gradient-to-r from-[#028a07] to-[#04a80a] hover:from-[#03a008] hover:to-[#05c40c] text-white font-bold uppercase tracking-wider text-xs py-3 px-6 rounded-xl shadow-lg shadow-green-600/25 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                <FaPlus className="text-sm" /> Create Prescription
+              </button>
+            </div>
           </div>
 
-          <div className="bg-[var(--bg-glass)] p-4 rounded-2xl mb-4 grid gap-3 sm:grid-cols-3 items-center">
-            <select
-              className="px-3 py-2 rounded bg-[var(--bg-glass)] border border-[var(--border)] text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[#027906]"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="">All Statuses</option>
-              <option value="SENT">Incoming (Sent)</option>
-              <option value="ACKNOWLEDGED">Acknowledged</option>
-              <option value="READY">Ready for Pickup</option>
-              <option value="DISPENSED">Dispensed</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
-            <button
-              className="px-3 py-2 text-[var(--text-main)] hover:text-[#027906] font-semibold transition-colors flex items-center gap-2"
-              onClick={load}
-            >
-              Refresh List
-            </button>
+          <div className="bg-[var(--bg-glass)] p-5 rounded-2xl mb-6 border border-[var(--border)] flex flex-col gap-4 shadow-sm">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="relative w-full md:w-80">
+                <input
+                  type="text"
+                  placeholder="Search patient, doctor or medication..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-main)] text-sm outline-none focus:border-[#027906] transition-colors"
+                />
+                <span className="material-symbols-outlined absolute left-2.5 top-2.5 text-lg text-[var(--text-muted)]">
+                  search
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                <select
+                  className="px-4 py-2.5 rounded-xl bg-surface-container border border-outline/20 text-on-surface text-sm font-semibold outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-sm cursor-pointer"
+                  value={status === "SENT" ? "INCOMING" : status}
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="INCOMING">Incoming (Sent)</option>
+                  <option value="ACKNOWLEDGED">Acknowledged</option>
+                  <option value="READY">Ready for Pickup</option>
+                  <option value="DISPENSED">Dispensed</option>
+                  <option value="REJECTED">Rejected</option>
+                </select>
+                <button
+                  className="px-4 py-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-main)] hover:text-[#027906] font-semibold text-sm transition-colors flex items-center gap-2"
+                  onClick={load}
+                >
+                  <span className="material-symbols-outlined text-base">refresh</span>
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Status Pill Tabs */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--border)]">
+              {[
+                { label: "All", value: "" },
+                { label: "Incoming", value: "SENT" },
+                { label: "Acknowledged", value: "ACKNOWLEDGED" },
+                { label: "Ready for Pickup", value: "READY" },
+                { label: "Dispensed", value: "DISPENSED" },
+                { label: "Rejected", value: "REJECTED" },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => setStatus(tab.value)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    status === tab.value
+                      ? "bg-[#027906] text-white shadow-sm shadow-green-600/30"
+                      : "bg-[var(--bg-main)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border)]"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {loading ? (
             <p className="text-[var(--text-soft)]">Loading…</p>
-          ) : list.length === 0 ? (
-            <div className="text-[var(--text-muted)]">No prescriptions found.</div>
+          ) : filteredList.length === 0 ? (
+            <div className="text-[var(--text-muted)] p-8 text-center bg-[var(--bg-glass)] rounded-2xl border border-[var(--border)]">
+              No prescriptions found matching your filter criteria.
+            </div>
           ) : (
             <div className="bg-[var(--bg-glass)] rounded-2xl p-6 shadow overflow-x-auto">
               <table className="w-full border-collapse text-left">
@@ -489,7 +576,7 @@ export default function PharmacyPrescriptions() {
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map((p) => (
+                  {filteredList.map((p) => (
                     <tr
                       key={p.id}
                       className="border-b border-[var(--border)] hover:bg-[var(--bg-glass)] transition"

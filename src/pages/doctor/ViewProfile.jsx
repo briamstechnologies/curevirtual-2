@@ -103,9 +103,19 @@ export default function DoctorViewProfile() {
                   <h3 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-1">
                     {userName}
                   </h3>
-                  <p className="text-[10px] font-black text-[var(--brand-blue)] uppercase tracking-[0.2em] mb-6">
+                  <p className="text-[10px] font-black text-[var(--brand-blue)] uppercase tracking-[0.2em] mb-4">
                     {profile.specialization || "General Specialist"}
                   </p>
+                  <div className="flex flex-col gap-2 items-center mb-6">
+                    <span className="px-3.5 py-1.5 rounded-full bg-primary/15 border border-primary/30 text-primary text-xs font-black tracking-wide flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-sm">badge</span>
+                      Doctor ID: {profile.referenceId || profile.reference_id || "CV-DR-GH-2026-0001"}
+                    </span>
+                    <span className="px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500 text-xs font-black tracking-wide flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                      Status: {profile.verificationStatus === "VERIFIED" ? "Verified" : "Pending Verification"}
+                    </span>
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-6 border-y border-[var(--border)]">
                     <div>

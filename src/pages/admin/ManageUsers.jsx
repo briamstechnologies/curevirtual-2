@@ -482,7 +482,7 @@ export default function ManageUsers() {
   };
 
   const handleDeleteUser = async (id) => {
-    if (!window.confirm("⚠️ IRREVERSIBLE ACTION: Permanently purge this identity from central core?")) return;
+    if (!window.confirm("⚠️ IRREVERSIBLE ACTION: Permanently purge this identity's complete data from the system?")) return;
     try {
       await api.delete(`/admin/users/${id}`);
       toast.info("Identity Purged Successfully.");
@@ -574,9 +574,26 @@ export default function ManageUsers() {
                       </td>
                       <td className="px-8 py-5 text-xs font-bold text-[var(--text-soft)]">{u.email}</td>
                       <td className="px-8 py-5">
-                        <span className="px-3 py-1 rounded-full bg-[var(--bg-main)] border border-[var(--border)] text-[9px] font-black uppercase tracking-widest text-[var(--brand-green)]">
-                          {u.role}
-                        </span>
+                        <div className="flex flex-col items-start gap-2">
+                          <span className="px-3 py-1 rounded-full bg-[var(--bg-main)] border border-[var(--border)] text-[9px] font-black uppercase tracking-widest text-[var(--brand-green)]">
+                            {u.role}
+                          </span>
+                          {u.role === "PHYSICIAN_ASSISTANT" && (
+                            <div className="flex flex-wrap gap-1 mt-1 max-w-[200px]">
+                              {u.assignedDoctors && u.assignedDoctors.length > 0 ? (
+                                u.assignedDoctors.map((doc, idx) => (
+                                  <span key={idx} className="text-[9px] font-bold bg-[var(--brand-green)]/10 text-[var(--brand-green)] border border-[var(--brand-green)]/30 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                    {doc.name}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-[9px] font-bold bg-red-500/10 text-red-500 border border-red-500/30 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                  UNLINKED
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-8 py-5">
                         <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
@@ -625,7 +642,7 @@ export default function ManageUsers() {
                           <button
                             onClick={() => handleDeleteUser(u.id)}
                             className="p-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                            title="Delete"
+                            title="Delete Data"
                           >
                             <FaTrash size={14} />
                           </button>
@@ -795,12 +812,46 @@ function LinkPAModal({ pa, onClose, onSuccess }) {
           </button>
         </div>
 
+        {/* Active Links */}
+        {pa.assignedDoctors && pa.assignedDoctors.length > 0 && (
+          <div className="mb-6">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">Active Links</h4>
+            <div className="space-y-2">
+              {pa.assignedDoctors.map((doc, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-[var(--brand-green)]/30 bg-[var(--brand-green)]/5">
+                  <span className="text-xs font-bold text-[var(--text-main)]">{doc.name}</span>
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm(`Are you sure you want to remove ${doc.name}?`)) return;
+                      try {
+                        setLinking(true);
+                        await api.post("/admin/remove-pa", { paId: pa.id, doctorId: doc.id });
+                        toast.success(`${doc.name} unlinked successfully!`);
+                        onSuccess();
+                      } catch (err) {
+                        toast.error(err?.response?.data?.error || "Remove nahi ho saka");
+                      } finally {
+                        setLinking(false);
+                      }
+                    }}
+                    disabled={linking}
+                    className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                    title="Remove Link"
+                  >
+                    <FaTrash size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Search */}
         <div className="relative mb-4">
           <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-xs" />
           <input
             type="text"
-            placeholder="Doctor ka naam ya email search karo..."
+            placeholder="Search new doctor to link..."
             value={searchDoc}
             onChange={(e) => setSearchDoc(e.target.value)}
             className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl text-xs font-bold text-[var(--text-main)] focus:border-purple-500 outline-none transition-all"

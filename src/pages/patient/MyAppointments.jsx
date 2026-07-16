@@ -1,6 +1,6 @@
 // FILE: src/pages/patient/MyAppointments.jsx
 import { useCallback, useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
 import { FaPlusCircle, FaTrash, FaVideo, FaEdit, FaPhoneAlt, FaSpinner } from "react-icons/fa";
@@ -22,6 +22,7 @@ export default function MyAppointments() {
   const patientUserId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "Patient";
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +83,15 @@ export default function MyAppointments() {
   useEffect(() => {
     if (patientUserId) fetchAppointments();
   }, [fetchAppointments, patientUserId]);
+
+  useEffect(() => {
+    if (location.state?.prefillDoctorId) {
+      setBookOpen(true);
+      setForm((prev) => ({ ...prev, doctorId: location.state.prefillDoctorId }));
+      // Clear the state so refreshing doesn't reopen it
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // ========== POLLING: Check callStatus every 5 seconds ==========
   useEffect(() => {

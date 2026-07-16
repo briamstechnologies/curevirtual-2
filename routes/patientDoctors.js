@@ -8,7 +8,18 @@ const { verifyToken, requireRole, verifyOwnerOrAdmin } = require("../middleware/
 /** Helpers */
 async function getPatientProfileByUserId(patientUserId) {
   if (!patientUserId) return null;
-  return prisma.patientProfile.findUnique({ where: { userId: String(patientUserId) } });
+  let profile = await prisma.patientProfile.findUnique({ where: { userId: String(patientUserId) } });
+  if (!profile) {
+    profile = await prisma.patientProfile.findUnique({ where: { id: String(patientUserId) } });
+  }
+  if (!profile) {
+    const user = await prisma.user.findUnique({ where: { id: String(patientUserId) } });
+    if (user && user.role === "PATIENT") {
+      const { ensureDefaultProfile } = require("../lib/provisionProfile");
+      profile = await ensureDefaultProfile(user);
+    }
+  }
+  return profile;
 }
 function buildDoctorFilters(q) {
   const {

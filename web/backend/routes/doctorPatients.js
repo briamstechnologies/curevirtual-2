@@ -70,7 +70,7 @@ router.get("/doctor/patients", verifyToken, requireRole(["DOCTOR", "ADMIN", "SUP
 
     const where = buildPatientWhere(req.query, doctor.id);
 
-    const patients = await prisma.patientProfile.findMany({
+    let patients = await prisma.patientProfile.findMany({
       where,
       include: { user: true },
       orderBy: [{ createdAt: "desc" }],

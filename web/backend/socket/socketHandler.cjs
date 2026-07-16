@@ -7,6 +7,7 @@ const roomUsers = new Map(); // roomId -> Set of socketIds
 const callTimeouts = new Map(); // appointmentId -> setTimeout ID
 
 module.exports = (io) => {
+  io.activeUsers = activeUsers; // Expose to routes
   io.on("connection", (socket) => {
     console.log(`✅ Socket connected: ${socket.id}`);
 
@@ -163,8 +164,8 @@ module.exports = (io) => {
 
     socket.on(
       "initiate-video-call",
-      async ({ consultationId, patientId, doctorName, roomName }) => {
-        console.log(`🔔 Call initiated for consultation ${consultationId} by ${doctorName}`);
+      async ({ consultationId, patientId, doctorName, roomName, callType = "video" }) => {
+        console.log(`🔔 Call initiated for consultation ${consultationId} by ${doctorName} (Type: ${callType})`);
 
         try {
           // 1. Update DB Status to RINGING
@@ -182,6 +183,7 @@ module.exports = (io) => {
                 doctorName,
                 doctorUserId: socket.userId, // Send doctor's ID to patient
                 roomName,
+                callType,
               });
               patientNotified = true;
             }

@@ -4,6 +4,7 @@ const express = require("express");
 const xss = require("xss");
 const { verifyToken, requireRole } = require("../middleware/rbac.js");
 const prisma = require("../prisma/prismaClient");
+const { supabaseAdmin } = require("../lib/supabaseAdmin");
 const router = express.Router();
 
 // ✅ Utility: Add to activity log
@@ -136,6 +137,16 @@ router.delete(
     try {
       const id = req.params.id;
 
+      // Delete from Supabase Auth first
+      if (supabaseAdmin) {
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(id);
+        } catch (authErr) {
+          console.warn("Supabase auth deletion failed or user not found:", authErr.message);
+        }
+      }
+
+      // Prisma cascades will delete profiles, appointments, etc.
       const deleted = await prisma.user.delete({
         where: { id },
       });

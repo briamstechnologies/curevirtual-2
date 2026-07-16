@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../Lib/api";
-import ZegoVideoCall from "../components/ZegoVideoCall";
+import AgoraVideoCall from "../components/AgoraVideoCall";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 /**
@@ -117,7 +117,7 @@ const CallPage = () => {
         </div>
       </div>
 
-      <ZegoVideoCall
+      <AgoraVideoCall
         roomName={appointment.roomName}
         userName={displayName}
         userId={userId}

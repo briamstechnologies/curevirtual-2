@@ -59,7 +59,7 @@ async function run() {
 
   // Link PA with Doctor
   console.log("Linking PA to Doctor in DB...");
-  const link = await prisma.physicianAssistant.upsert({
+  const link = await prisma.physicianAssistantProfile.upsert({
     where: { userId: pa.id },
     update: { assignedDoctorId: doctor.doctor.id },
     create: {
@@ -77,7 +77,7 @@ async function run() {
   });
 
   // Verify PA can resolve Doctor profile
-  const resolvedOffline = await prisma.physicianAssistant.findUnique({
+  const resolvedOffline = await prisma.physicianAssistantProfile.findUnique({
     where: { userId: pa.id },
     include: { doctor: true }
   });
@@ -95,7 +95,7 @@ async function run() {
     data: { isOnline: true }
   });
 
-  const resolvedOnline = await prisma.physicianAssistant.findUnique({
+  const resolvedOnline = await prisma.physicianAssistantProfile.findUnique({
     where: { userId: pa.id },
     include: { doctor: true }
   });
@@ -109,7 +109,7 @@ async function run() {
   // Clean up if we created dummy users
   if (doctor.email.startsWith("test_doctor_")) {
     console.log("Cleaning up test doctor and PA...");
-    await prisma.physicianAssistant.delete({ where: { userId: pa.id } });
+    await prisma.physicianAssistantProfile.delete({ where: { userId: pa.id } });
     await prisma.user.delete({ where: { id: pa.id } });
     await prisma.user.delete({ where: { id: doctor.id } });
     console.log("Cleanup complete!");

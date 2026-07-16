@@ -270,10 +270,23 @@ router.post("/book", async (req, res) => {
     let patientProfile = await prisma.patientProfile.findUnique({
       where: { userId: patientId },
     });
-    if (!patientProfile)
+    if (!patientProfile) {
       patientProfile = await prisma.patientProfile.findUnique({
         where: { id: patientId },
       });
+    }
+
+    // Auto-create profile if missing
+    if (!patientProfile) {
+      const user = await prisma.user.findUnique({
+        where: { id: patientId },
+      });
+      if (user && user.role === "PATIENT") {
+        const { ensureDefaultProfile } = require("../lib/provisionProfile");
+        patientProfile = await ensureDefaultProfile(user);
+      }
+    }
+
     if (!patientProfile) return res.status(404).json({ error: "Patient profile not found" });
     
     // startTime is a UTC ISO string from the frontend

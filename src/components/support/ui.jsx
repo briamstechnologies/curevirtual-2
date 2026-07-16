@@ -76,16 +76,16 @@ export const AssigneeBadge = ({ assignee }) => {
 export const Modal = ({ open, onClose, title, children, maxWidth = "max-w-lg" }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className={`relative w-full ${maxWidth} rounded-2xl bg-[#1a1a2e] p-6 shadow-xl text-white`}>
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className={`relative w-full ${maxWidth} rounded-3xl bg-surface-container-lowest border border-outline-variant/20 p-6 shadow-2xl text-on-surface animate-in zoom-in-95 duration-200`}>
         <button
           onClick={onClose}
-          className="absolute right-4 top-3 text-gray-300 text-xl hover:text-red-400"
+          className="absolute right-5 top-5 w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error/10 transition-all"
           aria-label="Close"
         >
-          <FaTimes />
+          <FaTimes className="text-sm" />
         </button>
-        {title && <h2 className="text-2xl font-semibold mb-4 text-[#E2FCE3]">{title}</h2>}
+        {title && <h2 className="text-xl font-bold mb-4 text-on-surface tracking-tight">{title}</h2>}
         {children}
       </div>
     </div>
@@ -106,18 +106,18 @@ export const ConfirmModal = ({
   if (!open) return null;
   return (
     <Modal open={open} onClose={onCancel} title={title} maxWidth="max-w-md">
-      <p className="text-gray-200">{message}</p>
+      <p className="text-sm text-on-surface-variant leading-relaxed">{message}</p>
       <div className="mt-6 flex justify-end gap-3">
         <button
           onClick={onCancel}
-          className="px-4 py-2 rounded border border-white/20 hover:bg-white/10 disabled:opacity-50"
+          className="px-5 py-2.5 rounded-xl border border-outline-variant/30 text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container transition-all disabled:opacity-50"
           disabled={loading}
         >
           {cancelText}
         </button>
         <button
           onClick={onConfirm}
-          className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+          className="px-5 py-2.5 rounded-xl bg-error hover:bg-error/90 text-on-error text-xs font-black uppercase tracking-wider shadow-lg transition-all disabled:opacity-50"
           disabled={loading}
         >
           {loading ? "Processing..." : confirmText}

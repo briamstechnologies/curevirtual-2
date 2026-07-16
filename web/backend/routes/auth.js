@@ -453,29 +453,17 @@ const APPROVAL_REQUIRED_ROLES = [
  */
 async function setUserOnline(userId, role, isOnline) {
   try {
-    const now = new Date();
-
     if (role === "DOCTOR") {
-      await prisma.doctorProfile.updateMany({
+      await prisma.doctorProfile.update({
         where: { userId },
-        data: {
-          isOnline,
-          lastSeenAt: now,
-        },
-      });
+        data: { isOnline }
+      }).catch(() => {});
+      
+      const io = require('../server.js').io || (global.io); 
+      // Or we can just emit if we have access to io
     }
-
-    if (role === "PHYSICIAN_ASSISTANT") {
-      await prisma.physicianAssistant.updateMany({
-        where: { userId },
-        data: {
-          isOnline,
-          lastSeenAt: now,
-        },
-      });
-    }
-  } catch (err) {
-    console.error("⚠️ setUserOnline error:", err.message);
+  } catch (error) {
+    console.error("Failed to set user online status:", error);
   }
 }
 
@@ -495,7 +483,12 @@ router.post("/register", async (req, res) => {
       gender,
       maritalStatus,
       specialization,
+      country,
+      supervisingDoctorId,
     } = req.body || {};
+
+    console.log("Country extracted for registration:", country || "GH (default)");
+    console.log("SupervisingDoctorId extracted:", supervisingDoctorId || "None");
 
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
@@ -540,7 +533,7 @@ router.post("/register", async (req, res) => {
       },
     });
 
-    await ensureDefaultProfile(user, specialization);
+    await ensureDefaultProfile(user, specialization, country, supervisingDoctorId);
 
     const token = jwt.sign(
       { id: user.id, role: user.role, type: "USER" },
@@ -571,6 +564,8 @@ router.post("/register-success", async (req, res) => {
       gender,
       maritalStatus,
       specialization,
+      country,
+      supervisingDoctorId,
     } = req.body || {};
 
     if (!supabaseId || !email) {
@@ -652,7 +647,7 @@ router.post("/register-success", async (req, res) => {
     // Provision default profile (Idempotent call)
     if (existingUser) {
       try {
-        await ensureDefaultProfile(existingUser, specialization);
+        await ensureDefaultProfile(existingUser, specialization, country, supervisingDoctorId);
         console.log("✅ Default profile ensured/created for:", existingUser.role);
       } catch (profileError) {
         console.error(
@@ -872,7 +867,7 @@ router.get("/doctor-status/:userId", async (req, res) => {
 
     const doctor = await prisma.doctorProfile.findUnique({
       where: { userId },
-      select: { isOnline: true, lastSeenAt: true },
+      select: { id: true },
     });
 
     if (!doctor) {
@@ -892,26 +887,39 @@ router.get("/pa-assigned-doctor/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const pa = await prisma.physicianAssistant.findFirst({
+    const pa = await prisma.physicianAssistantProfile.findFirst({
       where: { userId },
       include: {
-        doctor: {
+        assignments: {
+          where: { assignmentStatus: "ACTIVE" },
           include: {
-            user: true,
+            doctor: {
+              include: {
+                user: true,
+              },
+            },
           },
         },
       },
     });
 
-    if (!pa) {
+    if (!pa || !pa.assignments || pa.assignments.length === 0) {
       return res.status(404).json({ error: "No doctor assigned" });
     }
 
+    const firstActive = pa.assignments[0];
+
     return res.json({
-      doctorId: pa.assignedDoctorId,
-      doctorName: `${pa.doctor.user.firstName} ${pa.doctor.user.lastName}`,
-      isOnline: pa.doctor.isOnline,
-      lastSeenAt: pa.doctor.lastSeenAt,
+      doctorId: firstActive.doctor.id,
+      doctorName: `${firstActive.doctor.user.firstName} ${firstActive.doctor.user.lastName}`,
+      isOnline: false,
+      lastSeenAt: null,
+      supervisors: pa.assignments.map(a => ({
+        doctorId: a.doctor.id,
+        doctorName: `${a.doctor.user.firstName} ${a.doctor.user.lastName}`,
+        isOnline: false,
+        lastSeenAt: null,
+      })),
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });

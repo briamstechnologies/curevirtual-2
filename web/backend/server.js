@@ -383,6 +383,7 @@ io.use(socketAuth);
 
 // Initialize Socket Handler
 require("./socket/socketHandler.cjs")(io);
+app.set("io", io);
 
 // ✅ Inject io into registration-requests route (must run after socketHandler)
 const registrationRequestsRoute = require("./routes/registrationRequests");
@@ -475,6 +476,7 @@ const clinicalEncounterRoutes = require("./routes/clinicalEncounter");
 
 app.use("/api", doctorPatientsRoutes);
 app.use("/api/doctor", doctorRoutes);
+app.use("/api/doctors", doctorRoutes);
 app.use("/api/doctor/video", doctorVideoRoutes);
 app.use("/api/clinical-encounter", clinicalEncounterRoutes);
 app.use("/api/appointments", require("./routes/appointmentApi"));
@@ -524,6 +526,14 @@ app.use("/api/pharmacy", pharmacyRoute);
 // ----------------------------
 const laboratoryRoute = require("./routes/Laboratory");
 app.use("/api/laboratory", laboratoryRoute);
+
+// ----------------------------
+// ✅ CONSULTATION & PA ROUTES
+// ----------------------------
+const consultationsRoute = require("./routes/consultations");
+const paRoute = require("./routes/pa");
+app.use("/api/consultations", consultationsRoute);
+app.use("/api/consultations/pa", paRoute);
 
 
 // ----------------------------
@@ -598,9 +608,65 @@ app.use((err, req, res, _next) => {
 // ✅ Diagnostics (Temporary)
 app.use("/api/diagnostics", require("./routes/diagnostic"));
 
+// ✅ Pre-startup port cleanup
+const { execSync } = require("child_process");
+
+function cleanPortSync(port) {
+  if (process.env.NODE_ENV === "production") return;
+  try {
+    const isWindows = process.platform === "win32";
+    if (isWindows) {
+      const cmd = `netstat -ano | findstr :${port}`;
+      const output = execSync(cmd, { encoding: "utf8" });
+      const lines = output.split("\n");
+      const pids = new Set();
+      
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 5) {
+          const localAddress = parts[1];
+          if (localAddress.endsWith(`:${port}`)) {
+            const pid = parts[parts.length - 1];
+            const parsedPid = parseInt(pid, 10);
+            if (parsedPid > 0 && parsedPid !== process.pid) {
+              pids.add(parsedPid);
+            }
+          }
+        }
+      }
+      
+      for (const pid of pids) {
+        console.log(`[Port Cleanup] Killing process ${pid} using port ${port}...`);
+        try {
+          execSync(`taskkill /F /PID ${pid}`, { stdio: "ignore" });
+        } catch (e) {
+          // ignore
+        }
+      }
+    } else {
+      try {
+        const pid = execSync(`lsof -t -i:${port}`, { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }).trim();
+        if (pid) {
+          const parsedPid = parseInt(pid, 10);
+          if (parsedPid > 0 && parsedPid !== process.pid) {
+            console.log(`[Port Cleanup] Killing process ${parsedPid} using port ${port}...`);
+            execSync(`kill -9 ${parsedPid}`, { stdio: "ignore" });
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  } catch (err) {
+    // Port is clear
+  }
+}
+
 // ✅ Server start
 const PORT = process.env.PORT || 5001;
 const HOST = "0.0.0.0";
+
+cleanPortSync(PORT);
 
 server.listen(PORT, HOST, () => {
   console.log("-------------------------------------------");
@@ -609,3 +675,4 @@ server.listen(PORT, HOST, () => {
   console.log(`⏱️  Started at: ${new Date().toISOString()}`);
   console.log("-------------------------------------------");
 });
+// Trigger nodemon restart for Prisma Client update

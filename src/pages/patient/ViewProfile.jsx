@@ -52,6 +52,18 @@ export default function PatientViewProfile() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(typeof window !== "undefined" ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   // Derive reactive display name
   const displayName =
@@ -120,8 +132,9 @@ export default function PatientViewProfile() {
                     <div className="text-2xl font-black text-[var(--text-main)] tracking-tight">
                       {displayName}
                     </div>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-[var(--brand-blue)] mt-1">
-                      MRN Protocol: {profile.medicalRecordNumber || "OFFLINE"}
+                    <div className="text-[10px] font-black uppercase tracking-widest text-[var(--brand-blue)] mt-1 flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500"} inline-block`}></span>
+                      MRN Protocol: {profile.referenceId || profile.medicalRecordNumber || `PAK-PT-${String(profile.id || "").slice(0, 6).toUpperCase()}`} • {isOnline ? "ONLINE (ACTIVE)" : "OFFLINE (DISCONNECTED)"}
                     </div>
                   </div>
                 </div>
@@ -204,7 +217,7 @@ export default function PatientViewProfile() {
                     {[
                       {
                         label: "Medical Record Number",
-                        value: profile.medicalRecordNumber || "—",
+                        value: profile.referenceId || profile.medicalRecordNumber || `PAK-PT-${String(profile.id || "").slice(0, 6).toUpperCase()}`,
                       },
                       {
                         label: "Insurance Provider",
@@ -234,43 +247,6 @@ export default function PatientViewProfile() {
                         <dd className="text-sm font-bold text-[var(--text-main)] text-right">
                           {item.value}
                         </dd>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="md:col-span-2 space-y-4">
-                  <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-orange)] ml-1 mb-4">
-                    Clinical Observations
-                  </h2>
-                  <div className="grid md:grid-cols-3 gap-6">
-                    {[
-                      {
-                        label: "Allergies",
-                        value: profile.allergies,
-                        color: "orange",
-                      },
-                      {
-                        label: "Active Medications",
-                        value: profile.medications,
-                        color: "blue",
-                      },
-                      {
-                        label: "Medical History",
-                        value: profile.medicalHistory,
-                        color: "green",
-                      },
-                    ].map((item, idx) => (
-                      <div
-                        key={idx}
-                        className={`bg-[var(--bg-main)]/50 border border-[var(--border)] rounded-3xl p-6 border-t-4 border-t-[var(--brand-${item.color})]`}
-                      >
-                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3">
-                          {item.label}
-                        </p>
-                        <p className="text-sm font-bold text-[var(--text-main)] whitespace-pre-wrap leading-relaxed">
-                          {item.value?.trim() ? item.value : "No critical data logged."}
-                        </p>
                       </div>
                     ))}
                   </div>

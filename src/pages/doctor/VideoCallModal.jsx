@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import ZegoVideoCall from "../../components/ZegoVideoCall";
+import AgoraVideoCall from "../../components/AgoraVideoCall";
 import { FaSave } from "react-icons/fa";
 import api from "../../Lib/api";
 import { ToastContainer, toast } from "react-toastify";
@@ -59,12 +59,12 @@ export default function VideoCallModal({ consultation, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black flex z-[200]">
-      {/* Video Side — Zego */}
-      <div className="flex-[2] relative bg-neutral-950">
-        <ZegoVideoCall
+      {/* Video Side — Agora */}
+      <div className="flex-[2] bg-black overflow-hidden relative min-h-[600px]">
+        <AgoraVideoCall
           roomName={activeRoomName}
-          userName={userName}
           userId={userId}
+          userName={userName}
           onClose={handleEnd}
         />
       </div>
