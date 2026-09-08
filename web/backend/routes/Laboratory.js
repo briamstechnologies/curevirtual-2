@@ -98,7 +98,10 @@ router.get("/stats", ...authenticateLab, async (req, res) => {
             return res.json({ success: true, data: emptyPayload, ...emptyPayload });
         }
 
-        const [totalOrders, pendingOrders, completedOrders, totalPatients] =
+        const trailing30Days = new Date();
+        trailing30Days.setDate(trailing30Days.getDate() - 30);
+
+        const [totalOrders, pendingOrders, completedOrders, totalPatients, trailing30Orders, activeSub, RecentOrders] =
             await Promise.all([
                 prisma.labOrder.count({
                     where: { laboratoryId: labProfile.id },
@@ -122,17 +125,108 @@ router.get("/stats", ...authenticateLab, async (req, res) => {
                         select: { patientId: true },
                     })
                     .then((rows) => rows.length),
+                prisma.labOrder.count({
+                    where: {
+                        laboratoryId: labProfile.id,
+                        orderedAt: { gte: trailing30Days },
+                    },
+                }),
+                prisma.userSubscription.findFirst({
+                    where: {
+                        userId: labUserId,
+                        status: "active",
+                        expiresAt: { gt: new Date() }
+                    },
+                    include: { plan: true }
+                }),
+                prisma.labOrder.findMany({
+                    where: { laboratoryId: labProfile.id },
+                    take: 10,
+                    orderBy: { createdAt: "desc" },
+                    include: {
+                        patient: {
+                            include: { user: { select: { firstName: true, lastName: true } } }
+                        }
+                    }
+                })
             ]);
 
-        const earningsNum = completedOrders * 150;
+        // Volume Commission Tier Calculations (Spec Section 5)
+        const isSubscribed = !!activeSub;
+        let tierName = "Tier 1 (0–49 Orders)";
+        let commissionPct = 15;
+        let nextTierMin = 50;
+        let ordersToNextTier = Math.max(0, 50 - trailing30Orders);
+        let progressPct = Math.min(100, Math.round((trailing30Orders / 50) * 100));
+
+        if (isSubscribed) {
+            tierName = "Lab Partner Plan (Pro Subscribed)";
+            commissionPct = activeSub.plan?.commissionRateOverride || 8;
+            nextTierMin = null;
+            ordersToNextTier = 0;
+            progressPct = 100;
+        } else if (trailing30Orders >= 200) {
+            tierName = "Tier 3 (200+ Orders)";
+            commissionPct = 10;
+            nextTierMin = null;
+            ordersToNextTier = 0;
+            progressPct = 100;
+        } else if (trailing30Orders >= 50) {
+            tierName = "Tier 2 (50–199 Orders)";
+            commissionPct = 12;
+            nextTierMin = 200;
+            ordersToNextTier = Math.max(0, 200 - trailing30Orders);
+            progressPct = Math.min(100, Math.round(((trailing30Orders - 50) / 150) * 100));
+        }
+
+        // Financial Earnings Calculation
+        let grossEarningsGHS = 0;
+        let platformFeesGHS = 0;
+
+        const formattedOrders = RecentOrders.map((ord) => {
+            const amountGHS = ord.totalAmountGHS || ord.priceGHS || 150;
+            const feeGHS = amountGHS * (commissionPct / 100);
+            const netPayoutGHS = amountGHS - feeGHS;
+            
+            grossEarningsGHS += amountGHS;
+            platformFeesGHS += feeGHS;
+
+            return {
+                id: ord.id,
+                testName: ord.testName || ord.testType || "Standard Lab Panel",
+                patientName: ord.patient?.user ? `${ord.patient.user.firstName} ${ord.patient.user.lastName}`.trim() : "Patient",
+                status: ord.status,
+                orderedAt: ord.orderedAt || ord.createdAt,
+                amountGHS,
+                commissionPct,
+                platformFeeGHS: feeGHS,
+                netPayoutGHS
+            };
+        });
+
+        const netEarningsGHS = grossEarningsGHS - platformFeesGHS;
+
         const payload = {
             pendingTests: pendingOrders,
             reportsUploaded: completedOrders,
             totalPatients,
-            earnings: `$${earningsNum}`,
+            earnings: `GHS ${netEarningsGHS.toFixed(2)}`,
+            grossEarningsGHS,
+            platformFeesGHS,
+            netEarningsGHS,
             totalOrders,
             pendingOrders,
             completedOrders,
+            trailing30Orders,
+            volumeTier: {
+                tierName,
+                commissionPct,
+                isSubscribed,
+                nextTierMin,
+                ordersToNextTier,
+                progressPct
+            },
+            recentOrders: formattedOrders
         };
 
         return res.json({
@@ -151,6 +245,69 @@ router.get("/stats", ...authenticateLab, async (req, res) => {
    GET  /api/laboratory/profile?userId=...
    PUT  /api/laboratory/profile
 ================================================================ */
+
+/**
+ * POST /api/laboratory/avatar (Upload/Replace Laboratory Avatar/Logo)
+ */
+router.post("/avatar", upload.single("avatar"), async (req, res) => {
+    try {
+        const userId = req.user?.id || req.body?.userId;
+        if (!userId) return res.status(400).json({ error: "User identity missing" });
+
+        if (!req.file) {
+            return res.status(400).json({ error: "No image file provided" });
+        }
+
+        let publicUrl;
+        const supabaseClient = supabaseAdmin;
+        if (supabaseClient) {
+            const ext = req.file.originalname.split(".").pop() || "png";
+            const fileName = `laboratory-${userId}-${Date.now()}.${ext}`;
+            const { error: uploadError } = await supabaseClient.storage
+                .from("avatars")
+                .upload(fileName, req.file.buffer, {
+                    contentType: req.file.mimetype,
+                    upsert: true,
+                });
+
+            if (!uploadError) {
+                const { data } = supabaseClient.storage.from("avatars").getPublicUrl(fileName);
+                publicUrl = data.publicUrl;
+            } else {
+                console.warn("Supabase laboratory avatar upload warning:", uploadError.message);
+            }
+        }
+        if (!publicUrl) {
+            publicUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+        }
+
+        // Save in DB
+        try {
+            await prisma.$executeRawUnsafe(
+                `UPDATE "User" SET "avatarUrl" = $1 WHERE id = $2`,
+                publicUrl,
+                String(userId)
+            ).catch(() => {});
+            await prisma.$executeRawUnsafe(
+                `UPDATE "LaboratoryProfile" SET "avatarUrl" = $1 WHERE "userId" = $2`,
+                publicUrl,
+                String(userId)
+            ).catch(() => {});
+        } catch (dbErr) {
+            console.warn("Could not update lab avatar in db:", dbErr.message);
+        }
+
+        return res.json({
+            success: true,
+            avatarUrl: publicUrl,
+            message: "Laboratory photo uploaded and saved successfully",
+        });
+    } catch (err) {
+        console.error("Laboratory avatar upload error:", err);
+        return res.status(500).json({ error: "Internal server error during avatar upload" });
+    }
+});
+
 router.get("/profile", ...authenticateLab, async (req, res) => {
     try {
         const userId = inferUserId(req);
@@ -179,13 +336,25 @@ router.get("/profile", ...authenticateLab, async (req, res) => {
             await prisma.$executeRawUnsafe(`UPDATE "LaboratoryProfile" SET "verificationStatus" = 'VERIFIED' WHERE "userId" = $1`, userId).catch(() => {});
         }
 
+        const avatarRows = await prisma.$queryRawUnsafe(
+            `SELECT "avatarUrl" FROM "User" WHERE id = $1 LIMIT 1`,
+            userId
+        ).catch(() => []);
+        const userAvatarUrl = avatarRows && avatarRows.length > 0 ? avatarRows[0].avatarUrl : null;
+
+        const finalAvatar = rawProfile?.avatarUrl || userAvatarUrl || null;
+
         const responseData = {
             ...rawProfile,
+            avatarUrl: finalAvatar,
             referenceId: rawProfile?.referenceId || "CV-LB-GH-2026-0001",
             verificationStatus: isApproved ? "VERIFIED" : (rawProfile?.verificationStatus || "PENDING"),
             laboratoryName: rawProfile?.laboratoryName || rawProfile?.displayName || `${user.firstName || ""} ${user.lastName || ""}`.trim(),
             registrationDate: rawProfile?.createdAt || new Date(),
-            user
+            user: {
+                ...user,
+                avatarUrl: finalAvatar,
+            }
         };
 
         return res.json({ success: true, data: responseData });

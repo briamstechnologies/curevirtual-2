@@ -6,25 +6,43 @@ import { toast } from "react-toastify";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    totalAppointments: 0,
-    completedAppointments: 0,
-    pendingAppointments: 0,
-    totalPrescriptions: 0,
-    totalMessages: 0,
-    activePatients: 0,
-    urgentFlags: {
-      urgentLabs: 0,
-      unsignedNotes: 0,
-      lateAppointments: 0,
-    },
+  const [stats, setStats] = useState(() => {
+    const cached = localStorage.getItem("cached_doctor_stats");
+    return cached ? JSON.parse(cached) : {
+      totalAppointments: 0,
+      completedAppointments: 0,
+      pendingAppointments: 0,
+      totalPrescriptions: 0,
+      totalMessages: 0,
+      activePatients: 0,
+      urgentFlags: {
+        urgentLabs: 0,
+        unsignedNotes: 0,
+        lateAppointments: 0,
+      },
+    };
   });
 
-  const [waitingPatients, setWaitingPatients] = useState([]);
-  const [pendingConsultations, setPendingConsultations] = useState([]);
-  const [profile, setProfile] = useState(null);
-  const [isOnline, setIsOnline] = useState(true);
-  const [myPAs, setMyPAs] = useState([]);
+  const [waitingPatients, setWaitingPatients] = useState(() => {
+    const cached = localStorage.getItem("cached_doctor_waiting");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [pendingConsultations, setPendingConsultations] = useState(() => {
+    const cached = localStorage.getItem("cached_doctor_pending");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [profile, setProfile] = useState(() => {
+    const cached = localStorage.getItem("cached_doctor_profile");
+    return cached ? JSON.parse(cached) : null;
+  });
+  const [isOnline, setIsOnline] = useState(() => {
+    const cached = localStorage.getItem("cached_doctor_profile");
+    return cached ? JSON.parse(cached).isOnline : true;
+  });
+  const [myPAs, setMyPAs] = useState(() => {
+    const cached = localStorage.getItem("cached_doctor_pas");
+    return cached ? JSON.parse(cached) : [];
+  });
 
   const doctorId = localStorage.getItem("userId");
   const role = localStorage.getItem("role") || "DOCTOR";
@@ -37,7 +55,10 @@ export default function DoctorDashboard() {
     if (role === "PHYSICIAN_ASSISTANT") return;
     try {
       const res = await api.get("/doctor/consultations/pending");
-      setPendingConsultations(res.data || []);
+      if (res.data) {
+        setPendingConsultations(res.data);
+        localStorage.setItem("cached_doctor_pending", JSON.stringify(res.data));
+      }
     } catch (err) {
       console.error("Error fetching pending consultations:", err);
     }
@@ -77,15 +98,23 @@ export default function DoctorDashboard() {
         const profileRes = results[2];
         const pasRes = results[3];
 
-        if (statsRes?.data) setStats(statsRes.data);
-        if (waitingRes?.data) setWaitingPatients(waitingRes.data);
+        if (statsRes?.data) {
+          setStats(statsRes.data);
+          localStorage.setItem("cached_doctor_stats", JSON.stringify(statsRes.data));
+        }
+        if (waitingRes?.data) {
+          setWaitingPatients(waitingRes.data);
+          localStorage.setItem("cached_doctor_waiting", JSON.stringify(waitingRes.data));
+        }
         if (profileRes?.data?.data || profileRes?.data) {
           const p = profileRes.data.data || profileRes.data;
           setProfile(p);
           setIsOnline(p.isOnline || false);
+          localStorage.setItem("cached_doctor_profile", JSON.stringify(p));
         }
         if (pasRes?.data) {
           setMyPAs(pasRes.data);
+          localStorage.setItem("cached_doctor_pas", JSON.stringify(pasRes.data));
         }
         await fetchPendingConsultations();
       } catch (err) {
@@ -120,7 +149,7 @@ export default function DoctorDashboard() {
             <div className="w-20 h-20 bg-warning/10 text-warning rounded-full flex items-center justify-center">
               <span className="material-symbols-outlined text-5xl">warning</span>
             </div>
-            <h2 className="font-headline text-3xl font-black text-on-surface">
+            <h2 className="font-headline text-xl font-black text-on-surface">
               No Assigned Physician
             </h2>
             <p className="text-on-surface-variant text-base max-w-md leading-relaxed opacity-80">
@@ -160,7 +189,7 @@ export default function DoctorDashboard() {
                 <span className="relative inline-flex rounded-full h-6 w-6 bg-success"></span>
               </span>
             </div>
-            <h2 className="font-headline text-3xl font-black text-on-surface">
+            <h2 className="font-headline text-xl font-black text-on-surface">
               Supervising Physician is Active
             </h2>
             <p className="text-on-surface-variant text-base max-w-md leading-relaxed opacity-80">
@@ -201,8 +230,12 @@ export default function DoctorDashboard() {
     <DashboardLayout role={role}>
       <div className="space-y-12">
         {/* Urgent Alerts Header */}
-        <section className="bg-error-container/20 border border-error/10 rounded-[32px] p-6 flex flex-col md:flex-row items-center gap-6 animate-pulse-soft">
-          <div className="w-14 h-14 bg-error text-white rounded-2xl flex items-center justify-center shadow-lg shadow-error/20">
+        <section className="bg-gradient-to-r from-red-500/10 to-transparent border border-red-500/20 rounded-[32px] p-6 flex flex-col md:flex-row items-center gap-6 animate-pulse-soft">
+          <div className="w-14 h-14 bg-red-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20 relative">
+            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+            </span>
             <span
               className="material-symbols-outlined text-3xl"
               style={{ fontVariationSettings: "'FILL' 1" }}
@@ -211,17 +244,17 @@ export default function DoctorDashboard() {
             </span>
           </div>
           <div className="flex-grow text-center md:text-left">
-            <h2 className="font-headline text-xl font-extrabold text-error">
+            <h2 className="font-headline text-xl font-extrabold text-red-500">
               Urgent Clinical Action Required
             </h2>
-            <p className="text-on-error-container text-sm font-medium opacity-80">
+            <p className="text-on-error-container text-sm font-medium opacity-80 mt-1">
               You have {stats.urgentFlags?.urgentLabs || 0} critical lab results and{" "}
               {stats.urgentFlags?.unsignedNotes || 0} unsigned clinical notes pending.
             </p>
           </div>
           <button
             onClick={() => navigate("/doctor/appointments")}
-            className="btn-premium bg-error text-white px-8 py-3 rounded-2xl shadow-lg shadow-error/10 hover:brightness-110"
+            className="btn-premium bg-red-500 text-white px-8 py-3 rounded-2xl shadow-lg shadow-red-500/30 hover:bg-red-600 transition-all hover:scale-105"
           >
             Review Now
           </button>
@@ -230,7 +263,7 @@ export default function DoctorDashboard() {
         {/* Hero & Quick Volume Analytics */}
         <section className="flex flex-col md:flex-row justify-between items-end gap-6">
           <div className="flex flex-col gap-2">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-on-surface tracking-tighter">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-on-surface tracking-tighter">
               Good morning,{" "}
               {role === "PHYSICIAN_ASSISTANT" ? userName : `Dr. ${userName.split(" ")[0]}`}
             </h1>
@@ -363,7 +396,7 @@ export default function DoctorDashboard() {
         <div className="grid lg:grid-cols-12 gap-10">
           <div className="lg:col-span-8 flex flex-col gap-6">
             <div className="flex justify-between items-center">
-              <h2 className="font-headline text-2xl font-bold text-on-surface flex items-center gap-3">
+              <h2 className="font-headline text-xl font-bold text-on-surface flex items-center gap-3">
                 Virtual Waiting Room
                 <span className="bg-primary-container text-primary text-xs px-3 py-1 rounded-full">
                   {waitingPatients.length} Active
@@ -387,9 +420,14 @@ export default function DoctorDashboard() {
                   />
                 ))
               ) : (
-                <div className="card-premium p-12 text-center opacity-40">
-                  <span className="material-symbols-outlined text-6xl mb-4">person_search</span>
-                  <p className="font-bold text-lg">No patients in lobby</p>
+                <div className="p-12 text-center border-2 border-dashed border-[var(--border)] bg-gray-50/50 rounded-[24px] flex flex-col items-center justify-center opacity-70 hover:opacity-100 transition-opacity">
+                  <div className="relative w-20 h-20 mb-4 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-[var(--brand-blue)]/5 rounded-full scale-150"></div>
+                    <div className="absolute inset-0 bg-[var(--brand-blue)]/10 rounded-full scale-110"></div>
+                    <span className="material-symbols-outlined text-5xl text-[var(--brand-blue)] relative z-10">person_search</span>
+                  </div>
+                  <h3 className="font-bold text-lg text-on-surface mb-2">No patients in lobby</h3>
+                  <p className="text-sm text-on-surface-variant max-w-xs">Patients will appear here once they join the virtual waiting room.</p>
                 </div>
               )}
             </div>
@@ -397,7 +435,7 @@ export default function DoctorDashboard() {
             {/* Physician Assistant Reviews */}
             {role === "DOCTOR" && (
               <div className="flex flex-col gap-6 mt-10">
-                <h2 className="font-headline text-2xl font-bold text-on-surface flex items-center gap-3">
+                <h2 className="font-headline text-xl font-bold text-on-surface flex items-center gap-3">
                   Pending Assistant Reviews
                   {pendingConsultations.length > 0 && (
                     <span className="bg-amber-500/10 text-amber-500 text-xs px-3 py-1 rounded-full border border-amber-500/30">
@@ -415,9 +453,14 @@ export default function DoctorDashboard() {
                       />
                     ))
                   ) : (
-                    <div className="card-premium p-12 text-center opacity-40">
-                      <span className="material-symbols-outlined text-6xl mb-4">clinical_notes</span>
-                      <p className="font-bold text-lg">No pending assistant reviews</p>
+                    <div className="p-12 text-center border-2 border-dashed border-[var(--border)] bg-gray-50/50 rounded-[24px] flex flex-col items-center justify-center opacity-70 hover:opacity-100 transition-opacity">
+                      <div className="relative w-20 h-20 mb-4 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-[var(--brand-green)]/5 rounded-full scale-150"></div>
+                        <div className="absolute inset-0 bg-[var(--brand-green)]/10 rounded-full scale-110"></div>
+                        <span className="material-symbols-outlined text-5xl text-[var(--brand-green)] relative z-10">clinical_notes</span>
+                      </div>
+                      <h3 className="font-bold text-lg text-on-surface mb-2">No pending reviews</h3>
+                      <p className="text-sm text-on-surface-variant max-w-xs">You have reviewed all clinical notes from your Physician Assistants.</p>
                     </div>
                   )}
                 </div>
@@ -426,9 +469,9 @@ export default function DoctorDashboard() {
           </div>
 
           <div className="lg:col-span-4 space-y-8">
-            <div className="card-premium flex flex-col justify-between bg-surface-container-high border-none shadow-xl">
+            <div className="card-premium flex flex-col justify-between bg-gradient-to-br from-[var(--brand-blue)]/5 to-[var(--brand-blue)]/10 border border-[var(--brand-blue)]/10 shadow-lg rounded-[32px] p-8">
               <div className="space-y-6">
-                <div className="w-14 h-14 bg-secondary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-secondary/20">
+                <div className="w-14 h-14 bg-[var(--brand-blue)] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-[var(--brand-blue)]/20">
                   <span
                     className="material-symbols-outlined text-3xl"
                     style={{ fontVariationSettings: "'FILL' 1" }}
@@ -437,17 +480,17 @@ export default function DoctorDashboard() {
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-headline text-2xl font-bold text-on-surface">
+                  <h3 className="font-headline text-xl font-bold text-on-surface">
                     Telehealth Bridge
                   </h3>
-                  <p className="text-on-surface-variant font-medium text-sm leading-relaxed mt-2">
+                  <p className="text-on-surface-variant font-medium text-sm leading-relaxed mt-2 opacity-80">
                     Start a direct video consultation or join the multi-provider nursing lobby.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => navigate("/doctor/video-consultation")}
-                className="btn-premium-primary w-full py-4 rounded-2xl mt-8"
+                className="btn-premium bg-[var(--brand-blue)] text-white shadow-lg shadow-[var(--brand-blue)]/30 w-full py-4 rounded-2xl mt-8 hover:bg-blue-800 transition-all hover:-translate-y-1"
               >
                 Join Lobby
               </button>
@@ -455,9 +498,9 @@ export default function DoctorDashboard() {
 
             {/* Physician Assistants Card */}
             {role === "DOCTOR" && (
-              <div className="card-premium bg-surface-container-high border-none shadow-xl p-6 space-y-6 animate-fade-in">
+              <div className="card-premium bg-[var(--bg-glass)] border border-[var(--border)] shadow-lg rounded-[32px] p-8 space-y-6 animate-fade-in backdrop-blur-md">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-[var(--brand-green)]/10 text-[var(--brand-green)] rounded-2xl flex items-center justify-center shadow-sm">
                     <span
                       className="material-symbols-outlined text-2xl"
                       style={{ fontVariationSettings: "'FILL' 1" }}
@@ -466,7 +509,7 @@ export default function DoctorDashboard() {
                     </span>
                   </div>
                   <div>
-                    <h3 className="font-headline text-xl font-bold text-on-surface">
+                    <h3 className="font-headline text-lg font-bold text-on-surface">
                       Physician Assistants
                     </h3>
                     <p className="text-on-surface-variant text-xs opacity-75">
@@ -480,14 +523,14 @@ export default function DoctorDashboard() {
                     stats.assignedPAs.map((pa) => (
                       <div
                         key={pa.id}
-                        className="flex items-center justify-between p-3 bg-surface-container-highest rounded-2xl border border-outline/5"
+                        className="group flex items-center justify-between p-4 bg-surface/50 hover:bg-surface-container-highest rounded-2xl border border-outline/10 transition-all hover:border-[var(--brand-green)]/30"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-bold text-sm">
+                          <div className="w-9 h-9 bg-[var(--brand-green)]/10 text-[var(--brand-green)] rounded-xl flex items-center justify-center font-bold text-sm group-hover:bg-[var(--brand-green)] group-hover:text-white transition-colors">
                             {pa.name[0]}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-on-surface leading-none mb-0.5">
+                            <p className="text-sm font-bold text-on-surface leading-none mb-1">
                               {pa.name}
                             </p>
                             <p className="text-[10px] text-on-surface-variant opacity-70">
@@ -496,14 +539,14 @@ export default function DoctorDashboard() {
                           </div>
                         </div>
                         <span className="flex h-2.5 w-2.5 relative">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success"></span>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                         </span>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-6 border border-dashed border-outline/20 rounded-2xl opacity-60">
-                      <span className="material-symbols-outlined text-3xl mb-1 text-outline">
+                    <div className="text-center py-8 border-2 border-dashed border-outline/10 bg-surface-container-lowest/50 rounded-2xl opacity-60">
+                      <span className="material-symbols-outlined text-3xl mb-2 text-outline">
                         group
                       </span>
                       <p className="text-xs font-semibold">No PAs linked to your profile</p>
@@ -521,15 +564,15 @@ export default function DoctorDashboard() {
 
 function KPICard({ icon, label, value, sub, color }) {
   const colorMap = {
-    primary: "text-primary bg-primary-container/10",
-    secondary: "text-secondary bg-secondary-container/10",
-    tertiary: "text-tertiary bg-tertiary-fixed/30",
+    primary: "text-[var(--brand-green)] bg-[var(--brand-green)]/10 group-hover:bg-[var(--brand-green)]/20 shadow-[var(--brand-green)]/10",
+    secondary: "text-[var(--brand-blue)] bg-[var(--brand-blue)]/10 group-hover:bg-[var(--brand-blue)]/20 shadow-[var(--brand-blue)]/10",
+    tertiary: "text-amber-500 bg-amber-500/10 group-hover:bg-amber-500/20 shadow-amber-500/10",
   };
 
   return (
-    <div className="card-premium flex flex-col justify-between hover:scale-[1.02] cursor-pointer">
+    <div className="group card-premium flex flex-col justify-between hover:scale-[1.02] cursor-pointer bg-[var(--bg-glass)] backdrop-blur-md rounded-[24px] shadow-sm hover:shadow-xl transition-all border border-[var(--border)] p-6">
       <div
-        className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 ${colorMap[color]}`}
+        className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-colors shadow-sm ${colorMap[color]}`}
       >
         <span
           className="material-symbols-outlined text-2xl"

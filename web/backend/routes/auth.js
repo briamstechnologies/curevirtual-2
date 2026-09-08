@@ -430,7 +430,6 @@
 
 // module.exports = router;
 
-
 // FILE: backend/routes/auth.js
 const express = require("express");
 const jwt = require("jsonwebtoken");
@@ -441,12 +440,7 @@ const { supabaseAdmin } = require("../lib/supabaseAdmin");
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const APPROVAL_REQUIRED_ROLES = [
-  "DOCTOR",
-  "PHARMACY",
-  "LABORATORY",
-  "PHYSICIAN_ASSISTANT",
-];
+const APPROVAL_REQUIRED_ROLES = ["DOCTOR", "PHARMACY", "LABORATORY", "PHYSICIAN_ASSISTANT"];
 
 /**
  * ✅ UNIVERSAL ONLINE STATUS HANDLER (FIXED)
@@ -454,12 +448,14 @@ const APPROVAL_REQUIRED_ROLES = [
 async function setUserOnline(userId, role, isOnline) {
   try {
     if (role === "DOCTOR") {
-      await prisma.doctorProfile.update({
-        where: { userId },
-        data: { isOnline }
-      }).catch(() => {});
-      
-      const io = require('../server.js').io || (global.io); 
+      await prisma.doctorProfile
+        .update({
+          where: { userId },
+          data: { isOnline },
+        })
+        .catch(() => {});
+
+      const io = require("../server.js").io || global.io;
       // Or we can just emit if we have access to io
     }
   } catch (error) {
@@ -496,22 +492,21 @@ router.post("/register", async (req, res) => {
 
     const normedEmail = String(email).trim().toLowerCase();
 
-    const { data: sbData, error: sbError } =
-      await supabaseAdmin.auth.admin.createUser({
-        email: normedEmail,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          firstName,
-          middleName,
-          lastName,
-          role,
-          dateOfBirth,
-          gender,
-          maritalStatus,
-          specialization,
-        },
-      });
+    const { data: sbData, error: sbError } = await supabaseAdmin.auth.admin.createUser({
+      email: normedEmail,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        firstName,
+        middleName,
+        lastName,
+        role,
+        dateOfBirth,
+        gender,
+        maritalStatus,
+        specialization,
+      },
+    });
 
     if (sbError) {
       return res.status(400).json({ error: sbError.message });
@@ -535,11 +530,22 @@ router.post("/register", async (req, res) => {
 
     await ensureDefaultProfile(user, specialization, country, supervisingDoctorId);
 
-    const token = jwt.sign(
-      { id: user.id, role: user.role, type: "USER" },
-      JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    // Auto-link any pending corporate seats matching user's email
+    await prisma.corporateSeat
+      .updateMany({
+        where: {
+          employeeEmail: normedEmail,
+          employeeUserId: null,
+        },
+        data: {
+          employeeUserId: user.id,
+        },
+      })
+      .catch((e) => console.error("Failed to link corporate seat on register:", e));
+
+    const token = jwt.sign({ id: user.id, role: user.role, type: "USER" }, JWT_SECRET, {
+      expiresIn: "1d",
+    });
 
     return res.status(201).json({ user, token });
   } catch (err) {
@@ -569,9 +575,7 @@ router.post("/register-success", async (req, res) => {
     } = req.body || {};
 
     if (!supabaseId || !email) {
-      return res
-        .status(400)
-        .json({ error: "Missing required fields: supabaseId, email" });
+      return res.status(400).json({ error: "Missing required fields: supabaseId, email" });
     }
 
     const normedEmail = String(email).trim().toLowerCase();
@@ -603,15 +607,15 @@ router.post("/register-success", async (req, res) => {
       });
       console.log("✅ User upserted successfully in Prisma:", existingUser.id);
     } catch (dbError) {
-      console.warn("⚠️ Prisma upsert failed. Attempting fallback lookup / retry...", dbError.message);
+      console.warn(
+        "⚠️ Prisma upsert failed. Attempting fallback lookup / retry...",
+        dbError.message
+      );
 
       existingUser = await prisma.user.findFirst({
         where: {
-          OR: [
-            { id: supabaseId },
-            { email: normedEmail }
-          ]
-        }
+          OR: [{ id: supabaseId }, { email: normedEmail }],
+        },
       });
 
       if (!existingUser) {
@@ -629,7 +633,7 @@ router.post("/register-success", async (req, res) => {
               dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date(),
               gender: gender || "PREFER_NOT_TO_SAY",
               maritalStatus: maritalStatus || "SINGLE",
-            }
+            },
           });
           console.log("✅ User created successfully on retry:", existingUser.id);
         } catch (retryError) {
@@ -638,7 +642,7 @@ router.post("/register-success", async (req, res) => {
             message: "User registered partially, database profile creation pending retry.",
             syncPending: true,
             supabaseId,
-            email: normedEmail
+            email: normedEmail,
           });
         }
       }
@@ -650,10 +654,7 @@ router.post("/register-success", async (req, res) => {
         await ensureDefaultProfile(existingUser, specialization, country, supervisingDoctorId);
         console.log("✅ Default profile ensured/created for:", existingUser.role);
       } catch (profileError) {
-        console.error(
-          "⚠️ Failed to provision default profile (non-blocking):",
-          profileError,
-        );
+        console.error("⚠️ Failed to provision default profile (non-blocking):", profileError);
       }
     }
 
@@ -661,7 +662,7 @@ router.post("/register-success", async (req, res) => {
     const token = jwt.sign(
       { id: existingUser.id, role: existingUser.role, type: "USER" },
       JWT_SECRET,
-      { expiresIn: "1d" },
+      { expiresIn: "1d" }
     );
 
     return res.status(201).json({
@@ -692,7 +693,7 @@ router.post("/check-email", async (req, res) => {
 
     // 1. Check in Supabase Auth (auth.users)
     const authUser = await prisma.users.findFirst({
-      where: { email: normedEmail }
+      where: { email: normedEmail },
     });
 
     if (authUser) {
@@ -702,7 +703,7 @@ router.post("/check-email", async (req, res) => {
           exists: true,
           verified: true,
           status: "ALREADY_REGISTERED",
-          message: "This email is already fully registered on our platform."
+          message: "This email is already fully registered on our platform.",
         });
       } else {
         // Unconfirmed auth user -> stuck / incomplete signup
@@ -712,11 +713,14 @@ router.post("/check-email", async (req, res) => {
         // Delete from public."User" first to avoid foreign key constraints (if any)
         try {
           await prisma.user.deleteMany({
-            where: { email: normedEmail }
+            where: { email: normedEmail },
           });
           console.log(`✅ Cleaned public.User record for unconfirmed user ${normedEmail}`);
         } catch (dbUserError) {
-          console.error(`❌ Failed to delete public.User record for ${normedEmail}:`, dbUserError.message);
+          console.error(
+            `❌ Failed to delete public.User record for ${normedEmail}:`,
+            dbUserError.message
+          );
         }
 
         // Delete from auth.users via Supabase Admin API
@@ -724,13 +728,19 @@ router.post("/check-email", async (req, res) => {
           try {
             const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(authUser.id);
             if (deleteError) {
-              console.error(`❌ Failed to delete stuck Supabase Auth user ${normedEmail} via API:`, deleteError.message);
+              console.error(
+                `❌ Failed to delete stuck Supabase Auth user ${normedEmail} via API:`,
+                deleteError.message
+              );
             } else {
               console.log(`✅ Auto-cleaned stuck Supabase Auth user via API: ${normedEmail}`);
               cleared = true;
             }
           } catch (cleanError) {
-            console.error(`❌ Unexpected error deleting stuck Supabase Auth user ${normedEmail}:`, cleanError);
+            console.error(
+              `❌ Unexpected error deleting stuck Supabase Auth user ${normedEmail}:`,
+              cleanError
+            );
           }
         }
 
@@ -738,12 +748,17 @@ router.post("/check-email", async (req, res) => {
         if (!cleared) {
           try {
             await prisma.users.delete({
-              where: { id: authUser.id }
+              where: { id: authUser.id },
             });
-            console.log(`✅ Auto-cleaned stuck Supabase Auth user via DB fallback: ${normedEmail} (ID: ${authUser.id})`);
+            console.log(
+              `✅ Auto-cleaned stuck Supabase Auth user via DB fallback: ${normedEmail} (ID: ${authUser.id})`
+            );
             cleared = true;
           } catch (dbDeleteError) {
-            console.error(`❌ Failed DB delete fallback for ${normedEmail}:`, dbDeleteError.message);
+            console.error(
+              `❌ Failed DB delete fallback for ${normedEmail}:`,
+              dbDeleteError.message
+            );
           }
         }
 
@@ -754,26 +769,31 @@ router.post("/check-email", async (req, res) => {
           cleared,
           message: cleared
             ? "Account pending activation. Stuck session cleared successfully. You can now register again."
-            : "Account pending activation but stuck session could not be cleared automatically."
+            : "Account pending activation but stuck session could not be cleared automatically.",
         });
       }
     }
 
     // 2. Check in our Prisma database (if not found in auth.users)
     const prismaUser = await prisma.user.findUnique({
-      where: { email: normedEmail }
+      where: { email: normedEmail },
     });
 
     if (prismaUser) {
       // Exist in public.User but NOT in auth.users -> orphaned public User record!
-      console.log(`⚠️ Orphaned public.User record found for ${normedEmail} (no auth user). Cleaning up...`);
+      console.log(
+        `⚠️ Orphaned public.User record found for ${normedEmail} (no auth user). Cleaning up...`
+      );
       try {
         await prisma.user.delete({
-          where: { id: prismaUser.id }
+          where: { id: prismaUser.id },
         });
         console.log(`✅ Cleaned orphaned public.User record for ${normedEmail}`);
       } catch (dbUserError) {
-        console.error(`❌ Failed to delete orphaned public.User record for ${normedEmail}:`, dbUserError.message);
+        console.error(
+          `❌ Failed to delete orphaned public.User record for ${normedEmail}:`,
+          dbUserError.message
+        );
       }
     }
 
@@ -782,14 +802,13 @@ router.post("/check-email", async (req, res) => {
       exists: false,
       verified: false,
       status: "NEW_USER",
-      message: "Email is available for registration."
+      message: "Email is available for registration.",
     });
-
   } catch (err) {
     console.error("Check email error:", err);
     return res.status(500).json({
       error: "Internal server error during email check",
-      details: process.env.NODE_ENV === "development" ? err.message : undefined
+      details: process.env.NODE_ENV === "development" ? err.message : undefined,
     });
   }
 });
@@ -805,8 +824,7 @@ router.post("/login-sync", async (req, res) => {
     const normedEmail = email.trim().toLowerCase();
 
     if (supabaseAccessToken) {
-      const { data, error } =
-        await supabaseAdmin.auth.getUser(supabaseAccessToken);
+      const { data, error } = await supabaseAdmin.auth.getUser(supabaseAccessToken);
 
       if (error || !data.user) {
         return res.status(401).json({ error: "Invalid session" });
@@ -815,24 +833,35 @@ router.post("/login-sync", async (req, res) => {
 
     const account = await prisma.user.findUnique({
       where: { email: normedEmail },
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        role: true,
+        dateOfBirth: true,
+        gender: true,
+        subscriptionState: true,
+        organizationId: true,
+        createdAt: true,
+        updatedAt: true,
+        stripeCustomerId: true,
+        maritalStatus: true,
+        approvalStatus: true,
+      },
     });
 
     if (!account) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (
-      account.role === "DOCTOR" ||
-      account.role === "PHYSICIAN_ASSISTANT"
-    ) {
+    if (account.role === "DOCTOR" || account.role === "PHYSICIAN_ASSISTANT") {
       await setUserOnline(account.id, account.role, true);
     }
 
-    const token = jwt.sign(
-      { id: account.id, role: account.role },
-      JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    const token = jwt.sign({ id: account.id, role: account.role }, JWT_SECRET, { expiresIn: "1d" });
 
     return res.json({ token, user: account });
   } catch (err) {
@@ -914,7 +943,7 @@ router.get("/pa-assigned-doctor/:userId", async (req, res) => {
       doctorName: `${firstActive.doctor.user.firstName} ${firstActive.doctor.user.lastName}`,
       isOnline: false,
       lastSeenAt: null,
-      supervisors: pa.assignments.map(a => ({
+      supervisors: pa.assignments.map((a) => ({
         doctorId: a.doctor.id,
         doctorName: `${a.doctor.user.firstName} ${a.doctor.user.lastName}`,
         isOnline: false,

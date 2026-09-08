@@ -98,16 +98,21 @@ export default function MyDoctors() {
   const patientUserId = localStorage.getItem("userId");
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState(() => {
+    const cached = localStorage.getItem("cached_patient_doctors");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(!rows.length);
   const [search, setSearch] = useState("");
   const [viewDoctor, setViewDoctor] = useState(null);
 
   const fetchAssigned = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!rows.length) setLoading(true);
       const res = await api.get("/patient/doctors", { params: { patientUserId } });
-      setRows(res.data?.data || res.data || []);
+      const data = res.data?.data || res.data || [];
+      setRows(data);
+      localStorage.setItem("cached_patient_doctors", JSON.stringify(data));
     } catch (err) {
       console.error(err);
       toast.error("Failed to load assigned doctors");
@@ -199,7 +204,15 @@ export default function MyDoctors() {
                       <td className="p-3">
                         <div className="flex justify-center">
                           <button
-                            onClick={() => navigate('/patient/my-appointments', { state: { prefillDoctorId: d.id } })}
+                            onClick={() =>
+                              navigate('/patient/my-appointments', {
+                                state: {
+                                  prefillDoctorId: d.id,
+                                  prefillDoctorName: d.user ? `Dr. ${d.user.firstName} ${d.user.lastName}`.trim() : "Doctor",
+                                  prefillDoctorSpec: d.specialization || "General Physician",
+                                },
+                              })
+                            }
                             className="px-3 py-1.5 bg-[var(--brand-green)] text-white text-xs rounded-full font-bold hover:opacity-90 transition"
                           >
                             Book Appointment

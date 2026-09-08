@@ -4,6 +4,16 @@ const router = express.Router();
 const prisma = require("../prisma/prismaClient");
 const { verifyToken } = require("../middleware/rbac");
 
+// Helper to choose the most relevant transaction for an appointment
+function pickRelevantTransaction(transactions) {
+  if (!transactions || transactions.length === 0) return null;
+  const paid = transactions.filter(t => t.status === 'SUCCESS');
+  if (paid.length > 0) {
+    return paid.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+  }
+  return transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+}
+
 /* ============================================================
    Helper: Fetch appointment with doctor/patient user info
    ============================================================ */
@@ -21,6 +31,11 @@ async function getAppointmentWithUsers(id) {
           user: { select: { id: true, firstName: true, lastName: true } },
         },
       },
+      transactions: {
+        include: {
+          paConsultReview: true
+        }
+      }
     },
   });
 }
@@ -51,6 +66,12 @@ router.get("/:id", verifyToken, async (req, res) => {
         .json({ error: "You are not authorized to access this appointment" });
     }
 
+    const relevantTx = pickRelevantTransaction(appointment.transactions);
+    const consultType = relevantTx?.supervisingDoctorId ? "pa" : "doctor";
+    const coSignStatus = consultType === "pa"
+      ? (relevantTx?.paConsultReview?.reviewStatus || "pending_review")
+      : null;
+
     return res.json({
       id: appointment.id,
       doctorId: appointment.doctorId,
@@ -63,6 +84,8 @@ router.get("/:id", verifyToken, async (req, res) => {
       status: appointment.status,
       doctorName: `${appointment.doctor.user.firstName} ${appointment.doctor.user.lastName}`,
       patientName: `${appointment.patient.user.firstName} ${appointment.patient.user.lastName}`,
+      consultType,
+      coSignStatus
     });
   } catch (err) {
     console.error("❌ GET /api/appointments/:id error:", err);
@@ -184,6 +207,28 @@ router.get("/:id/status", verifyToken, async (req, res) => {
   } catch (err) {
     console.error("❌ GET /api/appointments/:id/status error:", err);
     return res.status(500).json({ error: "Failed to get call status" });
+  }
+});
+
+// ================================================================
+// GET /api/appointments/batch/statuses
+// Poll multiple callStatuses to prevent frontend API spam
+// ================================================================
+router.get("/batch/statuses", verifyToken, async (req, res) => {
+  try {
+    const { ids } = req.query;
+    if (!ids) return res.json({ data: [] });
+
+    const idArray = ids.split(",");
+    const appointments = await prisma.appointment.findMany({
+      where: { id: { in: idArray } },
+      select: { id: true, callStatus: true },
+    });
+
+    return res.json({ data: appointments });
+  } catch (err) {
+    console.error("❌ GET /api/appointments/batch/statuses error:", err);
+    return res.status(500).json({ error: "Failed to get call statuses" });
   }
 });
 

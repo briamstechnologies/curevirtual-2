@@ -1,149 +1,500 @@
 // FILE: src/pages/patient/PatientDashboard.jsx
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../../Lib/api";
 import DashboardLayout from "../../layouts/DashboardLayout";
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function formatAppointmentTime(dateStr) {
+  if (!dateStr) return "Scheduled";
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const isToday =
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear();
+
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const isTomorrow =
+      d.getDate() === tomorrow.getDate() &&
+      d.getMonth() === tomorrow.getMonth() &&
+      d.getFullYear() === tomorrow.getFullYear();
+
+    const timeStr = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
+
+    if (isToday) return `Today, ${timeStr}`;
+    if (isTomorrow) return `Tomorrow, ${timeStr}`;
+    return `${d.toLocaleDateString([], { month: "short", day: "numeric" })}, ${timeStr}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+function getInitials(name) {
+  if (!name) return "DR";
+  const parts = String(name).trim().split(/\s+/);
+  const first = parts[0]?.[0] || "";
+  const last = parts[1]?.[0] || "";
+  return (first + last).toUpperCase() || "DR";
+}
+
 export default function PatientDashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    totalAppointments: 0,
-    completedAppointments: 0,
-    pendingAppointments: 0,
-    totalPrescriptions: 0,
-    totalConsultations: 0,
-    totalDoctors: 0,
-  });
-
-  const patientId = localStorage.getItem("userId");
+  const patientId = localStorage.getItem("userId") || "";
   const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "Patient";
+  const firstName = userName.split(" ")[0] || "Patient";
+
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    activePrescriptions: 0,
+    unreadMessages: 0,
+    labResults: 0,
+  });
+  const [upcomingAppointment, setUpcomingAppointment] = useState(null);
+  const [profileData, setProfileData] = useState(null);
+
+  const loadDashboardData = useCallback(async () => {
+    if (!patientId) return;
+    try {
+      setLoading(true);
+
+      // Fetch Stats, Profile, Appointments, History concurrently
+      const [statsRes, profileRes, apptsRes, healthRes] = await Promise.allSettled([
+        api.get("/patient/stats", { params: { patientId } }),
+        api.get("/patient/profile", { params: { userId: patientId } }),
+        api.get("/patient/appointments", { params: { patientId } }),
+        api.get("/patient/health-history"),
+      ]);
+
+      let statsObj = { activePrescriptions: 0, unreadMessages: 0, labResults: 0 };
+
+      // Parse Profile Data
+      let prof = null;
+      if (profileRes.status === "fulfilled" && profileRes.value?.data?.data) {
+        prof = profileRes.value.data.data;
+        setProfileData(prof);
+      }
+
+      // Parse Stats
+      if (statsRes.status === "fulfilled" && statsRes.value?.data?.data) {
+        const d = statsRes.value.data.data;
+        statsObj.activePrescriptions = d.totalPrescriptions || prof?.prescriptions?.length || 0;
+      } else if (prof?.prescriptions) {
+        statsObj.activePrescriptions = prof.prescriptions.length;
+      }
+
+      // Parse Health History / Lab results
+      if (healthRes.status === "fulfilled" && healthRes.value?.data) {
+        const records = healthRes.value.data?.records || healthRes.value.data?.manualRecords || [];
+        statsObj.labResults = records.length || prof?.labOrders?.length || 0;
+      } else if (prof?.labOrders) {
+        statsObj.labResults = prof.labOrders.length;
+      }
+
+      // Messages count
+      try {
+        const msgRes = await api.get("/messages/unread-count");
+        if (msgRes.data?.unreadCount !== undefined) {
+          statsObj.unreadMessages = msgRes.data.unreadCount;
+        }
+      } catch {
+        statsObj.unreadMessages = 0;
+      }
+
+      setStats(statsObj);
+
+      // Parse Appointments
+      if (apptsRes.status === "fulfilled" && Array.isArray(apptsRes.value?.data)) {
+        const appts = apptsRes.value.data;
+        const upcoming = appts
+          .filter((a) => a.status !== "CANCELLED" && a.status !== "COMPLETED")
+          .sort((a, b) => new Date(a.appointmentDate) - new Date(b.appointmentDate))[0];
+
+        setUpcomingAppointment(upcoming || null);
+      }
+    } catch (err) {
+      console.error("Dashboard data load error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [patientId]);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await api.get(`/patient/stats`, { params: { patientId } });
-        const data = res?.data?.data ?? res?.data ?? null;
-        if (data) setStats(data);
-      } catch (err) {
-        console.error("Error fetching patient stats:", err);
-      }
-    };
-    if (patientId) fetchStats();
-  }, [patientId]);
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  const hasEmergencyContact = Boolean(
+    profileData?.emergencyContact ||
+    profileData?.emergencyContactName ||
+    profileData?.emergencyContactEmail
+  );
+
+  const isProfileComplete = Boolean(
+    profileData?.user?.firstName &&
+    profileData?.user?.lastName &&
+    (profileData?.bloodGroup || profileData?.user?.dateOfBirth)
+  );
+
+  const doctor = upcomingAppointment?.doctor;
+  const doctorUser = doctor?.user;
+  const doctorName = doctorUser
+    ? `Dr. ${doctorUser.firstName} ${doctorUser.lastName}`
+    : upcomingAppointment?.doctorName || "Dr. Medical Specialist";
+  const doctorSpecialty = doctor?.specialization || "General Physician";
+  const doctorAvatar = doctor?.avatarUrl || doctorUser?.avatarUrl || null;
+  const appointmentStatus = upcomingAppointment?.status || "Confirmed";
 
   return (
     <DashboardLayout role="PATIENT">
-      <div className="space-y-12">
-        {/* Hero Section */}
-        <section>
-          <div className="flex flex-col gap-2">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-on-surface tracking-tighter">
-              Welcome back, {userName.split(" ")[0]}
-            </h1>
-            {stats.referenceId && (
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full w-fit">
-                <span className="material-symbols-outlined text-sm">badge</span>
-                <span className="font-bold text-sm tracking-wider">{stats.referenceId}</span>
-              </div>
-            )}
-            <p className="text-on-surface-variant text-lg font-medium opacity-80 mt-2">
-              Your sanctuary is ready. Here's your health overview for today.
+      <div className="w-full space-y-6 pb-12 font-body px-1 sm:px-2 md:px-4">
+        {/* 1. GREETING HEADER */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+          <div>
+            <div className="flex items-center gap-2">
+              <span
+                className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight"
+                style={{
+                  background: "none",
+                  WebkitTextFillColor: "#0f172a",
+                  textTransform: "none",
+                }}
+              >
+                {getGreeting()}, {firstName}
+              </span>
+              <span
+                className="text-2xl sm:text-3xl inline-block select-none"
+                style={{
+                  background: "none",
+                  WebkitTextFillColor: "initial",
+                  color: "initial",
+                  fontFamily: '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif',
+                }}
+              >
+                👋
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm font-semibold text-[var(--text-soft)] mt-1 tracking-wide">
+              Manage your care and upcoming visits.
             </p>
           </div>
-        </section>
+          <Link
+            to="/patient/doctors/list"
+            className="btn btn-primary !px-6 !py-3 !rounded-2xl !text-xs !normal-case !tracking-wider shrink-0 self-start sm:self-auto flex items-center gap-2 shadow-lg shadow-emerald-500/20 decoration-none"
+          >
+            <span className="material-symbols-outlined text-base">search</span>
+            <span>Find a Doctor</span>
+          </Link>
+        </div>
 
-        {/* Daily Statistics - Horizontal Scroll */}
-        <section className="space-y-6">
-          <div className="flex justify-between items-end">
-            <h2 className="font-headline text-2xl font-bold text-on-surface">Daily Statistics</h2>
-            <button className="text-secondary font-bold text-sm hover:underline">View History</button>
-          </div>
-          
-          <div className="flex overflow-x-auto gap-6 no-scrollbar pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
-            <StatsCard 
-              icon="calendar_today" 
-              value={stats.totalAppointments} 
-              label="Visits" 
-              sub="Scheduled Visits" 
-              color="primary"
-            />
-            <StatsCard 
-              icon="prescriptions" 
-              value={stats.totalPrescriptions} 
-              label="Scripts" 
-              sub="Active Prescriptions" 
-              color="secondary"
-            />
-            <StatsCard 
-              icon="videocam" 
-              value={stats.totalConsultations} 
-              label="Calls" 
-              sub="Video Sessions" 
-              color="tertiary"
-            />
-            <StatsCard 
-              icon="group" 
-              value={stats.totalDoctors} 
-              label="Team" 
-              sub="Active Doctors" 
-              color="primary"
-            />
-          </div>
-        </section>
-
-        {/* Content Split: Consultations & Quick Actions */}
-        <div className="grid lg:grid-cols-12 gap-10">
-          {/* Main Column: Consultations */}
-          <div className="lg:col-span-8 space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="font-headline text-2xl font-bold text-on-surface">Upcoming Consultations</h2>
-              <button 
-                onClick={() => navigate("/patient/my-appointments")}
-                className="text-secondary font-bold text-sm hover:underline"
-              >
-                Schedule New
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <ConsultationItem 
-                name="Dr. Sarah Jenkins" 
-                specialty="General Check-up" 
-                type="Virtual Call" 
-                time="10:30 AM" 
-                status="In 15 Mins"
-                avatar="https://images.unsplash.com/photo-1559839734-2b71f1536783?auto=format&fit=crop&q=80&w=150"
-                isPrimary
-              />
-              <ConsultationItem 
-                name="Dr. Marcus Thornton" 
-                specialty="Lab Results Review" 
-                type="Audio Call" 
-                time="01:45 PM" 
-                status="Today"
-                avatar="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=150"
-              />
-            </div>
+        {/* 2. UPCOMING APPOINTMENT CARD */}
+        <div className="card !p-6 !rounded-[2rem] w-full">
+          <div className="flex items-center gap-2 text-xs font-black text-[var(--brand-green)] uppercase tracking-wider mb-4">
+            <span className="material-symbols-outlined text-base">calendar_month</span>
+            <span>Upcoming Appointment</span>
           </div>
 
-          {/* Side Column: Quick Actions & Promo */}
-          <div className="lg:col-span-4 space-y-8">
-            <div className="card-premium h-full flex flex-col justify-between bg-gradient-to-br from-[var(--brand-blue)] via-[var(--brand-purple)] to-[var(--brand-blue)] bg-[length:200%_200%] animate-gradient text-white border-none shadow-2xl shadow-blue-500/20">
-              <div className="space-y-4 text-center">
-                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-                  <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>add_circle</span>
+          {upcomingAppointment ? (
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+              {/* Doctor Info & Timing */}
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[1.5rem] overflow-hidden bg-slate-100 border border-[var(--border)] shrink-0 flex items-center justify-center shadow-md">
+                  {doctorAvatar ? (
+                    <img
+                      src={doctorAvatar}
+                      alt={doctorName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-tr from-[var(--brand-green)] to-[var(--brand-blue)] text-white font-black text-xl flex items-center justify-center">
+                      {getInitials(doctorName)}
+                    </div>
+                  )}
                 </div>
+
                 <div className="space-y-1">
-                  <h3 className="font-headline text-2xl font-bold">Ready to start?</h3>
-                  <p className="text-white/80 font-medium text-sm px-4 leading-relaxed">Connect with your health specialist instantly via our secure lobby.</p>
+                  <div className="flex items-center gap-1.5">
+                    <h2
+                      className="text-base sm:text-lg font-black text-slate-900 tracking-tight !normal-case"
+                      style={{ background: "none", WebkitTextFillColor: "#0f172a" }}
+                    >
+                      {doctorName}
+                    </h2>
+                    <span
+                      className="material-symbols-outlined text-[var(--brand-green)] text-base"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                      title="Verified Doctor"
+                    >
+                      verified
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-[var(--text-soft)]">
+                    {doctorSpecialty}
+                  </p>
+                  <div className="pt-1 flex flex-wrap items-center gap-2.5">
+                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm text-[var(--brand-green)]">schedule</span>
+                      {formatAppointmentTime(upcomingAppointment.appointmentDate)}
+                    </span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {appointmentStatus === "PENDING"
+                        ? "Pending Approval"
+                        : appointmentStatus === "APPROVED" || appointmentStatus === "CONFIRMED"
+                        ? "Confirmed"
+                        : appointmentStatus}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <button 
-                onClick={() => navigate("/patient/video-consultation")}
-                className="w-full bg-white text-primary font-black uppercase tracking-widest text-xs py-4 rounded-2xl shadow-xl hover:scale-[1.02] transition-transform mt-8"
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 md:min-w-[170px]">
+                <Link
+                  to={`/patient/video-consultation?room=${upcomingAppointment.roomName || upcomingAppointment.id}`}
+                  className="btn btn-primary !px-5 !py-3 !rounded-xl !text-xs !normal-case flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 decoration-none"
+                >
+                  <span className="material-symbols-outlined text-base">videocam</span>
+                  <span>Join Video Visit</span>
+                </Link>
+                <Link
+                  to="/patient/my-appointments"
+                  className="btn btn-secondary !px-5 !py-2.5 !rounded-xl !text-xs !normal-case flex items-center justify-center font-bold decoration-none"
+                >
+                  <span>View Details</span>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="py-5 px-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 w-full">
+              <div className="flex items-center gap-3 text-center sm:text-left">
+                <span className="material-symbols-outlined text-2xl text-[var(--brand-green)]">event_available</span>
+                <div>
+                  <p className="text-xs sm:text-sm font-black text-slate-900">No Upcoming Appointment</p>
+                  <p className="text-xs text-[var(--text-soft)]">You don't have any consultation booked right now.</p>
+                </div>
+              </div>
+              <Link
+                to="/patient/doctors/list"
+                className="btn btn-primary !px-4 !py-2.5 !rounded-xl !text-xs !normal-case shadow-sm decoration-none"
               >
-                Join Waiting Room
-              </button>
+                <span>Book Appointment</span>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* 3. QUICK ACTIONS */}
+        <div className="w-full">
+          <h2
+            className="text-xs font-black text-[var(--text-soft)] uppercase tracking-[0.2em] mb-3"
+            style={{ background: "none", WebkitTextFillColor: "var(--text-soft)" }}
+          >
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 w-full">
+            {/* Book Appointment */}
+            <Link
+              to="/patient/doctors/list"
+              className="bg-emerald-50/60 border border-emerald-200/70 hover:border-[var(--brand-green)] hover:shadow-lg hover:shadow-emerald-500/10 transition-all rounded-[1.5rem] p-4 flex flex-col items-center justify-center text-center cursor-pointer group decoration-none"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-white text-[var(--brand-green)] flex items-center justify-center mb-2.5 shadow-sm group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined text-xl text-[var(--brand-green)]">calendar_month</span>
+              </div>
+              <span className="font-bold text-xs text-slate-800 leading-tight">
+                Book<br />Appointment
+              </span>
+            </Link>
+
+            {/* Message Doctor */}
+            <Link
+              to="/patient/messages"
+              className="bg-sky-50/60 border border-sky-200/70 hover:border-[var(--brand-blue)] hover:shadow-lg hover:shadow-blue-500/10 transition-all rounded-[1.5rem] p-4 flex flex-col items-center justify-center text-center cursor-pointer group decoration-none"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-white text-[var(--brand-blue)] flex items-center justify-center mb-2.5 shadow-sm group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined text-xl text-[var(--brand-blue)]">chat</span>
+              </div>
+              <span className="font-bold text-xs text-slate-800 leading-tight">
+                Message<br />Doctor
+              </span>
+            </Link>
+
+            {/* View Prescriptions */}
+            <Link
+              to="/patient/prescriptions"
+              className="bg-purple-50/60 border border-purple-200/70 hover:border-[var(--brand-purple)] hover:shadow-lg hover:shadow-purple-500/10 transition-all rounded-[1.5rem] p-4 flex flex-col items-center justify-center text-center cursor-pointer group decoration-none"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-white text-[var(--brand-purple)] flex items-center justify-center mb-2.5 shadow-sm group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined text-xl text-[var(--brand-purple)]">prescriptions</span>
+              </div>
+              <span className="font-bold text-xs text-slate-800 leading-tight">
+                View<br />Medications
+              </span>
+            </Link>
+
+            {/* Upload Record */}
+            <Link
+              to="/patient/history"
+              className="bg-amber-50/60 border border-amber-200/70 hover:border-[var(--brand-orange)] hover:shadow-lg hover:shadow-amber-500/10 transition-all rounded-[1.5rem] p-4 flex flex-col items-center justify-center text-center cursor-pointer group decoration-none"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-white text-[var(--brand-orange)] flex items-center justify-center mb-2.5 shadow-sm group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined text-xl text-[var(--brand-orange)]">cloud_upload</span>
+              </div>
+              <span className="font-bold text-xs text-slate-800 leading-tight">
+                Upload<br />Record
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        {/* 4. STAT CARDS ROW */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 w-full">
+          {/* Active Prescriptions */}
+          <div className="bg-emerald-50/50 border border-emerald-200/60 rounded-[1.5rem] p-4 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-emerald-100/90 text-[var(--brand-green)] flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-base">medication</span>
+              </div>
+              <span className="text-xs font-bold text-slate-700">Active Medications</span>
+            </div>
+            <div className="my-2">
+              <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                {stats.activePrescriptions}
+              </span>
+            </div>
+            <Link
+              to="/patient/prescriptions"
+              className="text-xs font-bold text-[var(--brand-green)] hover:opacity-80 flex items-center gap-1 w-fit group decoration-none"
+            >
+              <span>View medications</span>
+              <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+            </Link>
+          </div>
+
+          {/* Unread Messages */}
+          <div className="bg-sky-50/50 border border-sky-200/60 rounded-[1.5rem] p-4 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-blue-100/90 text-[var(--brand-blue)] flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-base">chat</span>
+              </div>
+              <span className="text-xs font-bold text-slate-700">Unread Messages</span>
+            </div>
+            <div className="my-2">
+              <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                {stats.unreadMessages}
+              </span>
+            </div>
+            <Link
+              to="/patient/messages"
+              className="text-xs font-bold text-[var(--brand-blue)] hover:opacity-80 flex items-center gap-1 w-fit group decoration-none"
+            >
+              <span>View messages</span>
+              <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+            </Link>
+          </div>
+
+          {/* Lab Results */}
+          <div className="bg-purple-50/50 border border-purple-200/60 rounded-[1.5rem] p-4 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-purple-100/90 text-[var(--brand-purple)] flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-base">biotech</span>
+              </div>
+              <span className="text-xs font-bold text-slate-700">Lab Results</span>
+            </div>
+            <div className="my-2">
+              <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                {stats.labResults}
+              </span>
+            </div>
+            <Link
+              to="/patient/history"
+              className="text-xs font-bold text-[var(--brand-purple)] hover:opacity-80 flex items-center gap-1 w-fit group decoration-none"
+            >
+              <span>View lab results</span>
+              <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* 5. CARE CHECKLIST SECTION */}
+        <div className="w-full">
+          <h2
+            className="text-xs font-black text-[var(--text-soft)] uppercase tracking-[0.2em] mb-3"
+            style={{ background: "none", WebkitTextFillColor: "var(--text-soft)" }}
+          >
+            Care Checklist
+          </h2>
+          <div className="card !p-5 sm:!p-6 !rounded-[2rem] space-y-4 w-full">
+            {/* Complete Profile Item */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[var(--brand-green)] flex items-center justify-center shrink-0 border border-emerald-100/80">
+                  <span className="material-symbols-outlined text-xl">person</span>
+                </div>
+                <div>
+                  <h3
+                    className="text-xs sm:text-sm font-black text-slate-900 !normal-case"
+                    style={{ background: "none", WebkitTextFillColor: "#0f172a" }}
+                  >
+                    Complete your profile
+                  </h3>
+                  <p className="text-xs text-[var(--text-soft)] font-medium mt-0.5">
+                    Add your personal details to help us personalize your care.
+                  </p>
+                </div>
+              </div>
+              {isProfileComplete ? (
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200 shrink-0 self-start sm:self-auto">
+                  <span className="material-symbols-outlined text-sm">check_circle</span>
+                  <span>Completed</span>
+                </span>
+              ) : (
+                <Link
+                  to="/patient/profile/view-profile"
+                  className="btn btn-secondary !px-5 !py-2.5 !rounded-xl !text-xs !normal-case shrink-0 self-start sm:self-auto font-bold decoration-none"
+                >
+                  <span>Complete</span>
+                </Link>
+              )}
+            </div>
+
+            {/* Add Emergency Contact Item */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[var(--brand-green)] flex items-center justify-center shrink-0 border border-emerald-100/80">
+                  <span className="material-symbols-outlined text-xl">health_and_safety</span>
+                </div>
+                <div>
+                  <h3
+                    className="text-xs sm:text-sm font-black text-slate-900 !normal-case"
+                    style={{ background: "none", WebkitTextFillColor: "#0f172a" }}
+                  >
+                    Add emergency contact
+                  </h3>
+                  <p className="text-xs text-[var(--text-soft)] font-medium mt-0.5">
+                    Ensure we can reach someone important to you.
+                  </p>
+                </div>
+              </div>
+              {hasEmergencyContact ? (
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200 shrink-0 self-start sm:self-auto">
+                  <span className="material-symbols-outlined text-sm">check_circle</span>
+                  <span>Added</span>
+                </span>
+              ) : (
+                <Link
+                  to="/patient/profile/view-profile"
+                  className="btn btn-secondary !px-5 !py-2.5 !rounded-xl !text-xs !normal-case shrink-0 self-start sm:self-auto font-bold decoration-none"
+                >
+                  <span>Add Contact</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -151,46 +502,3 @@ export default function PatientDashboard() {
     </DashboardLayout>
   );
 }
-
-function StatsCard({ icon, value, label, sub, color }) {
-  const colorMap = {
-    primary: "bg-[var(--brand-blue)]/10 text-[var(--brand-blue)]",
-    secondary: "bg-[var(--brand-green)]/10 text-[var(--brand-green)]",
-    tertiary: "bg-[var(--brand-purple)]/10 text-[var(--brand-purple)]",
-    error: "bg-red-500/10 text-red-500"
-  };
-
-  return (
-    <div className="flex-shrink-0 w-48 card-premium flex flex-col justify-between shadow-black/5">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-6 ${colorMap[color]}`}>
-        <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
-      </div>
-      <div className="flex flex-col">
-        <div className="flex items-baseline gap-1">
-          <span className="font-headline text-4xl font-extrabold text-on-surface leading-none">{value}</span>
-          <span className="text-on-surface-variant text-xs font-bold uppercase tracking-wider">{label}</span>
-        </div>
-        <span className="text-on-surface-variant text-[10px] mt-4 font-bold opacity-60 uppercase tracking-widest leading-none">{sub}</span>
-      </div>
-    </div>
-  );
-}
-
-function ConsultationItem({ name, specialty, type, time, status, avatar, isPrimary }) {
-  return (
-    <div className="group relative flex items-center p-5 rounded-[28px] bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-300 shadow-[0_8px_24px_-4px_rgba(0,108,10,0.04)] border border-transparent hover:border-primary/10">
-      <div className="w-16 h-16 rounded-2xl overflow-hidden bg-surface-container-high mr-5 shadow-sm">
-        <img src={avatar} alt={name} className="w-full h-full object-cover" />
-      </div>
-      <div className="flex-grow">
-        <h3 className="font-bold text-on-surface text-lg leading-none mb-1">{name}</h3>
-        <p className="text-on-surface-variant text-sm font-medium opacity-70">{specialty} • {type}</p>
-      </div>
-      <div className="text-right flex flex-col items-end">
-        <span className={`font-bold font-headline text-lg leading-none ${isPrimary ? "text-primary" : "text-on-surface"}`}>{time}</span>
-        <span className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mt-1 opacity-60">{status}</span>
-      </div>
-    </div>
-  );
-}
-

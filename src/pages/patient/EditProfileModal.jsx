@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import api from "../../Lib/api";
 import { toast } from "react-toastify";
 import PropTypes from "prop-types";
@@ -27,8 +27,19 @@ const BLOOD_GROUP_OPTIONS = [
 ];
 
 export default function EditProfileModal({ isOpen, onClose, profile, onProfileUpdate }) {
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [currentAvatar, setCurrentAvatar] = useState(
+    profile?.avatarUrl || profile?.user?.avatarUrl || localStorage.getItem("userAvatar") || null
+  );
+
+  useEffect(() => {
+    if (profile?.avatarUrl || profile?.user?.avatarUrl) {
+      setCurrentAvatar(profile.avatarUrl || profile.user.avatarUrl);
+    }
+  }, [profile]);
 
   useEffect(() => {
     if (profile) {
@@ -60,6 +71,44 @@ export default function EditProfileModal({ isOpen, onClose, profile, onProfileUp
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be under 5MB");
+      return;
+    }
+
+    try {
+      setAvatarUploading(true);
+      const userId = localStorage.getItem("userId");
+      const formDataUpload = new FormData();
+      formDataUpload.append("avatar", file);
+      if (userId) formDataUpload.append("userId", userId);
+
+      const res = await api.post("/patient/avatar", formDataUpload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data?.success && res.data?.avatarUrl) {
+        const newUrl = res.data.avatarUrl;
+        setCurrentAvatar(newUrl);
+        localStorage.setItem("userAvatar", newUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+        toast.success("Profile photo uploaded successfully!");
+      } else {
+        toast.error("Failed to upload image");
+      }
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      toast.error(err.response?.data?.error || "Error uploading image");
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -129,6 +178,60 @@ export default function EditProfileModal({ isOpen, onClose, profile, onProfileUp
 
         {/* Modal Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar text-left">
+          {/* Section 0: Profile Photo Upload */}
+          <div className="bg-surface-container/60 p-5 rounded-2xl border border-outline-variant/20 flex flex-col sm:flex-row items-center gap-5">
+            <div
+              className="relative group cursor-pointer flex-shrink-0"
+              onClick={() => !avatarUploading && fileInputRef.current?.click()}
+              title="Click to change photo"
+            >
+              {currentAvatar ? (
+                <img
+                  src={currentAvatar}
+                  alt="Profile"
+                  className="w-20 h-20 rounded-2xl object-cover border-2 border-primary shadow-md"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-2xl bg-primary/10 border-2 border-primary/20 text-primary flex items-center justify-center font-bold text-2xl shadow-sm">
+                  {formData.firstName?.[0]?.toUpperCase() || "P"}
+                </div>
+              )}
+              <div className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {avatarUploading ? (
+                  <span className="material-symbols-outlined text-white text-xl animate-spin">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-outlined text-white text-xl">photo_camera</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 text-center sm:text-left space-y-1">
+              <h4 className="font-bold text-sm text-on-surface">Profile Picture</h4>
+              <p className="text-xs text-on-surface-variant">Upload a clear JPG, PNG or WEBP image (Max 5MB).</p>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-2 shadow-sm mx-auto sm:mx-0"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    {avatarUploading ? "progress_activity" : "upload"}
+                  </span>
+                  {avatarUploading ? "Uploading..." : "Upload New Photo"}
+                </button>
+              </div>
+            </div>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+            />
+          </div>
+
           {/* Section 1: Personal Specifications */}
           <section className="space-y-4">
             <div className="flex items-center gap-2">

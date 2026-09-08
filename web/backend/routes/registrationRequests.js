@@ -556,6 +556,28 @@ async function enrichWithFreshUrl(record) {
   return { ...record, licenseImageUrl: freshUrl ?? record.licenseImageUrl };
 }
 
+// ─── Helper: refresh signed URLs in batch ─────────────────────────
+async function refreshSignedUrlsBatch(filePaths, expiresInSeconds = 3600) {
+  if (!supabaseAdmin || !filePaths || filePaths.length === 0) return {};
+  try {
+    const { data, error } = await supabaseAdmin.storage
+      .from('license-documents')
+      .createSignedUrls(filePaths, expiresInSeconds);
+    if (error || !data) return {};
+    const map = {};
+    data.forEach(item => {
+      if (item.signedUrl) {
+        // Supabase returns full path or relative path, map by matching basename or relative path
+        map[item.path] = item.signedUrl;
+      }
+    });
+    return map;
+  } catch (err) {
+    console.error('⚠️ Batch URL refresh error:', err);
+    return {};
+  }
+}
+
 /* ============================================================
    POST /api/registration-requests/submit
    Triggered after OTP verification for DOCTOR/PHARMACY/LABORATORY users.
@@ -828,8 +850,14 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
       return { ...rest, user: User };
     });
 
-    // Refresh signed URLs (1h expiry) before serving to admin
-    const enriched = await Promise.all(normalizedRequests.map(enrichWithFreshUrl));
+    // Refresh signed URLs (1h expiry) before serving to admin in batch
+    const filePaths = normalizedRequests.map(r => r.licenseFilePath).filter(Boolean);
+    const signedUrlsMap = await refreshSignedUrlsBatch(filePaths);
+
+    const enriched = normalizedRequests.map(r => ({
+      ...r,
+      licenseImageUrl: signedUrlsMap[r.licenseFilePath] || r.licenseImageUrl,
+    }));
 
     return res.json({
       data: enriched,

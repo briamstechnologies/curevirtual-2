@@ -7,6 +7,23 @@ const emailService = require("../services/emailService");
 const { verifyToken, requireRole, verifyOwnerOrAdmin } = require("../middleware/rbac.js");
 const { ensureDefaultProfile } = require("../lib/provisionProfile.js");
 const { parseAsLocal } = require("../utils/timeUtils");
+const multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage() });
+const { createClient } = require("@supabase/supabase-js");
+
+const supabase = process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
+  : null;
+
+// Helper to choose the most relevant transaction for an appointment
+function pickRelevantTransaction(transactions) {
+  if (!transactions || transactions.length === 0) return null;
+  const paid = transactions.filter((t) => t.status === "SUCCESS");
+  if (paid.length > 0) {
+    return paid.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+  }
+  return transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+}
 
 const router = express.Router();
 
@@ -35,6 +52,62 @@ async function getPatientProfileIdByUserId(userId) {
 }
 
 /**
+ * POST /api/patient/avatar (Upload/Replace Patient Avatar)
+ */
+router.post("/avatar", upload.single("avatar"), async (req, res) => {
+  try {
+    const userId = req.user?.id || req.body?.userId;
+    if (!userId) return res.status(400).json({ error: "User identity missing" });
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file provided" });
+    }
+
+    let publicUrl;
+    if (supabase) {
+      const ext = req.file.originalname.split(".").pop() || "png";
+      const fileName = `patient-${userId}-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("Supabase avatar upload error:", uploadError);
+        return res.status(500).json({ error: `Upload failed: ${uploadError.message}` });
+      }
+
+      const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+      publicUrl = data.publicUrl;
+    } else {
+      publicUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+    }
+
+    // Update in database using raw query
+    try {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "User" SET "avatarUrl" = $1 WHERE id = $2`,
+        publicUrl,
+        String(userId)
+      );
+    } catch (dbErr) {
+      console.warn("Could not update avatarUrl column directly:", dbErr.message);
+    }
+
+    return res.json({
+      success: true,
+      avatarUrl: publicUrl,
+      message: "Avatar uploaded and saved successfully",
+    });
+  } catch (err) {
+    console.error("Avatar upload handler error:", err);
+    return res.status(500).json({ error: "Internal server error during avatar upload" });
+  }
+});
+
+/**
  * GET /api/patient/profile  (Current User)
  */
 // GET /api/patient/profile  (Current User)
@@ -52,16 +125,16 @@ router.get("/profile", async (req, res) => {
       where: { userId: String(userId) },
       include: {
         user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              phone: true,
-              dateOfBirth: true,
-              gender: true,
-              maritalStatus: true,
-            },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            dateOfBirth: true,
+            gender: true,
+            maritalStatus: true,
+          },
         },
         appointments: true,
         prescriptions: true,
@@ -97,10 +170,32 @@ router.get("/profile", async (req, res) => {
 
     if (!patient) return res.status(404).json({ success: false, message: "Profile not found" });
 
-    const mrn = patient.referenceId || patient.medicalRecordNumber || `PAK-PT-${String(patient.id || "").slice(0, 6).toUpperCase()}`;
+    const mrn =
+      patient.referenceId ||
+      patient.medicalRecordNumber ||
+      `PAK-PT-${String(patient.id || "")
+        .slice(0, 6)
+        .toUpperCase()}`;
+
+    let avatarUrl = null;
+    try {
+      const userRes = await prisma.$queryRawUnsafe(
+        `SELECT "avatarUrl" FROM "User" WHERE id = $1 LIMIT 1`,
+        String(userId)
+      );
+      avatarUrl = userRes?.[0]?.avatarUrl || null;
+    } catch {
+      // ignore
+    }
+
     const enrichedPatient = {
       ...patient,
+      avatarUrl,
       medicalRecordNumber: mrn,
+      user: {
+        ...patient.user,
+        avatarUrl,
+      },
     };
 
     return res.json({ success: true, data: enrichedPatient });
@@ -148,7 +243,9 @@ router.put("/profile", async (req, res) => {
       userId = req.user.id;
     }
 
-    console.log(`[RBAC] Incoming Profile Update - UserID: ${userId}, TokenID: ${req.user.id}, Role: ${req.user.role}, Timezone: ${timezone}`);
+    console.log(
+      `[RBAC] Incoming Profile Update - UserID: ${userId}, TokenID: ${req.user.id}, Role: ${req.user.role}, Timezone: ${timezone}`
+    );
 
     if (!userId) {
       return res.status(400).json({ error: "userId is required" });
@@ -156,10 +253,12 @@ router.put("/profile", async (req, res) => {
 
     // 🛡️ SECURITY FIX: Explicitly compare with the TOKEN identity instead of just the body's shadowing ID
     if (req.user.role === "PATIENT" && String(req.user.id) !== String(userId)) {
-      console.warn(`[RBAC] 🛡️ Blocked profile update attempt. Request ID: ${userId}, Token ID: ${req.user.id}`);
-      return res.status(403).json({ 
-        error: "Forbidden", 
-        message: "You are not authorized to update this profile." 
+      console.warn(
+        `[RBAC] 🛡️ Blocked profile update attempt. Request ID: ${userId}, Token ID: ${req.user.id}`
+      );
+      return res.status(403).json({
+        error: "Forbidden",
+        message: "You are not authorized to update this profile.",
       });
     }
 
@@ -326,24 +425,21 @@ router.get("/stats", async (req, res) => {
 
     const pid = patientProfile.id;
 
-    const [totalAppointments, completedAppointments, pendingAppointments] = await Promise.all([
+    const [
+      totalAppointments,
+      completedAppointments,
+      pendingAppointments,
+      totalPrescriptions,
+      totalConsultations,
+      apptDocs,
+      consultDocs,
+      rxDocs,
+    ] = await Promise.all([
       prisma.appointment.count({ where: { patientId: pid } }),
-      prisma.appointment.count({
-        where: { patientId: pid, status: "COMPLETED" },
-      }),
-      prisma.appointment.count({
-        where: { patientId: pid, status: "PENDING" },
-      }),
-    ]);
-
-    const totalPrescriptions = await prisma.prescription.count({
-      where: { patientId: pid },
-    });
-    const totalConsultations = await prisma.videoConsultation.count({
-      where: { patientId: pid },
-    });
-
-    const [apptDocs, consultDocs, rxDocs] = await Promise.all([
+      prisma.appointment.count({ where: { patientId: pid, status: "COMPLETED" } }),
+      prisma.appointment.count({ where: { patientId: pid, status: "PENDING" } }),
+      prisma.prescription.count({ where: { patientId: pid } }),
+      prisma.videoConsultation.count({ where: { patientId: pid } }),
       prisma.appointment.findMany({
         where: { patientId: pid },
         distinct: ["doctorId"],
@@ -386,10 +482,12 @@ router.get("/stats", async (req, res) => {
       context: {
         userId: req.user?.id,
         patientId: req.query.patientId,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     });
-    return res.status(500).json({ success: false, error: "Failed to fetch patient stats due to internal error" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Failed to fetch patient stats due to internal error" });
   }
 });
 
@@ -482,14 +580,38 @@ router.get("/appointments", async (req, res) => {
       include: {
         doctor: {
           include: {
-            user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+            user: {
+              select: { id: true, firstName: true, lastName: true, email: true, phone: true },
+            },
+            paAssignments: {
+              where: { assignmentStatus: "ACTIVE" },
+            },
+          },
+        },
+        transactions: {
+          include: {
+            paConsultReview: true,
           },
         },
       },
       orderBy: { appointmentDate: "desc" },
     });
 
-    return res.json(items);
+    const mapped = items.map((appt) => {
+      const relevantTx = pickRelevantTransaction(appt.transactions);
+      const consultType = relevantTx?.supervisingDoctorId ? "pa" : "doctor";
+      const coSignStatus =
+        consultType === "pa" ? relevantTx?.paConsultReview?.reviewStatus || "pending_review" : null;
+
+      const { transactions, ...rest } = appt;
+      return {
+        ...rest,
+        consultType,
+        coSignStatus,
+      };
+    });
+
+    return res.json(mapped);
   } catch (err) {
     console.error("❌ GET /patient/appointments error:", err);
     return res.status(500).json({ error: "Failed to load appointments" });
@@ -608,7 +730,9 @@ router.post("/appointments", async (req, res) => {
       include: {
         doctor: {
           include: {
-            user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+            user: {
+              select: { id: true, firstName: true, lastName: true, email: true, phone: true },
+            },
           },
         },
       },
@@ -1595,30 +1719,34 @@ router.get("/medications/today", async (req, res) => {
     const patientProfileId = await getPatientProfileIdByUserId(userId);
     if (!patientProfileId) return res.status(404).json({ error: "Patient profile not found" });
 
-    const todayDate = new Date().toISOString().split('T')[0];
+    const todayDate = new Date().toISOString().split("T")[0];
 
     const schedules = await prisma.medicationSchedule.findMany({
       where: { patientId: patientProfileId },
       include: {
         logs: {
-          where: { date: todayDate }
-        }
-      }
+          where: { date: todayDate },
+        },
+      },
     });
 
-    const formatted = schedules.map(s => {
+    const formatted = schedules.map((s) => {
       let daysArr = [];
-      try { daysArr = JSON.parse(s.days); } catch(e) { daysArr = s.days.split(',').map(d=>d.trim()); }
+      try {
+        daysArr = JSON.parse(s.days);
+      } catch (e) {
+        daysArr = s.days.split(",").map((d) => d.trim());
+      }
       return {
         id: s.id,
         name: s.name,
         dose: s.dose,
         time: s.time,
         days: daysArr,
-        taken: s.logs.length > 0 ? s.logs[0].taken : false
+        taken: s.logs.length > 0 ? s.logs[0].taken : false,
       };
     });
-    
+
     res.json({ success: true, data: formatted });
   } catch (err) {
     console.error("Failed to fetch today meds:", err);
@@ -1634,7 +1762,7 @@ router.post("/medications", async (req, res) => {
   try {
     const userId = req.user?.id;
     const { name, dose, time, days } = req.body;
-    
+
     const patientProfileId = await getPatientProfileIdByUserId(userId);
     if (!patientProfileId) return res.status(404).json({ error: "Patient profile not found" });
 
@@ -1644,8 +1772,8 @@ router.post("/medications", async (req, res) => {
         name,
         dose,
         time,
-        days: JSON.stringify(days || ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
-      }
+        days: JSON.stringify(days || ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]),
+      },
     });
 
     res.json({ success: true, data: newMed });
@@ -1663,26 +1791,26 @@ router.post("/medications/:id/toggle", async (req, res) => {
   try {
     const userId = req.user?.id;
     const scheduleId = req.params.id;
-    const todayDate = new Date().toISOString().split('T')[0];
+    const todayDate = new Date().toISOString().split("T")[0];
 
     const patientProfileId = await getPatientProfileIdByUserId(userId);
     if (!patientProfileId) return res.status(404).json({ error: "Patient profile not found" });
 
     const schedule = await prisma.medicationSchedule.findFirst({
-      where: { id: scheduleId, patientId: patientProfileId }
+      where: { id: scheduleId, patientId: patientProfileId },
     });
     if (!schedule) return res.status(403).json({ error: "Not authorized" });
 
     let log = await prisma.medicationLog.findUnique({
       where: {
-        scheduleId_date: { scheduleId, date: todayDate }
-      }
+        scheduleId_date: { scheduleId, date: todayDate },
+      },
     });
 
     if (log) {
       log = await prisma.medicationLog.update({
         where: { id: log.id },
-        data: { taken: !log.taken, takenAt: new Date() }
+        data: { taken: !log.taken, takenAt: new Date() },
       });
     } else {
       log = await prisma.medicationLog.create({
@@ -1690,8 +1818,8 @@ router.post("/medications/:id/toggle", async (req, res) => {
           scheduleId,
           date: todayDate,
           taken: true,
-          takenAt: new Date()
-        }
+          takenAt: new Date(),
+        },
       });
     }
 
@@ -1744,17 +1872,17 @@ router.get("/health-history", async (req, res) => {
         where: { patientId: patientProfileId },
         include: {
           doctor: {
-            include: { user: true }
-          }
+            include: { user: true },
+          },
         },
-        orderBy: { createdAt: "desc" }
+        orderBy: { createdAt: "desc" },
       });
     } catch (e) {
       console.warn("Could not fetch clinical encounters:", e.message);
     }
 
     // Format manual records
-    const formattedManual = (manualRecords || []).map(r => ({
+    const formattedManual = (manualRecords || []).map((r) => ({
       id: r.id,
       type: r.type,
       provider: r.provider,
@@ -1762,18 +1890,18 @@ router.get("/health-history", async (req, res) => {
       note: r.note,
       icon: r.icon || "clinical_notes",
       source: "MANUAL",
-      createdAt: r.createdAt
+      createdAt: r.createdAt,
     }));
 
     // Format encounter records
-    const formattedEncounters = (encounters || []).map(e => {
-      const docName = e.doctor?.user 
+    const formattedEncounters = (encounters || []).map((e) => {
+      const docName = e.doctor?.user
         ? `Dr. ${e.doctor.user.firstName || ""} ${e.doctor.user.lastName || ""}`.trim()
         : "Clinical Encounter";
       const dateStr = new Date(e.createdAt).toLocaleDateString("en-US", {
         month: "short",
         day: "2-digit",
-        year: "numeric"
+        year: "numeric",
       });
       return {
         id: e.id,
@@ -1783,7 +1911,7 @@ router.get("/health-history", async (req, res) => {
         note: e.assessment || e.plan || e.subjective || "Clinical encounter completed.",
         icon: "medical_services",
         source: "ENCOUNTER",
-        createdAt: e.createdAt
+        createdAt: e.createdAt,
       };
     });
 
@@ -1794,26 +1922,26 @@ router.get("/health-history", async (req, res) => {
         where: {
           patientId: patientProfileId,
           status: "COMPLETED",
-          resultUrl: { not: null }
+          resultUrl: { not: null },
         },
         include: {
           laboratory: { include: { user: true } },
-          doctor: { include: { user: true } }
+          doctor: { include: { user: true } },
         },
-        orderBy: { orderedAt: "desc" }
+        orderBy: { orderedAt: "desc" },
       });
     } catch (e) {
       console.warn("Could not fetch lab orders:", e.message);
     }
 
-    const formattedLabs = (labOrders || []).map(l => {
+    const formattedLabs = (labOrders || []).map((l) => {
       const labName = l.laboratory?.user
         ? `${l.laboratory.user.firstName || ""} ${l.laboratory.user.lastName || ""}`.trim()
         : "Laboratory";
       const dateStr = new Date(l.completedAt || l.orderedAt).toLocaleDateString("en-US", {
         month: "short",
         day: "2-digit",
-        year: "numeric"
+        year: "numeric",
       });
       return {
         id: l.id,
@@ -1824,13 +1952,13 @@ router.get("/health-history", async (req, res) => {
         icon: "biotech",
         source: "LAB",
         resultUrl: l.resultUrl,
-        createdAt: l.completedAt || l.orderedAt
+        createdAt: l.completedAt || l.orderedAt,
       };
     });
 
     // Merge and sort newest first
-    const combined = [...formattedManual, ...formattedEncounters, ...formattedLabs].sort((a, b) => 
-      new Date(b.createdAt) - new Date(a.createdAt)
+    const combined = [...formattedManual, ...formattedEncounters, ...formattedLabs].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
 
     res.json({ success: true, data: combined });
@@ -1856,13 +1984,13 @@ router.get("/lab-reports", async (req, res) => {
       where: {
         patientId: patientProfileId,
         status: "COMPLETED",
-        resultUrl: { not: null }
+        resultUrl: { not: null },
       },
       include: {
         doctor: { include: { user: true } },
-        laboratory: { include: { user: true } }
+        laboratory: { include: { user: true } },
       },
-      orderBy: { orderedAt: "desc" }
+      orderBy: { orderedAt: "desc" },
     });
 
     return res.json({ success: true, data: reports });
@@ -1887,7 +2015,9 @@ router.post("/health-history", async (req, res) => {
     const recId = `phr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const recType = type || "Medical Record";
     const recProvider = provider || "General Provider";
-    const recDate = date || new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+    const recDate =
+      date ||
+      new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
     const recNote = note || "";
     const recIcon = icon || "clinical_notes";
 
@@ -1901,8 +2031,8 @@ router.post("/health-history", async (req, res) => {
             provider: recProvider,
             date: recDate,
             note: recNote,
-            icon: recIcon
-          }
+            icon: recIcon,
+          },
         });
       } else {
         throw new Error("Fallback to raw insert");
@@ -1919,7 +2049,7 @@ router.post("/health-history", async (req, res) => {
         provider: recProvider,
         date: recDate,
         note: recNote,
-        icon: recIcon
+        icon: recIcon,
       };
     }
 
@@ -1927,6 +2057,83 @@ router.post("/health-history", async (req, res) => {
   } catch (err) {
     console.error("Failed to add health history record:", err);
     res.status(500).json({ error: "Failed to add health history record" });
+  }
+});
+
+/**
+ * PUT /api/patient/health-history/:id
+ * Update an existing health record
+ */
+router.put("/health-history/:id", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { id } = req.params;
+    const { type, provider, date, note, icon } = req.body;
+
+    const patientProfileId = await getPatientProfileIdByUserId(userId);
+    if (!patientProfileId) return res.status(404).json({ error: "Patient profile not found" });
+
+    try {
+      if (prisma.patientHealthRecord) {
+        await prisma.patientHealthRecord.updateMany({
+          where: { id, patientId: patientProfileId },
+          data: {
+            ...(type && { type }),
+            ...(provider && { provider }),
+            ...(date && { date }),
+            ...(note !== undefined && { note }),
+            ...(icon && { icon }),
+          },
+        });
+      } else {
+        throw new Error("Fallback to raw query");
+      }
+    } catch (e) {
+      await prisma.$executeRaw`
+        UPDATE "public"."PatientHealthRecord"
+        SET "type" = ${type}, "provider" = ${provider}, "date" = ${date}, "note" = ${note}, "updatedAt" = NOW()
+        WHERE "id" = ${id} AND "patientId" = ${patientProfileId}
+      `;
+    }
+
+    res.json({ success: true, message: "Record updated successfully" });
+  } catch (err) {
+    console.error("Failed to update health record:", err);
+    res.status(500).json({ error: "Failed to update health record" });
+  }
+});
+
+/**
+ * DELETE /api/patient/health-history/:id
+ * Delete a health record
+ */
+router.delete("/health-history/:id", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    const patientProfileId = await getPatientProfileIdByUserId(userId);
+    if (!patientProfileId) return res.status(404).json({ error: "Patient profile not found" });
+
+    try {
+      if (prisma.patientHealthRecord) {
+        await prisma.patientHealthRecord.deleteMany({
+          where: { id, patientId: patientProfileId },
+        });
+      } else {
+        throw new Error("Fallback to raw query");
+      }
+    } catch (e) {
+      await prisma.$executeRaw`
+        DELETE FROM "public"."PatientHealthRecord"
+        WHERE "id" = ${id} AND "patientId" = ${patientProfileId}
+      `;
+    }
+
+    res.json({ success: true, message: "Record deleted successfully" });
+  } catch (err) {
+    console.error("Failed to delete health record:", err);
+    res.status(500).json({ error: "Failed to delete health record" });
   }
 });
 

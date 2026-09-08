@@ -93,7 +93,7 @@ export default function Subscribers() {
                         <td className="p-3">{s.computedStatus || s.status}</td>
                         <td className="p-3">
                           {s.startDate && s.endDate
-                            ? `${new Date(s.startDate).toLocaleDateString()} → ${new Date(s.endDate).toLocaleDateString()}`
+                            ? `${new Date(s.startDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} → ${new Date(s.endDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}`
                             : "—"}
                         </td>
                         <td className="p-3">

@@ -87,6 +87,9 @@ router.get("/patient/doctors/all", async (req, res) => {
       orderBy: [{ yearsOfExperience: "desc" }, { consultationFee: "asc" }],
       include: {
         user: true,
+        paAssignments: {
+          where: { assignmentStatus: "ACTIVE" }
+        },
         schedules: {
           where: { isActive: true }
         }
@@ -118,6 +121,9 @@ router.get("/patient/doctors", verifyToken, async (req, res) => {
         doctor: {
           include: {
             user: true,
+            paAssignments: {
+              where: { assignmentStatus: "ACTIVE" }
+            },
             schedules: {
               where: { isActive: true }
             }

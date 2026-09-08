@@ -45,9 +45,12 @@ export default function VideoConsultation() {
   const patientUserId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "Patient";
 
-  const [consultations, setConsultations] = useState([]);
+  const [consultations, setConsultations] = useState(() => {
+    const cached = localStorage.getItem("cached_patient_video_consultations");
+    return cached ? JSON.parse(cached) : [];
+  });
   const [doctors, setDoctors] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!consultations.length);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [callModalOpen, setCallModalOpen] = useState(false);
@@ -87,12 +90,14 @@ export default function VideoConsultation() {
 
   const fetchConsultations = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!consultations.length) setLoading(true);
       const res = await api.get(`/videocall/list`, {
         params: { userId: patientUserId, role: "PATIENT" },
       });
       const data = res.data?.data || res.data || [];
-      setConsultations(data.sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt)));
+      const sortedData = data.sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt));
+      setConsultations(sortedData);
+      localStorage.setItem("cached_patient_video_consultations", JSON.stringify(sortedData));
     } catch (err) {
       console.error("[VideoConsultation] fetchConsultations error:", err);
       setError("Failed to sync consultation logs.");

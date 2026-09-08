@@ -79,7 +79,7 @@ export default function DoctorSendMessage() {
             e.currentTarget.src = "/placeholder-logo.png";
           }}
         />
-        <h1 className="text-2xl font-bold mb-6 text-[#ffffff]">Send Message</h1>
+        <h1 className="text-xl font-bold mb-6 text-[#ffffff]">Send Message</h1>
 
         <form
           onSubmit={handleSend}

@@ -35,8 +35,15 @@ export default function SecureInbox({ role: propRole }) {
       const res = await api.get("/messages/inbox", { params: { userId } });
       const items = Array.isArray(res.data) ? res.data : res.data?.data || [];
       setMessages(items);
-      if (items.length > 0 && !selectedContact) {
-        setSelectedContact(items[0]);
+      if (items.length > 0) {
+        if (!selectedContact) {
+          setSelectedContact(items[0]);
+        } else {
+          const updated = items.find((it) => String(it.contactId) === String(selectedContact.contactId));
+          if (updated) {
+            setSelectedContact((prev) => ({ ...prev, ...updated }));
+          }
+        }
       }
     } catch (err) {
       console.error("Failed to fetch inbox:", err);
@@ -54,11 +61,20 @@ export default function SecureInbox({ role: propRole }) {
     }
   }, []);
 
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
   const loadContacts = useCallback(async () => {
     try {
       const res = await api.get("/messages/contacts/all");
       const allUsers = Array.isArray(res.data) ? res.data : res.data?.data || [];
-      const filtered = allUsers.filter((u) => String(u.id) !== String(userId));
+      const filtered = allUsers.filter((u) => {
+        if (String(u.id) === String(userId)) return false;
+        if (role === "PATIENT") {
+          return u.role !== "PATIENT" && u.role !== "ADMIN" && u.role !== "SUPERADMIN";
+        }
+        return true;
+      });
       setContacts(
         filtered.map((u) => ({
           id: u.id,
@@ -69,7 +85,7 @@ export default function SecureInbox({ role: propRole }) {
     } catch (err) {
       console.error("Failed to load contacts:", err);
     }
-  }, [userId]);
+  }, [userId, role]);
 
   const handleDeleteMessage = (msgId) => {
     setConfirmDeleteTarget({ type: "MESSAGE", id: msgId });
@@ -156,6 +172,16 @@ export default function SecureInbox({ role: propRole }) {
     }
   };
 
+  const markConversationAsRead = useCallback(async (contactId) => {
+    if (!contactId || !userId) return;
+    try {
+      await api.patch(`/messages/read-all/${contactId}`, {}, { params: { userId } });
+      window.dispatchEvent(new Event("messagesRead"));
+    } catch (e) {
+      /* silent */
+    }
+  }, [userId]);
+
   useEffect(() => {
     fetchInbox();
     const interval = setInterval(fetchInbox, 10000);
@@ -164,13 +190,14 @@ export default function SecureInbox({ role: propRole }) {
 
   useEffect(() => {
     if (selectedContact) {
+      markConversationAsRead(selectedContact.contactId);
       fetchChatHistory(selectedContact.contactId);
       const interval = setInterval(() => {
         fetchChatHistory(selectedContact.contactId);
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [selectedContact, fetchChatHistory]);
+  }, [selectedContact, fetchChatHistory, markConversationAsRead]);
 
   useEffect(() => {
     scrollToBottom();
@@ -179,6 +206,44 @@ export default function SecureInbox({ role: propRole }) {
   const formatRoleLabel = (roleStr) => {
     if (!roleStr) return "Active Connection";
     return roleStr.replace(/_/g, " ");
+  };
+
+  const getAvatarUrl = (contact) => {
+    if (!contact) {
+      return `https://ui-avatars.com/api/?name=User&background=027906&color=ffffff&bold=true`;
+    }
+
+    const loggedInId = localStorage.getItem("userId");
+    const targetId = String(contact.contactId || contact.id || contact.userId || "");
+    if (loggedInId && targetId === String(loggedInId)) {
+      const myAvatar =
+        localStorage.getItem("userAvatar") ||
+        localStorage.getItem("profile_image") ||
+        localStorage.getItem("profileImage");
+      if (myAvatar) return myAvatar;
+    }
+
+    const img =
+      contact.contactAvatar ||
+      contact.avatarUrl ||
+      contact.avatar_url ||
+      contact.profileImage ||
+      contact.profile_image ||
+      contact.user?.profileImage ||
+      contact.user?.profile_image ||
+      contact.user?.avatarUrl ||
+      contact.user?.avatar_url ||
+      contact.doctor?.avatarUrl ||
+      contact.doctor?.profileImage ||
+      contact.patient?.avatarUrl ||
+      contact.patient?.profileImage ||
+      contact.laboratory?.avatarUrl ||
+      contact.pharmacy?.avatarUrl;
+
+    if (img) return img;
+
+    const name = contact.contactName || contact.name || contact.firstName || "User";
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=027906&color=ffffff&bold=true`;
   };
 
   return (
@@ -218,14 +283,16 @@ export default function SecureInbox({ role: propRole }) {
                       : "bg-surface-container-low hover:bg-surface-container text-on-surface"
                   }`}
                 >
-                  <div
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl flex-shrink-0 ${
-                      selectedContact?.contactId === msg.contactId
-                        ? "bg-white/20 text-white"
-                        : "bg-primary/10 text-primary"
-                    }`}
-                  >
-                    {msg.contactName?.[0] || "?"}
+                  <div className="w-12 h-12 rounded-2xl overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center border border-white/20">
+                    <img
+                      src={getAvatarUrl(msg)}
+                      alt={msg.contactName || "User"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.contactName || "User")}&background=027906&color=ffffff&bold=true`;
+                      }}
+                    />
                   </div>
                   <div className="flex-1 text-left overflow-hidden">
                     <div className="flex justify-between items-center mb-0.5">
@@ -276,22 +343,30 @@ export default function SecureInbox({ role: propRole }) {
               {/* Chat Header */}
               <div className="px-8 py-5 border-b border-outline-variant/30 flex justify-between items-center bg-white/60">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
-                    <span
-                      className="material-symbols-outlined text-primary"
-                      style={{ fontVariationSettings: "'FILL' 1" }}
-                    >
-                      person
-                    </span>
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#027906]/30 flex-shrink-0 shadow-sm bg-primary/10 flex items-center justify-center">
+                    <img
+                      src={getAvatarUrl(selectedContact)}
+                      alt={selectedContact.contactName || "User"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedContact.contactName || "User")}&background=027906&color=ffffff&bold=true`;
+                      }}
+                    />
                   </div>
                   <div>
-                    <h3 className="font-headline font-bold text-on-surface leading-none">
-                      {selectedContact.contactName}
-                    </h3>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-headline font-bold text-lg text-on-surface leading-none">
+                        {selectedContact.contactName}
+                      </h3>
+                      <span className="material-symbols-outlined text-base text-[#027906]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        check_circle
+                      </span>
+                    </div>
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="w-2 h-2 rounded-full bg-[#027906] animate-pulse"></span>
                       <span className="text-[10px] font-bold text-[#027906] uppercase tracking-widest">
-                        {formatRoleLabel(selectedContact.contactRole)}
+                        Online • {formatRoleLabel(selectedContact.contactRole)}
                       </span>
                     </div>
                   </div>
@@ -320,14 +395,27 @@ export default function SecureInbox({ role: propRole }) {
                   return (
                     <div
                       key={chat.id}
-                      className={`flex items-center gap-2 group ${
+                      className={`flex items-start gap-3 group ${
                         isMine ? "justify-end" : "justify-start"
                       }`}
                     >
+                      {!isMine && (
+                        <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border border-outline-variant/40 shadow-sm mt-1">
+                          <img
+                            src={getAvatarUrl(selectedContact)}
+                            alt={selectedContact?.contactName || "User"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedContact?.contactName || "User")}&background=027906&color=ffffff&bold=true`;
+                            }}
+                          />
+                        </div>
+                      )}
                       {isMine && (
                         <button
                           onClick={() => handleDeleteMessage(chat.id)}
-                          className="opacity-0 group-hover:opacity-100 p-2 text-error/60 hover:text-error transition-all"
+                          className="opacity-0 group-hover:opacity-100 p-2 text-error/60 hover:text-error transition-all self-center"
                           title="Delete message"
                         >
                           <span className="material-symbols-outlined text-sm">delete</span>
@@ -357,7 +445,7 @@ export default function SecureInbox({ role: propRole }) {
                       {!isMine && (
                         <button
                           onClick={() => handleDeleteMessage(chat.id)}
-                          className="opacity-0 group-hover:opacity-100 p-2 text-error/60 hover:text-error transition-all"
+                          className="opacity-0 group-hover:opacity-100 p-2 text-error/60 hover:text-error transition-all self-center"
                           title="Delete message"
                         >
                           <span className="material-symbols-outlined text-sm">delete</span>
@@ -445,22 +533,133 @@ export default function SecureInbox({ role: propRole }) {
 
             <form onSubmit={handleSendNewMessage} className="space-y-4 text-left">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-1 mb-1 block">
                   Select Recipient
                 </label>
-                <select
-                  required
-                  value={newReceiverId}
-                  onChange={(e) => setNewReceiverId(e.target.value)}
-                  className="w-full bg-surface-container mt-1 p-4 rounded-xl text-on-surface font-bold focus:ring-2 focus:ring-primary/50 outline-none transition-all"
-                >
-                  <option value="">-- Choose Recipient --</option>
-                  {contacts.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({formatRoleLabel(c.role)})
-                    </option>
-                  ))}
-                </select>
+
+                <div className="relative">
+                  <div
+                    className="relative flex items-center bg-surface-container rounded-2xl border border-outline-variant/40 focus-within:border-primary transition-all cursor-pointer"
+                    onClick={() => setIsDropdownOpen(true)}
+                  >
+                    <span className="material-symbols-outlined absolute left-3.5 text-outline text-lg pointer-events-none">
+                      search
+                    </span>
+
+                    <input
+                      type="text"
+                      value={
+                        isDropdownOpen
+                          ? recipientSearch
+                          : newReceiverId
+                          ? contacts.find((c) => String(c.id) === String(newReceiverId))
+                            ? `${contacts.find((c) => String(c.id) === String(newReceiverId)).name} (${formatRoleLabel(contacts.find((c) => String(c.id) === String(newReceiverId)).role)})`
+                            : recipientSearch
+                          : recipientSearch
+                      }
+                      onChange={(e) => {
+                        setRecipientSearch(e.target.value);
+                        if (!isDropdownOpen) setIsDropdownOpen(true);
+                      }}
+                      onFocus={() => {
+                        setIsDropdownOpen(true);
+                      }}
+                      placeholder="Type to search recipient by name or role..."
+                      className="w-full bg-transparent pl-10 pr-10 py-3.5 rounded-2xl text-xs font-bold text-on-surface outline-none placeholder:text-outline/70"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsDropdownOpen(!isDropdownOpen);
+                      }}
+                      className="absolute right-3 p-1 rounded-full text-outline hover:text-on-surface transition-all"
+                    >
+                      <span className={`material-symbols-outlined text-lg transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}>
+                        expand_more
+                      </span>
+                    </button>
+                  </div>
+
+                  {isDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setIsDropdownOpen(false)}
+                      />
+
+                      <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-outline-variant/30 max-h-56 overflow-y-auto z-20 p-2 space-y-1 animate-in fade-in slide-in-from-top-2 no-scrollbar">
+                        {contacts.filter((c) => {
+                          const term = recipientSearch.toLowerCase().trim();
+                          if (!term) return true;
+                          return (
+                            c.name.toLowerCase().includes(term) ||
+                            formatRoleLabel(c.role).toLowerCase().includes(term)
+                          );
+                        }).length === 0 ? (
+                          <div className="p-4 text-center text-xs font-bold text-outline">
+                            No matching recipients found.
+                          </div>
+                        ) : (
+                          contacts
+                            .filter((c) => {
+                              const term = recipientSearch.toLowerCase().trim();
+                              if (!term) return true;
+                              return (
+                                c.name.toLowerCase().includes(term) ||
+                                formatRoleLabel(c.role).toLowerCase().includes(term)
+                              );
+                            })
+                            .map((c) => (
+                              <div
+                                key={c.id}
+                                onClick={() => {
+                                  setNewReceiverId(c.id);
+                                  setRecipientSearch(`${c.name} (${formatRoleLabel(c.role)})`);
+                                  setIsDropdownOpen(false);
+                                }}
+                                className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${
+                                  String(newReceiverId) === String(c.id)
+                                    ? "bg-[#027906] text-white font-bold shadow-md"
+                                    : "hover:bg-surface-container-high text-on-surface font-medium"
+                                }`}
+                              >
+                                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center border border-white/20">
+                                  <img
+                                    src={getAvatarUrl(c)}
+                                    alt={c.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=027906&color=ffffff&bold=true`;
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold truncate leading-tight">{c.name}</p>
+                                  <p
+                                    className={`text-[10px] uppercase font-bold tracking-wider mt-0.5 ${
+                                      String(newReceiverId) === String(c.id)
+                                        ? "text-white/80"
+                                        : "text-outline"
+                                    }`}
+                                  >
+                                    {formatRoleLabel(c.role)}
+                                  </p>
+                                </div>
+                                {String(newReceiverId) === String(c.id) && (
+                                  <span className="material-symbols-outlined text-sm text-white">
+                                    check
+                                  </span>
+                                )}
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div>

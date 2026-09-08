@@ -185,9 +185,13 @@ export const SocketProvider = ({ children }) => {
     return () => {
       console.log("🧹 Cleaning socket...");
       if (socketRef.current) {
-        socketRef.current.removeAllListeners();
-        socketRef.current.disconnect();
+        const s = socketRef.current;
         socketRef.current = null;
+        s.removeAllListeners();
+        // Delay disconnect to prevent 'WebSocket closed before connection established' browser error in React StrictMode
+        setTimeout(() => {
+          s.disconnect();
+        }, 2000);
       }
     };
   }, [user, backendUrl]);

@@ -24,6 +24,7 @@ const BookAppointment = () => {
   // Payment workflow states
   const [bookingStep, setBookingStep] = useState("select"); // 'select', 'payment', 'success'
   const [checkoutData, setCheckoutData] = useState(null);
+  const [isPaConsult, setIsPaConsult] = useState(false);
 
   const patientId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName");
@@ -56,9 +57,12 @@ const BookAppointment = () => {
     fetchDoctors();
   }, [searchParams]);
 
+  // Handle doctor selection and PA fallback check
   const handleDoctorChange = (doctorId) => {
     const doctor = doctors.find((d) => d.id === doctorId);
     setSelectedDoctor(doctor);
+    // Reset PA consult selection by default
+    setIsPaConsult(false);
     setFormData({
       ...formData,
       doctorId,
@@ -89,16 +93,50 @@ const BookAppointment = () => {
       });
 
       const appointmentId = res.data?.appointment?.id;
-      const fee = selectedDoctor?.consultationFee || 0; // Fallback to 0 for testing
+      const fee = selectedDoctor?.consultationFee || 150; // Dynamic consultation fee with 150 GHS fallback
 
-      if (appointmentId) {
-        setCheckoutData({ appointmentId, doctorFee: fee });
+      if (!appointmentId) {
+        throw new Error("Invalid booking response from server");
+      }
 
-        // AUTO-SUCCESS FOR TESTING (Bypassing payment step)
-        handlePaymentSuccess();
-        toast.success("Appointment booked successfully (Test Mode)!");
-      } else {
-        throw new Error("Invalid booking response");
+      // Step 2: Spawn Transaction & PA Commission Tracking Record
+      let transactionId = null;
+      try {
+        const activePa = selectedDoctor?.paAssignments?.[0];
+        const paProfileId = (isPaConsult && activePa) ? activePa.paId : null;
+
+        const txRes = await api.post("/transactions/consult", {
+          appointmentId,
+          amountGHS: fee,
+          isPaConsult: isPaConsult && !!activePa,
+          doctorProfileId: selectedDoctor?.id,
+          paProfileId
+        });
+        transactionId = txRes.data?.transaction?.id;
+      } catch (txErr) {
+        console.error("Transaction creation failed:", txErr);
+        toast.warn("Appointment reserved! Payment setup encountered an issue. Please complete payment from 'My Appointments'.");
+        setLoading(false);
+        navigate("/patient/appointments");
+        return;
+      }
+
+      // Step 3: Initiate Paystack Payment Gateway
+      try {
+        const initRes = await api.post("/payments/v2/initiate", { transactionId });
+        if (initRes.data?.authorization_url) {
+          toast.info("Redirecting to Paystack Payment Gateway...");
+          window.location.href = initRes.data.authorization_url;
+          return;
+        } else {
+          throw new Error("Payment gateway URL not received");
+        }
+      } catch (payErr) {
+        console.error("Paystack initiation failed:", payErr);
+        toast.warn("Appointment reserved! Payment initiation failed. Please click 'Pay Now' in 'My Appointments'.");
+        setLoading(false);
+        navigate("/patient/appointments");
+        return;
       }
     } catch (err) {
       console.error("Booking error:", err);
@@ -166,6 +204,45 @@ const BookAppointment = () => {
                       : !loadingDoctors && <option disabled>No doctors available</option>}
                   </select>
                 </div>
+
+                {/* PA Fallback / Co-Sign Option Card (Spec Section 7) */}
+                {selectedDoctor && (
+                  <div className="bg-gradient-to-r from-amber-500/10 via-sky-500/10 to-transparent border border-amber-500/30 p-5 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-amber-500/20 text-amber-500 text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-lg">
+                          Physician Assistant Option
+                        </span>
+                        <span className="text-[11px] text-[var(--text-soft)] font-medium">
+                          Faster Availability
+                        </span>
+                      </div>
+                      <input 
+                        type="checkbox"
+                        id="paToggle"
+                        checked={isPaConsult}
+                        onChange={(e) => setIsPaConsult(e.target.checked)}
+                        className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
+                      />
+                    </div>
+
+                    <label htmlFor="paToggle" className="block cursor-pointer space-y-1">
+                      <div className="text-sm font-black text-[var(--text-main)]">
+                        Physician Assistant — supervised by Dr. {selectedDoctor.user?.firstName} {selectedDoctor.user?.lastName}
+                      </div>
+                      <p className="text-xs text-[var(--text-soft)] leading-relaxed">
+                        Book your consult with a licensed Physician Assistant (PA). Every PA consultation clinical note is thoroughly reviewed and co-signed by Dr. {selectedDoctor.user?.firstName} {selectedDoctor.user?.lastName}.
+                      </p>
+                    </label>
+
+                    {isPaConsult && (
+                      <div className="mt-2 bg-amber-500/15 border border-amber-500/30 rounded-xl p-3 text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                        <span>🛡️</span>
+                        <span>Selected: Physician Assistant — supervised by Dr. {selectedDoctor.user?.firstName} {selectedDoctor.user?.lastName}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Reason */}
                 {formData.doctorId && (

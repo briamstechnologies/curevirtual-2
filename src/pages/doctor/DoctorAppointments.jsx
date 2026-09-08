@@ -87,11 +87,21 @@ export default function DoctorAppointments() {
   const [viewType, setViewType] = useState("APPOINTMENTS"); // "APPOINTMENTS" or "PATIENTS"
 
   // Common State
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   // Appointments State
-  const [appointments, setAppointments] = useState([]);
+  const [appointments, setAppointments] = useState(() => {
+    try {
+      const cached = localStorage.getItem("cached_doctor_appointments");
+      const parsed = cached ? JSON.parse(cached) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 10;
   const [modalOpen, setModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -104,6 +114,8 @@ export default function DoctorAppointments() {
 
   // Patients (Roster) State
   const [patients, setPatients] = useState([]);
+  const [patientPage, setPatientPage] = useState(1);
+  const [patientTotalPages, setPatientTotalPages] = useState(1);
   const [patientsLoading, setPatientsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [viewPatient, setViewPatient] = useState(null);
@@ -134,29 +146,44 @@ export default function DoctorAppointments() {
     try {
       setPatientsLoading(true);
       const res = await api.get("/doctor/my-patients", {
-        params: { doctorId: doctorUserId },
+        params: { doctorId: doctorUserId, page: patientPage, limit: 10 },
       });
-      setPatients(res.data?.data || res.data || []);
+      if (res.data && res.data.data) {
+        setPatients(res.data.data);
+        setPatientTotalPages(res.data.totalPages || 1);
+      } else {
+        setPatients(res.data || []);
+        setPatientTotalPages(1);
+      }
     } catch (err) {
       console.error("Error loading patients");
     } finally {
       setPatientsLoading(false);
     }
-  }, [doctorUserId]);
+  }, [doctorUserId, patientPage]);
 
-  const fetchAppointments = useCallback(async () => {
+  const fetchAppointments = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
       const res = await api.get("/doctor/appointments", {
-        params: { doctorId: doctorUserId },
+        params: { doctorId: doctorUserId, page, limit },
       });
-      setAppointments(res.data || []);
+      if (res.data && Array.isArray(res.data.data)) {
+        setAppointments(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+        if (page === 1) {
+          localStorage.setItem("cached_doctor_appointments", JSON.stringify(res.data.data));
+        }
+      } else if (Array.isArray(res.data)) {
+        setAppointments(res.data);
+        setTotalPages(1);
+      } else {
+        setAppointments([]);
+        setTotalPages(1);
+      }
     } catch (err) {
       setError("Failed to load clinical schedule.");
-    } finally {
-      setLoading(false);
     }
-  }, [doctorUserId]);
+  }, [doctorUserId, page, limit, appointments.length]);
 
   const fetchLaboratories = async () => {
     try {
@@ -168,11 +195,18 @@ export default function DoctorAppointments() {
   };
 
   useEffect(() => {
-    fetchMyPatients();
-    fetchAppointments();
-    fetchLaboratories();
-    fetchAssignedLabTests();
-  }, [fetchMyPatients, fetchAppointments, fetchAssignedLabTests]);
+    // 1. Fetch critical data immediately (silently if we have cache)
+    fetchAppointments(true);
+
+    // 2. Defer non-critical data (used only in modals) to avoid blocking initial render
+    const timer = setTimeout(() => {
+      fetchMyPatients();
+      fetchLaboratories();
+      fetchAssignedLabTests();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [fetchAppointments, fetchMyPatients, fetchAssignedLabTests]);
 
   // Poll call statuses for approved appointments every 8 seconds
   useEffect(() => {
@@ -184,16 +218,16 @@ export default function DoctorAppointments() {
 
     const pollStatuses = async () => {
       try {
-        const updates = await Promise.allSettled(
-          approvedIds.map((id) => api.get(`/appointments/${id}/status`))
-        );
+        const res = await api.get(`/appointments/batch/statuses`, {
+          params: { ids: approvedIds.join(",") },
+        });
+        const updates = res.data?.data || [];
+        
         setAppointments((prev) =>
           prev.map((a) => {
-            const match = updates.find(
-              (u) => u.status === "fulfilled" && u.value.data.appointmentId === a.id
-            );
+            const match = updates.find((u) => u.id === a.id);
             if (match) {
-              return { ...a, callStatus: match.value.data.callStatus };
+              return { ...a, callStatus: match.callStatus };
             }
             return a;
           })
@@ -250,22 +284,22 @@ export default function DoctorAppointments() {
     try {
       if (editing && selectedAppointment?.id) {
         await api.patch(`/doctor/appointments/${selectedAppointment.id}`, { ...form, doctorId: doctorUserId });
-        toast.success("Schedule Updated");
+        toast.success("Updated Appointment");
       } else {
         await api.post(`/doctor/appointments`, { ...form, doctorId: doctorUserId });
-        toast.success("Protocol Registered");
+        toast.success("Appointment Submitted");
       }
       setModalOpen(false);
       fetchAppointments();
     } catch (err) {
-      toast.error("Protocol Sync Failed");
+      toast.error("Appointment Sync Failed");
     }
   };
 
   const handleApprove = async (id) => {
     try {
       await api.patch(`/doctor/appointments/${id}`, { status: "APPROVED" });
-      toast.success("Protocol Approved");
+      toast.success("Appointment Approved");
       fetchAppointments();
     } catch (err) {
       toast.error("Failed to approve");
@@ -281,7 +315,7 @@ export default function DoctorAppointments() {
     try {
       setDeleting(true);
       await api.delete(`/doctor/appointments/${pendingDeleteId}`);
-      toast.success("Data Purged");
+      toast.success("Delete Appointment");
       setConfirmOpen(false);
       fetchAppointments();
     } catch (err) {
@@ -424,13 +458,13 @@ export default function DoctorAppointments() {
   const handleDeleteProtocolActionConfirm = async (item) => {
     try {
       await api.delete(`/doctor/protocol-actions/${item.id}`);
-      toast.success("Protocol action deleted successfully");
+      toast.success("Action deleted successfully");
       setConfirmDeleteProtocolAction(null);
       fetchMyPatients();
       fetchAppointments();
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.error || "Protocol action delete nahi ho saka, dubara koshish karein");
+      toast.error(err.response?.data?.error || "Action delete nahi ho saka, dubara koshish karein");
     }
   };
 
@@ -443,7 +477,7 @@ export default function DoctorAppointments() {
             <h2 className="text-[10px] font-black text-[var(--brand-green)] uppercase tracking-[0.3em] mb-1">
               Clinical {viewType === "APPOINTMENTS" ? "Schedule" : "Registry"}
             </h2>
-            <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tighter uppercase">
+            <h1 className="text-xl font-black text-[var(--text-main)] tracking-tighter uppercase">
               {viewType === "APPOINTMENTS" ? "Appointments" : "My Patients"}
             </h1>
           </div>
@@ -478,7 +512,7 @@ export default function DoctorAppointments() {
             )}
             {viewType === "APPOINTMENTS" && (
               <button onClick={openNewModal} className="btn btn-primary whitespace-nowrap">
-                <FaPlus /> New Session
+                <FaPlus /> New Appointment
               </button>
             )}
           </div>
@@ -497,24 +531,18 @@ export default function DoctorAppointments() {
               <table className="w-full text-left border-collapse min-w-[800px] md:min-w-0">
                 <thead>
                   <tr className="bg-[var(--bg-main)]/50 border-b border-[var(--border)]">
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Subject</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Time Protocol</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Patient</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Appointment Time</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Objective</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Status</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] text-center">Operations</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)] text-[var(--text-main)]">
-                  {loading ? (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-sm font-bold text-[var(--text-soft)] animate-pulse">
-                        Scanning Grid...
-                      </td>
-                    </tr>
-                  ) : appointments.length === 0 ? (
+                  {appointments.length === 0 ? (
                     <tr>
                       <td colSpan="5" className="px-6 py-12 text-center text-sm font-bold text-[var(--text-soft)]">
-                        Protocol Clear. No appointments found.
+                        No appointments found.
                       </td>
                     </tr>
                   ) : (
@@ -567,6 +595,31 @@ export default function DoctorAppointments() {
                 </tbody>
               </table>
             </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="p-4 border-t border-[var(--border)] bg-[var(--bg-card)]/50 flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                  Page {page} of {totalPages}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-main)] disabled:opacity-50 hover:bg-[var(--bg-main)]/80 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-main)] disabled:opacity-50 hover:bg-[var(--bg-main)]/80 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="card !p-0 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -574,11 +627,11 @@ export default function DoctorAppointments() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[var(--bg-main)]/50 border-b border-[var(--border)]">
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Subject Name</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Patient Name</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Encrypted Identity</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Gender</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Classification</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] text-center">Protocol Actions</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
@@ -591,7 +644,7 @@ export default function DoctorAppointments() {
                   ) : filteredPatients.length === 0 ? (
                     <tr>
                       <td colSpan="5" className="px-6 py-12 text-center font-bold text-[var(--text-soft)] uppercase tracking-widest text-xs">
-                        No matching subjects found.
+                        No matching patients found.
                       </td>
                     </tr>
                   ) : (
@@ -632,7 +685,7 @@ export default function DoctorAppointments() {
                             </button>
                             <button
                               onClick={() => setConfirmDeleteProtocolAction(p)}
-                              title="Delete Protocol Action"
+                              title="Delete Action"
                               className="p-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
                             >
                               <FaTrash size={14} />
@@ -645,6 +698,32 @@ export default function DoctorAppointments() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls for Patients */}
+            {patientTotalPages > 1 && (
+              <div className="p-4 border-t border-[var(--border)] bg-[var(--bg-card)]/50 flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                  Page {patientPage} of {patientTotalPages}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPatientPage((p) => Math.max(1, p - 1))}
+                    disabled={patientPage === 1}
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-main)] disabled:opacity-50 hover:bg-[var(--bg-main)]/80 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPatientPage((p) => Math.min(patientTotalPages, p + 1))}
+                    disabled={patientPage === patientTotalPages}
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-main)] disabled:opacity-50 hover:bg-[var(--bg-main)]/80 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 
@@ -653,7 +732,7 @@ export default function DoctorAppointments() {
           <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
             <div>
               <h3 className="text-xl font-black text-[var(--text-main)] uppercase tracking-tighter">Assigned Lab Tests Registry</h3>
-              <p className="text-xs text-[var(--text-soft)]">Real-time tracking of diagnostic protocols and laboratory orders</p>
+              <p className="text-xs text-[var(--text-soft)]">Real-time tracking of diagnostic tests and laboratory orders</p>
             </div>
             <span className="px-3 py-1 rounded-full bg-[var(--brand-green)]/10 text-[var(--brand-green)] text-xs font-bold">
               {assignedLabTests.length} Assigned
@@ -754,21 +833,21 @@ export default function DoctorAppointments() {
       {modalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div onClick={() => setModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-          <div className="relative z-10 w-full max-w-lg glass !p-8 animate-in zoom-in-95 duration-300">
-            <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-6">
-              {viewMode ? "Protocol View" : editing ? "Confirm Session" : "Initialize Protocol"}
+          <div className="relative z-10 w-full max-w-lg bg-white/95 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-[32px] border border-white/40 !p-8 animate-in zoom-in-95 duration-300">
+            <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-green)] tracking-tighter uppercase mb-6">
+              {viewMode ? "Appointment View" : editing ? "Confirm Appointment" : "Schedule Appointment"}
             </h2>
             {viewMode ? (
               <div className="space-y-6 text-[var(--text-main)] text-xs font-bold">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">Subject</p>
+                    <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">Patient</p>
                     <p className="text-[var(--text-main)]">
                       {selectedAppointment?.patient?.user ? `${selectedAppointment.patient.user.firstName} ${selectedAppointment.patient.user.lastName}` : "IDENTITY_UNKNOWN"}
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">Protocol Date</p>
+                    <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">Appointment Date</p>
                     <p className="text-[var(--text-main)]">{formatLiteralDateTime(selectedAppointment?.appointmentDate)}</p>
                   </div>
                 </div>
@@ -787,41 +866,41 @@ export default function DoctorAppointments() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5 text-[var(--text-main)]">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Select Subject</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Select Patient</label>
                   <select
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none text-black"
+                    className="w-full bg-white border border-gray-200 rounded-2xl py-3.5 px-4 text-xs font-bold focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)] transition-all outline-none text-gray-800 shadow-sm"
                     value={form.patientId}
                     onChange={(e) => setForm({ ...form, patientId: e.target.value })}
                     required
                   >
-                    <option value="">-- Choose Subject --</option>
+                    <option value="">-- Choose Patient --</option>
                     {patients.map((p) => (
                       <option key={p.id} value={p.id}>{p.name || p.user?.name}</option>
                     ))}
                   </select>
                 </div>
                 <div className="space-y-1.5 text-[var(--text-main)]">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Protocol Time</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Appointment Time</label>
                   <input
                     type="datetime-local"
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none text-[var(--text-main)]"
+                    className="w-full bg-white border border-gray-200 rounded-2xl py-3.5 px-4 text-xs font-bold focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)] transition-all outline-none text-gray-800 shadow-sm"
                     value={form.appointmentDate}
                     onChange={(e) => setForm({ ...form, appointmentDate: e.target.value })}
                     required
                   />
                 </div>
                 <div className="space-y-1.5 text-[var(--text-main)]">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Case Notes</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Reason for Visit</label>
                   <textarea
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none h-24 text-[var(--text-main)]"
+                    className="w-full bg-white border border-gray-200 rounded-2xl py-3.5 px-4 text-xs font-bold focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)] transition-all outline-none h-24 text-gray-800 shadow-sm"
                     value={form.reason}
                     onChange={(e) => setForm({ ...form, reason: e.target.value })}
                     placeholder="Input clinical objectives..."
                   />
                 </div>
-                <div className="flex gap-3 pt-2">
-                  <button type="button" onClick={() => setModalOpen(false)} className="btn flex-1 bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-soft)]">Cancel</button>
-                  <button type="submit" className="btn btn-primary flex-[2]">{editing ? "Update Protocol" : "Confirm Session"}</button>
+                <div className="flex gap-4 pt-4 mt-2">
+                  <button type="button" onClick={() => setModalOpen(false)} className="btn flex-1 bg-white border-2 border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-red-500 hover:border-red-500/30 transition-all font-bold rounded-2xl shadow-sm">Cancel</button>
+                  <button type="submit" className="btn btn-primary flex-[2] rounded-2xl shadow-lg shadow-[var(--brand-blue)]/30 hover:scale-105 transition-transform">{editing ? "Update Appointment" : "Confirm Appointment"}</button>
                 </div>
               </form>
             )}
@@ -834,7 +913,7 @@ export default function DoctorAppointments() {
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmOpen(false)}></div>
           <div className="relative z-10 w-full max-w-md glass !p-8 animate-in zoom-in-95 duration-300">
-            <h3 className="text-xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-2">Delete Protocol?</h3>
+            <h3 className="text-xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-2">Delete Appointment?</h3>
             <p className="text-sm font-bold text-[var(--text-soft)] mb-8 uppercase tracking-widest opacity-70 italic">Critical Data Loss Expected.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmOpen(false)} className="btn flex-1 bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-soft)]">Abort</button>
@@ -853,7 +932,7 @@ export default function DoctorAppointments() {
           <div className="relative z-10 w-full max-w-2xl glass !p-8 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto scrollbar-hide">
             <button onClick={() => setViewPatient(null)} className="absolute right-6 top-6 text-[var(--text-muted)] hover:text-[var(--text-main)]"><FaTimes /></button>
             <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-6 flex items-center gap-3">
-              <FaUser className="text-[var(--brand-green)]" /> Subject Profile
+              <FaUser className="text-[var(--brand-green)]" /> Patient Profile
             </h2>
             <div className="grid md:grid-cols-2 gap-8 mb-8 border-t border-[var(--border)] pt-8">
               <section className="space-y-4">
@@ -923,7 +1002,7 @@ export default function DoctorAppointments() {
                 </div>
               </section>
             </div>
-            <button onClick={() => setViewPatient(null)} className="btn btn-primary w-full shadow-lg">Close Protocol</button>
+            <button onClick={() => setViewPatient(null)} className="btn btn-primary w-full shadow-lg">Close Profile</button>
           </div>
         </div>
       )}
@@ -1053,7 +1132,7 @@ export default function DoctorAppointments() {
               <FaTrash />
             </div>
             <div>
-              <h3 className="text-xl font-black text-[var(--text-main)] uppercase tracking-tighter">Delete Protocol Action?</h3>
+              <h3 className="text-xl font-black text-[var(--text-main)] uppercase tracking-tighter">Delete Action?</h3>
               <p className="text-sm text-[var(--text-soft)] mt-2">
                 Kya aap is action ko delete karna chahte hain? Delete karne ke baad ye action turant UI aur database se remove ho jayega.
               </p>

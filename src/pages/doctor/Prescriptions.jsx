@@ -1,5 +1,5 @@
 // FILE: src/pages/doctor/Prescriptions.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Select from "react-select";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
@@ -10,13 +10,39 @@ import {
   FaTrash,
   FaFileMedical,
   FaPrescriptionBottleAlt,
+  FaSearch,
+  FaShieldAlt,
+  FaTimes,
+  FaPills,
+  FaCheckCircle
 } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function DoctorPrescriptions() {
-  const [prescriptions, setPrescriptions] = useState([]);
+  const [prescriptions, setPrescriptions] = useState(() => {
+    const cached = localStorage.getItem("cached_doctor_prescriptions");
+    return cached ? JSON.parse(cached) : [];
+  });
   const [patients, setPatients] = useState([]);
+
+  // Filter & Search State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusTab, setStatusTab] = useState("Active");
+
+  // Modal States
+  const [modalOpen, setModalOpen] = useState(false);
+  const [viewModal, setViewModal] = useState(false);
+  const [editModal, setEditModal] = useState(false);
+  const [selectedPrescription, setSelectedPrescription] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+
+  // Loaders
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Form State (Exact Schema columns match)
   const [form, setForm] = useState({
     patientId: "",
     medication: "",
@@ -24,34 +50,28 @@ export default function DoctorPrescriptions() {
     frequency: "",
     duration: "",
     notes: "",
-    pharmacyId: "",
+    refills: 0,
+    isControlled: false,
+    deaNumber: "",
   });
-  const [pharmacies, setPharmacies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [viewModal, setViewModal] = useState(false);
-  const [editModal, setEditModal] = useState(false);
-  const [selectedPrescription, setSelectedPrescription] = useState(null);
-  const [error, setError] = useState("");
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState(null);
-  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const doctorUserId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "Doctor";
 
   const fetchPrescriptions = useCallback(async () => {
     try {
-      setLoading(true);
       const res = await api.get(`/doctor/prescriptions`, {
         params: { doctorId: doctorUserId },
       });
-      setPrescriptions(res.data || []);
-      setError("");
+      if (res.data) {
+        setPrescriptions(res.data);
+        localStorage.setItem("cached_doctor_prescriptions", JSON.stringify(res.data));
+      } else {
+        setPrescriptions([]);
+      }
     } catch (err) {
-      setError("Failed to sync clinical scripts.");
-    } finally {
-      setLoading(false);
+      console.error("Error loading prescriptions:", err);
+      toast.error("Failed to load clinical prescriptions.");
     }
   }, [doctorUserId]);
 
@@ -68,39 +88,53 @@ export default function DoctorPrescriptions() {
       });
       setPatients(uniquePatients);
     } catch (err) {
-      console.error("Error loading registry.");
+      console.error("Error loading patient registry:", err);
     }
   }, [doctorUserId]);
-
-  const fetchPharmacies = useCallback(async () => {
-    try {
-      const res = await api.get("/pharmacy/list");
-      const list = res.data?.data?.items || res.data?.items || [];
-      list.sort((a, b) => {
-        const nameA = a.name || a.displayName || "";
-        const nameB = b.name || b.displayName || "";
-        return nameA.localeCompare(nameB);
-      });
-      setPharmacies(list);
-    } catch (err) {
-      console.error("Error loading pharmacy list.");
-    }
-  }, []);
 
   useEffect(() => {
     fetchPrescriptions();
     fetchMyPatients();
-    fetchPharmacies();
-  }, [fetchPrescriptions, fetchMyPatients, fetchPharmacies]);
+  }, [fetchPrescriptions, fetchMyPatients]);
+
+  // Filtered Logic
+  const filteredPrescriptions = useMemo(() => {
+    return prescriptions.filter((p) => {
+      const patientName = `${p.patient?.user?.firstName || ""} ${p.patient?.user?.lastName || ""}`.toLowerCase();
+      const medName = (p.medication || "").toLowerCase();
+      const query = searchQuery.toLowerCase();
+
+      const matchesSearch = patientName.includes(query) || medName.includes(query);
+      const isPast = p.dispatchStatus === "DISPENSED" || p.dispatchStatus === "REJECTED" || p.status === "COMPLETED";
+      const matchesTab = statusTab === "Active" ? !isPast : isPast;
+
+      return matchesSearch && matchesTab;
+    });
+  }, [prescriptions, searchQuery, statusTab]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.patientId || !form.medication || !form.dosage) {
+      toast.error("Please fill in patient, medication, and dosage.");
+      return;
+    }
+
     try {
+      setSubmitting(true);
       await api.post("/doctor/prescriptions", {
-        ...form,
+        patientId: form.patientId,
+        medication: form.medication,
+        dosage: form.dosage,
+        frequency: form.frequency,
+        duration: form.duration,
+        notes: form.notes,
+        refills: Number(form.refills || 0),
+        isControlled: Boolean(form.isControlled),
+        deaNumber: form.deaNumber || null,
         doctorId: doctorUserId,
       });
-      toast.success("Protocol Registered.");
+
+      toast.success("Prescription generated successfully!");
       setModalOpen(false);
       setForm({
         patientId: "",
@@ -109,25 +143,40 @@ export default function DoctorPrescriptions() {
         frequency: "",
         duration: "",
         notes: "",
-        pharmacyId: "",
+        refills: 0,
+        isControlled: false,
+        deaNumber: "",
       });
       fetchPrescriptions();
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Sync Failed.");
+      toast.error(err?.response?.data?.error || "Failed to create prescription.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       await api.patch(`/doctor/prescriptions/${selectedPrescription.id}`, {
-        ...form,
+        patientId: form.patientId,
+        medication: form.medication,
+        dosage: form.dosage,
+        frequency: form.frequency,
+        duration: form.duration,
+        notes: form.notes,
+        refills: Number(form.refills || 0),
+        isControlled: Boolean(form.isControlled),
+        deaNumber: form.deaNumber || null,
       });
-      toast.success("Protocol Refined.");
+      toast.success("Prescription updated.");
       setEditModal(false);
       fetchPrescriptions();
     } catch (err) {
-      toast.error("Refinement Failed.");
+      toast.error(err?.response?.data?.error || "Failed to update prescription.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -135,11 +184,11 @@ export default function DoctorPrescriptions() {
     try {
       setConfirmLoading(true);
       await api.delete(`/doctor/prescriptions/${pendingDeleteId}`);
-      toast.success("Identity Purged.");
+      toast.success("Prescription deleted.");
       setConfirmOpen(false);
       fetchPrescriptions();
     } catch (err) {
-      toast.error("Purge Aborted.");
+      toast.error("Failed to delete record.");
     } finally {
       setConfirmLoading(false);
     }
@@ -147,302 +196,318 @@ export default function DoctorPrescriptions() {
 
   return (
     <DashboardLayout role="DOCTOR" user={{ name: userName }}>
-      <div className="space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto font-sans text-slate-800">
+        
+        {/* Top Header Card */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-100 p-6 rounded-3xl shadow-sm">
           <div>
-            <h2 className="text-[10px] font-black text-[var(--brand-blue)] uppercase tracking-[0.3em] mb-1">
-              Fulfillment Protocol
-            </h2>
-            <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tighter uppercase">
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
               Prescriptions
             </h1>
+            <p className="text-xs text-slate-400 font-bold mt-1">
+              Active medical prescriptions and patient treatment logs
+            </p>
           </div>
+          
           <button
             onClick={() => setModalOpen(true)}
             disabled={patients.length === 0}
-            className="btn btn-primary"
+            className="px-5 py-2.5 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-teal-700/20 active:scale-95 transition-all disabled:opacity-50"
           >
-            <FaPlus /> Priscription
+            <FaPlus /> New Prescription
           </button>
         </div>
 
-        {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
-            <p className="text-red-500 text-[10px] font-black uppercase tracking-widest">{error}</p>
+        {/* Toolbar & Filter */}
+        <div className="bg-white border border-slate-100 p-4 md:p-6 rounded-3xl shadow-sm space-y-4">
+          <div className="flex gap-8 border-b border-slate-100 text-sm font-bold">
+            {["Active", "Past"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setStatusTab(tab)}
+                className={`pb-3 transition-all ${
+                  statusTab === tab
+                    ? "border-b-2 border-teal-700 text-teal-800 font-black"
+                    : "text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
-        )}
 
-        <div className="card !p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[var(--bg-main)]/50 border-b border-[var(--border)]">
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Subject
-                  </th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Medication
-                  </th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Dosage
-                  </th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Cycle
-                  </th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Auth Date
-                  </th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] text-center">
-                    Protocol Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border)]">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan="6"
-                      className="px-6 py-12 text-center text-sm font-bold text-[var(--text-soft)] animate-pulse"
-                    >
-                      Accessing Crypto-records...
-                    </td>
-                  </tr>
-                ) : prescriptions.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan="6"
-                      className="px-6 py-12 text-center font-bold text-[var(--text-soft)] uppercase tracking-widest text-xs"
-                    >
-                      No active scripts identified.
-                    </td>
-                  </tr>
-                ) : (
-                  prescriptions.map((p) => (
-                    <tr key={p.id} className="hover:bg-[var(--bg-main)]/30 transition-colors">
-                      <td className="px-6 py-4 text-sm font-black text-[var(--text-main)]">
-                        {[p.patient?.user?.firstName, p.patient?.user?.lastName]
-                          .filter(Boolean)
-                          .join(" ") || "Unknown Patient"}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-bold text-[var(--text-soft)]">
-                        {p.medication}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-mono font-bold text-[var(--brand-blue)]">
-                        {p.dosage}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-bold text-[var(--text-soft)]">
-                        {p.frequency} / {p.duration}
-                      </td>
-                      <td className="px-6 py-4 text-[10px] font-bold text-[var(--text-muted)]">
-                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "—"}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1">
-                          <span
-                            className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md w-fit ${
-                              p.dispatchStatus === "DISPENSED" ? "bg-green-500/20 text-green-500" :
-                              p.dispatchStatus === "REJECTED" ? "bg-red-500/20 text-red-500" :
-                              p.dispatchStatus === "READY" ? "bg-purple-500/20 text-purple-500" :
-                              p.dispatchStatus === "ACKNOWLEDGED" ? "bg-blue-500/20 text-blue-500" :
-                              p.dispatchStatus === "SENT" ? "bg-yellow-500/20 text-yellow-500" :
-                              "bg-gray-500/20 text-gray-500"
-                            }`}
-                          >
-                            {p.dispatchStatus || "PENDING"}
-                          </span>
-                          {p.pharmacy && (
-                            <span className="text-[8px] font-bold text-[var(--text-soft)] truncate max-w-[100px]">
-                              {p.pharmacy.displayName || p.pharmacy.name || "Pharmacy"}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-center gap-3">
-                          <button
-                            onClick={() => {
-                              setSelectedPrescription(p);
-                              setViewModal(true);
-                            }}
-                            className="p-2 rounded-xl bg-[var(--brand-blue)]/10 text-[var(--brand-blue)] hover:bg-[var(--brand-blue)] hover:text-[var(--text-main)] transition-all shadow-sm"
-                          >
-                            <FaEye size={14} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedPrescription(p);
-                              setForm(p);
-                              setEditModal(true);
-                            }}
-                            className="p-2 rounded-xl bg-[var(--brand-green)]/10 text-[var(--brand-green)] hover:bg-[var(--brand-green)] hover:text-[var(--text-main)] transition-all shadow-sm"
-                          >
-                            <FaEdit size={14} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setPendingDeleteId(p.id);
-                              setConfirmOpen(true);
-                            }}
-                            className="p-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-[var(--text-main)] transition-all shadow-sm"
-                          >
-                            <FaTrash size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div className="relative">
+            <FaSearch className="absolute left-4 top-3.5 text-slate-400 text-xs" />
+            <input
+              type="text"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs font-medium focus:bg-white focus:border-teal-700 outline-none transition-all placeholder:text-slate-400"
+              placeholder="Search prescriptions by medicine or patient..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
+        </div>
+
+        {/* Prescriptions List */}
+        <div className="space-y-4">
+          {filteredPrescriptions.length === 0 ? (
+            <div className="p-16 bg-white border border-slate-100 rounded-3xl text-center text-slate-400 font-bold text-xs">
+              No {statusTab.toLowerCase()} prescriptions found in database.
+            </div>
+          ) : (
+            filteredPrescriptions.map((p) => {
+              const patientName = [p.patient?.user?.firstName, p.patient?.user?.lastName]
+                .filter(Boolean)
+                .join(" ") || p.patient?.name || "Patient Record";
+
+              return (
+                <div
+                  key={p.id}
+                  className="bg-white border border-slate-100 hover:border-slate-200 p-6 rounded-3xl shadow-xs transition-all space-y-4"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 text-teal-700 flex items-center justify-center text-xl shadow-xs">
+                        <FaPills />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-black text-slate-900">
+                            {p.medication} {p.dosage}
+                          </h3>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center gap-1">
+                            <FaCheckCircle className="text-[9px]" /> {p.dispatchStatus || "Active"}
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                          {p.frequency} {p.duration ? `• for ${p.duration}` : ""} {p.notes && p.notes !== "EMPTY" ? `(${p.notes})` : ""}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          setSelectedPrescription(p);
+                          setViewModal(true);
+                        }}
+                        className="p-2 rounded-xl text-slate-400 hover:text-teal-700 hover:bg-slate-50 transition"
+                        title="View Details"
+                      >
+                        <FaEye size={13} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedPrescription(p);
+                          setForm({
+                            patientId: p.patientId || p.patient?.id || "",
+                            medication: p.medication || "",
+                            dosage: p.dosage || "",
+                            frequency: p.frequency || "",
+                            duration: p.duration || "",
+                            notes: p.notes === "EMPTY" ? "" : p.notes || "",
+                            refills: p.refills || 0,
+                            isControlled: p.isControlled || false,
+                            deaNumber: p.deaNumber || "",
+                          });
+                          setEditModal(true);
+                        }}
+                        className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition"
+                        title="Edit Prescription"
+                      >
+                        <FaEdit size={13} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPendingDeleteId(p.id);
+                          setConfirmOpen(true);
+                        }}
+                        className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-slate-50 transition"
+                        title="Delete Prescription"
+                      >
+                        <FaTrash size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 py-3 border-y border-slate-50 text-xs font-semibold text-slate-600">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Patient</span>
+                      <span className="font-bold text-slate-800">{patientName}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Prescribed on</span>
+                      <span className="text-slate-700">
+                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Attending Doctor</span>
+                      <span className="text-slate-700">Dr. {userName}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Refills</span>
+                      <span className="text-slate-700">{p.refills || 0}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end pt-1">
+                    <button
+                      onClick={() => {
+                        setSelectedPrescription(p);
+                        setViewModal(true);
+                      }}
+                      className="py-2.5 px-6 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition text-center shadow-xs"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="p-4 bg-teal-50/70 border border-teal-100 rounded-3xl flex items-center gap-3 text-xs text-teal-900 font-semibold">
+          <FaShieldAlt className="text-teal-700 text-base shrink-0" />
+          <span>Take medicines only as directed by the clinician. Do not alter doses without approval.</span>
         </div>
       </div>
 
+      {/* New Prescription Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div onClick={() => setModalOpen(false)}></div>
-          <div className="animate-in zoom-in-95 duration-300  bg-white">
-            <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-6 flex items-center gap-3">
-              <FaPrescriptionBottleAlt className="text-[var(--brand-blue)]" /> Authorize Protocol
-            </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in">
+          <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 md:p-8 space-y-6">
+            <button
+              onClick={() => setModalOpen(false)}
+              className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
+            >
+              <FaTimes size={16} />
+            </button>
+
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                <FaPrescriptionBottleAlt className="text-teal-700" /> Issue Prescription
+              </h2>
+              <p className="text-xs font-semibold text-slate-400 mt-1">
+                Enter medical orders for patient record.
+              </p>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                  Target Subject
-                </label>
+              <div>
+                <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Select Patient</label>
                 <Select
-                  options={patients.map((p) => ({ value: p.id, label: p.name || p.user?.name || "Unknown" }))}
-                  value={form.patientId ? { value: form.patientId, label: patients.find(p => p.id === form.patientId)?.name || patients.find(p => p.id === form.patientId)?.user?.name || "Unknown" } : null}
+                  options={patients.map((p) => ({
+                    value: p.id,
+                    label: [p.user?.firstName, p.user?.lastName].filter(Boolean).join(" ") || p.name || "Unknown Patient",
+                  }))}
                   onChange={(selected) => setForm({ ...form, patientId: selected?.value || "" })}
                   placeholder="-- Search & Choose Patient --"
                   isSearchable
                   required
                   styles={{
-                    control: (base) => ({
+                    control: (base, state) => ({
                       ...base,
-                      backgroundColor: "var(--bg-main)",
-                      borderColor: "var(--border)",
                       borderRadius: "1rem",
-                      padding: "4px",
-                      color: "black",
+                      borderColor: state.isFocused ? "#0f766e" : "#e2e8f0",
+                      padding: "2px",
                       fontSize: "0.75rem",
-                      fontWeight: "bold",
+                      fontWeight: "600",
                     }),
-                    option: (base, state) => ({
-                      ...base,
-                      color: "black",
-                      backgroundColor: state.isFocused ? "#e5e7eb" : "white",
-                    }),
-                    singleValue: (base) => ({ ...base, color: "black" }),
+                    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
                   }}
+                  menuPortalTarget={typeof document !== "undefined" ? document.body : null}
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                  Medication Identity
-                </label>
-                <input
-                  type="text"
-                  className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-[var(--text-main)]"
-                  value={form.medication}
-                  onChange={(e) => setForm({ ...form, medication: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                  Fulfillment Pharmacy (Optional)
-                </label>
-                <Select
-                  options={pharmacies.map((ph) => ({ value: ph.id, label: ph.name || ph.displayName || "Unknown" }))}
-                  value={form.pharmacyId ? { value: form.pharmacyId, label: pharmacies.find(ph => ph.id === form.pharmacyId)?.name || pharmacies.find(ph => ph.id === form.pharmacyId)?.displayName || "Unknown" } : null}
-                  onChange={(selected) => setForm({ ...form, pharmacyId: selected?.value || "" })}
-                  placeholder="-- Let Patient Choose / Use Default --"
-                  isSearchable
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      backgroundColor: "var(--bg-main)",
-                      borderColor: "var(--border)",
-                      borderRadius: "1rem",
-                      padding: "4px",
-                      color: "black",
-                      fontSize: "0.75rem",
-                      fontWeight: "bold",
-                    }),
-                    option: (base, state) => ({
-                      ...base,
-                      color: "black",
-                      backgroundColor: state.isFocused ? "#e5e7eb" : "white",
-                    }),
-                    singleValue: (base) => ({ ...base, color: "black" }),
-                  }}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                    Dosage
-                  </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Medication</label>
                   <input
                     type="text"
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-[var(--text-main)]"
+                    placeholder="e.g. Panadol"
+                    className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-teal-700 outline-none"
+                    value={form.medication}
+                    onChange={(e) => setForm({ ...form, medication: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Dosage</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 500 mg"
+                    className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-teal-700 outline-none"
                     value={form.dosage}
                     onChange={(e) => setForm({ ...form, dosage: e.target.value })}
                     required
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                    Frequency
-                  </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Frequency</label>
                   <input
                     type="text"
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-[var(--text-main)]"
+                    placeholder="e.g. Every 8 hours"
+                    className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-teal-700 outline-none"
                     value={form.frequency}
                     onChange={(e) => setForm({ ...form, frequency: e.target.value })}
                     required
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                    Duration
-                  </label>
+                <div>
+                  <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Duration</label>
                   <input
                     type="text"
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-[var(--text-main)]"
+                    placeholder="e.g. 5 days"
+                    className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-teal-700 outline-none"
                     value={form.duration}
                     onChange={(e) => setForm({ ...form, duration: e.target.value })}
                     required
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                    Protocol Notes
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-[var(--text-main)]"
-                    value={form.notes}
-                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  />
-                </div>
               </div>
-              <div className="flex gap-3 pt-2">
+
+              <div>
+                <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Refills</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-teal-700 outline-none"
+                  value={form.refills}
+                  onChange={(e) => setForm({ ...form, refills: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Special Instructions</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Take with food."
+                  className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-teal-700 outline-none"
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="btn flex-1 bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-soft)]"
+                  className="px-5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-600 transition"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary flex-[2]">
-                  Confirm
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-6 py-2.5 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-black shadow-lg shadow-teal-700/20 transition-all disabled:opacity-50"
+                >
+                  {submitting ? "Prescribing..." : "Save Prescription"}
                 </button>
               </div>
             </form>
@@ -450,88 +515,150 @@ export default function DoctorPrescriptions() {
         </div>
       )}
 
-      {editModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div onClick={() => setEditModal(false)}></div>
-          <div className="animate-in zoom-in-95 duration-300">
-            <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-6 flex items-center gap-3">
-              Refine Protocol
-            </h2>
+      {/* View Prescription Modal */}
+      {viewModal && selectedPrescription && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 md:p-8 space-y-6">
+            <button
+              onClick={() => setViewModal(false)}
+              className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
+            >
+              <FaTimes size={16} />
+            </button>
+
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                <FaFileMedical className="text-teal-700" /> Prescription Summary
+              </h2>
+              <span className="text-xs font-mono font-bold text-slate-400">ID: {selectedPrescription.id}</span>
+            </div>
+
+            <div className="space-y-4 text-xs font-semibold">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Patient</span>
+                  <p className="font-bold text-slate-900">
+                    {[selectedPrescription.patient?.user?.firstName, selectedPrescription.patient?.user?.lastName].filter(Boolean).join(" ") || "Patient Record"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Authorized Date</span>
+                  <p className="font-bold text-slate-900">{new Date(selectedPrescription.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Medication & Dose</span>
+                  <p className="font-black text-slate-900 text-sm">{selectedPrescription.medication} {selectedPrescription.dosage}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Schedule</span>
+                  <p className="text-slate-700 font-bold">{selectedPrescription.frequency} ({selectedPrescription.duration})</p>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Clinical Instructions</span>
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-slate-700">
+                  {selectedPrescription.notes && selectedPrescription.notes !== "EMPTY" ? selectedPrescription.notes : "No special instructions entered."}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setViewModal(false)}
+              className="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition"
+            >
+              Close Details
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Prescription Modal */}
+      {editModal && selectedPrescription && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 md:p-8 space-y-6">
+            <button
+              onClick={() => setEditModal(false)}
+              className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
+            >
+              <FaTimes size={16} />
+            </button>
+
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Edit Prescription Order</h2>
+
             <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                  Medication Identity
-                </label>
+              <div>
+                <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Medication</label>
                 <input
                   type="text"
-                  className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-[var(--text-main)]"
+                  className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-teal-700 outline-none"
                   value={form.medication}
                   onChange={(e) => setForm({ ...form, medication: e.target.value })}
                   required
                 />
               </div>
-              {/* Similar fields... truncated for brevity but fully implemented in rewrite */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                    Dosage
-                  </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Dosage</label>
                   <input
                     type="text"
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-[var(--text-main)]"
+                    className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-teal-700 outline-none"
                     value={form.dosage}
                     onChange={(e) => setForm({ ...form, dosage: e.target.value })}
                     required
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                    Frequency
-                  </label>
+                <div>
+                  <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Duration</label>
                   <input
                     type="text"
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-[var(--text-main)]"
-                    value={form.frequency}
-                    onChange={(e) => setForm({ ...form, frequency: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                    Duration
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-[var(--text-main)]"
+                    className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-teal-700 outline-none"
                     value={form.duration}
                     onChange={(e) => setForm({ ...form, duration: e.target.value })}
                     required
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                    Protocol Notes
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-blue)] outline-none text-[var(--text-main)]"
-                    value={form.notes}
-                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  />
-                </div>
               </div>
-              <div className="flex gap-3 pt-2">
+
+              <div>
+                <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Frequency</label>
+                <input
+                  type="text"
+                  className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-teal-700 outline-none"
+                  value={form.frequency}
+                  onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Notes</label>
+                <input
+                  type="text"
+                  className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-teal-700 outline-none"
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setEditModal(false)}
-                  className="btn flex-1 bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-soft)]"
+                  className="px-5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-600 transition"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary flex-[2]">
-                  Sync Refinement
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-6 py-2.5 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-black shadow-lg transition-all disabled:opacity-50"
+                >
+                  {submitting ? "Updating..." : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -539,97 +666,33 @@ export default function DoctorPrescriptions() {
         </div>
       )}
 
-      {viewModal && selectedPrescription && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div onClick={() => setViewModal(false)}></div>
-          <div className="relative w-full max-w-lg glass !p-8 animate-in zoom-in-95 duration-300">
-            <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-6 flex items-center gap-3">
-              <FaFileMedical className="text-[var(--brand-green)]" /> Protocol Identity
-            </h2>
-            <div className="space-y-6 text-[var(--text-main)] text-xs font-bold">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">
-                    Subject ID
-                  </p>
-                  <p className="text-[var(--text-main)]">
-                    {[
-                      selectedPrescription.patient?.user?.firstName,
-                      selectedPrescription.patient?.user?.lastName,
-                    ]
-                      .filter(Boolean)
-                      .join(" ") || "Unknown Patient"}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">
-                    Auth Log
-                  </p>
-                  <p className="text-[var(--text-main)]">
-                    {new Date(selectedPrescription.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">
-                    Medication
-                  </p>
-                  <p className="text-[var(--brand-blue)]">{selectedPrescription.medication}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">
-                    Dosage Protocol
-                  </p>
-                  <p className="text-[var(--text-main)]">{selectedPrescription.dosage}</p>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">
-                  Clinical Notes
-                </p>
-                <p className="text-[var(--text-soft)] bg-[var(--bg-main)]/50 p-4 rounded-xl border border-[var(--border)] leading-relaxed">
-                  {selectedPrescription.notes || "No special instructions logged."}
-                </p>
-              </div>
+      {/* Delete Confirmation Modal */}
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in">
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 space-y-4 text-center">
+            <h3 className="text-xl font-black text-slate-900 tracking-tight">Delete Prescription?</h3>
+            <p className="text-xs font-bold text-slate-500">
+              Are you sure you want to permanently remove this medication record?
+            </p>
+            <div className="flex gap-3 pt-2">
               <button
-                onClick={() => setViewModal(false)}
-                className="btn btn-primary w-full shadow-lg"
+                onClick={() => setConfirmOpen(false)}
+                className="flex-1 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition"
               >
-                Close Log
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={confirmLoading}
+                className="flex-1 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-lg shadow-rose-600/20 transition disabled:opacity-50"
+              >
+                {confirmLoading ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {confirmOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md glass !p-8 animate-in zoom-in-95 duration-300">
-            <h3 className="text-xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-2">
-              Purge Clinical Record?
-            </h3>
-            <p className="text-sm font-bold text-[var(--text-soft)] mb-8 uppercase tracking-widest opacity-70 italic">
-              This will permanently delete the script.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmOpen(false)}
-                className="btn flex-1 bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-soft)]"
-              >
-                Abort
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="btn bg-red-500 text-[var(--text-main)] flex-[2] hover:bg-red-600 disabled:opacity-50"
-                disabled={confirmLoading}
-              >
-                {confirmLoading ? "Purging..." : "Confirm Deletion"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       <ToastContainer position="top-right" autoClose={2200} />
     </DashboardLayout>
   );

@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const prisma = require("../prisma/prismaClient");
+const { calculateSubscriptionExpiry } = require("../utils/dateHelper");
 
 const Stripe = require("stripe");
 const stripeSecret = process.env.STRIPE_SECRET_KEY || "";
@@ -301,30 +302,36 @@ router.get(
         whereUser.role = String(role);
       }
 
-      const whereSubsSome = {};
-      if (plan && ["MONTHLY", "YEARLY"].includes(String(plan))) {
-        whereSubsSome.plan = String(plan);
+      // Exclude non-subscribed users by requiring subscription history in at least one table
+      const subConditions = [];
+      const userSubConditions = [];
+
+      if (plan && ["MONTHLY", "YEARLY"].includes(String(plan).toUpperCase())) {
+        subConditions.push({ plan: String(plan).toUpperCase() });
+        userSubConditions.push({ plan: { billingCycle: String(plan).toLowerCase() } });
       }
-      if (
-        status &&
-        ["ACTIVE", "EXPIRED", "DEACTIVATED", "PENDING", "FAILED"].includes(
-          String(status),
-        )
-      ) {
-        whereSubsSome.status = String(status);
+      if (status && ["ACTIVE", "EXPIRED", "DEACTIVATED", "PENDING"].includes(String(status).toUpperCase())) {
+        subConditions.push({ status: String(status).toUpperCase() });
+        userSubConditions.push({ status: String(status).toLowerCase() });
       }
+
+      whereUser.OR = [
+        { subscriptions: { some: subConditions.length ? { AND: subConditions } : {} } },
+        { userSubscriptions: { some: userSubConditions.length ? { AND: userSubConditions } : {} } }
+      ];
 
       const text = q?.toString().trim();
       if (text) {
-        whereUser.OR = [
-          { name: { contains: text, mode: "insensitive" } },
-          { email: { contains: text, mode: "insensitive" } },
+        whereUser.AND = [
+          {
+            OR: [
+              { firstName: { contains: text, mode: "insensitive" } },
+              { lastName: { contains: text, mode: "insensitive" } },
+              { email: { contains: text, mode: "insensitive" } },
+            ]
+          }
         ];
       }
-
-      whereUser.subscriptions = {
-        some: Object.keys(whereSubsSome).length ? whereSubsSome : {},
-      };
 
       const take = Math.max(1, Math.min(100, Number(pageSize)));
       const skip = (Math.max(1, Number(page)) - 1) * take;
@@ -354,17 +361,54 @@ router.get(
                 updatedAt: true,
               },
             },
+            userSubscriptions: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              include: {
+                plan: true
+              }
+            }
           },
         }),
       ]);
 
-      const items = users.map((u) => ({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        role: u.role,
-        sub: u.subscriptions?.[0] || null,
-      }));
+      const items = users.map((u) => {
+        const newSub = u.userSubscriptions?.[0];
+        if (newSub) {
+          return {
+            id: u.id,
+            name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'User',
+            email: u.email,
+            role: u.role,
+            sub: {
+              id: newSub.id,
+              plan: newSub.plan?.name || newSub.planId,
+              status: newSub.status.toUpperCase(),
+              startDate: newSub.startedAt,
+              endDate: newSub.expiresAt,
+              updatedAt: newSub.updatedAt,
+              isNewModel: true
+            }
+          };
+        }
+
+        const oldSub = u.subscriptions?.[0];
+        return {
+          id: u.id,
+          name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'User',
+          email: u.email,
+          role: u.role,
+          sub: oldSub ? {
+            id: oldSub.id,
+            plan: oldSub.plan,
+            status: oldSub.status.toUpperCase(),
+            startDate: oldSub.startDate,
+            endDate: oldSub.endDate,
+            updatedAt: oldSub.updatedAt,
+            isNewModel: false
+          } : null
+        };
+      });
 
       return res.json({
         success: true,
@@ -446,8 +490,8 @@ router.get("/history", verifyToken, async (req, res) => {
   }
 });
 
-/* ------------------------ ADMIN: force status ----------------------- */
-// PATCH /api/subscription/id/status
+/* ------------------------ ADMIN: force status / edit / delete ----------------------- */
+// PATCH /api/subscription/:id/status
 router.patch(
   "/:id/status",
   verifyToken,
@@ -458,19 +502,47 @@ router.patch(
       const { status } = req.body || {};
 
       const allowed = ["ACTIVE", "DEACTIVATED", "EXPIRED"];
-      if (!allowed.includes(String(status))) {
+      if (!allowed.includes(String(status).toUpperCase())) {
         return res.status(400).json({ error: "Invalid status value" });
       }
 
+      // Check UserSubscription (New Model)
+      const userSub = await prisma.userSubscription.findUnique({
+        where: { id: String(id) },
+        include: { plan: true }
+      });
+
+      if (userSub) {
+        let updateData = { status: status.toLowerCase() };
+        if (status.toUpperCase() === "ACTIVE") {
+          const now = new Date();
+          updateData.startedAt = now;
+          updateData.expiresAt = calculateSubscriptionExpiry(now, userSub.plan?.billingCycle || 'monthly');
+        }
+
+        const updated = await prisma.userSubscription.update({
+          where: { id: userSub.id },
+          data: updateData,
+        });
+
+        await prisma.user.update({
+          where: { id: userSub.userId },
+          data: { subscriptionState: updated.status.toUpperCase() },
+        });
+
+        return res.json({ success: true, data: updated });
+      }
+
+      // Fallback to old Subscription model
       const sub = await prisma.subscription.findUnique({
         where: { id: String(id) },
       });
       if (!sub)
         return res.status(404).json({ error: "Subscription not found" });
 
-      let data = { status: String(status) };
+      let data = { status: String(status).toUpperCase() };
 
-      if (status === "ACTIVE") {
+      if (status.toUpperCase() === "ACTIVE") {
         const now = new Date();
         const ms = (sub.plan === "YEARLY" ? 365 : 30) * 24 * 60 * 60 * 1000;
         data.startDate = now;
@@ -482,7 +554,6 @@ router.patch(
         data,
       });
 
-      // Optional: reflect snapshot on User for quick UI badges
       await prisma.user.update({
         where: { id: sub.userId },
         data: { subscriptionState: updated.status },
@@ -496,6 +567,83 @@ router.patch(
         .json({ error: "Failed to update subscription status" });
     }
   },
+);
+
+// PUT /api/subscription/:id (Admin: Edit dates/plan)
+router.put(
+  "/:id",
+  verifyToken,
+  requireRole(["ADMIN", "SUPERADMIN"]),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { planId, startedAt, expiresAt, status } = req.body || {};
+
+      // 1. Check UserSubscription
+      const userSub = await prisma.userSubscription.findUnique({ where: { id } });
+      if (userSub) {
+        const updated = await prisma.userSubscription.update({
+          where: { id },
+          data: {
+            planId: planId || undefined,
+            status: status ? status.toLowerCase() : undefined,
+            startedAt: startedAt ? new Date(startedAt) : undefined,
+            expiresAt: expiresAt ? new Date(expiresAt) : undefined,
+          }
+        });
+        return res.json({ success: true, message: "Subscription updated successfully", data: updated });
+      }
+
+      // 2. Fallback to old Subscription
+      const sub = await prisma.subscription.findUnique({ where: { id } });
+      if (sub) {
+        const updated = await prisma.subscription.update({
+          where: { id },
+          data: {
+            plan: planId || undefined,
+            status: status ? status.toUpperCase() : undefined,
+            startDate: startedAt ? new Date(startedAt) : undefined,
+            endDate: expiresAt ? new Date(expiresAt) : undefined,
+          }
+        });
+        return res.json({ success: true, message: "Subscription updated successfully", data: updated });
+      }
+
+      return res.status(404).json({ error: "Subscription not found" });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+);
+
+// DELETE /api/subscription/:id (Admin: Delete record)
+router.delete(
+  "/:id",
+  verifyToken,
+  requireRole(["ADMIN", "SUPERADMIN"]),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // 1. Check UserSubscription
+      const userSub = await prisma.userSubscription.findUnique({ where: { id } });
+      if (userSub) {
+        await prisma.userSubscription.delete({ where: { id } });
+        return res.json({ success: true, message: "Subscription deleted successfully" });
+      }
+
+      // 2. Fallback to old Subscription
+      const sub = await prisma.subscription.findUnique({ where: { id } });
+      if (sub) {
+        await prisma.subscription.delete({ where: { id } });
+        return res.json({ success: true, message: "Subscription deleted successfully" });
+      }
+
+      return res.status(404).json({ error: "Subscription not found" });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
 );
 
 /* ------------------------ STRIPE ELEMENTS FLOW ---------------------- */
@@ -633,8 +781,7 @@ router.post("/stripe/checkout", verifyToken, async (req, res) => {
       const mockSessionId = "mock_" + Date.now();
 
       const now = new Date();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + (plan === "YEARLY" ? 365 : 30));
+      const endDate = calculateSubscriptionExpiry(now, plan);
 
       await prisma.subscription.create({
         data: {

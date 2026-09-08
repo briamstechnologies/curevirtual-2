@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { FaCamera, FaSpinner, FaEdit } from "react-icons/fa";
 
 const PLACEHOLDER_LOGO = "/images/logo/Asset3.png";
 
@@ -34,6 +35,8 @@ export default function PharmacyViewProfile() {
   const fallbackName =
     localStorage.getItem("userName") || localStorage.getItem("name") || "Pharmacy";
 
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
 
@@ -47,6 +50,11 @@ export default function PharmacyViewProfile() {
         toast.error("Profile not found. Please update your profile.");
       }
       setProfile(data);
+      const imgUrl = data?.avatarUrl || data?.user?.avatarUrl;
+      if (imgUrl) {
+        localStorage.setItem("userAvatar", imgUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+      }
     } catch (err) {
       console.error("Failed to load pharmacy profile:", err);
       toast.error(err?.response?.data?.error || "Failed to load profile.");
@@ -59,8 +67,50 @@ export default function PharmacyViewProfile() {
     loadProfile();
   }, [loadProfile]);
 
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be under 5MB");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("avatar", file);
+      formData.append("userId", userId);
+
+      const res = await api.post("/pharmacy/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data?.success && res.data?.avatarUrl) {
+        const newUrl = res.data.avatarUrl;
+        setProfile((prev) => ({
+          ...prev,
+          avatarUrl: newUrl,
+          user: { ...prev?.user, avatarUrl: newUrl },
+        }));
+        localStorage.setItem("userAvatar", newUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+        toast.success("Pharmacy logo/photo updated successfully!");
+      } else {
+        toast.error("Failed to upload image");
+      }
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      toast.error(err.response?.data?.error || "Error uploading image");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const displayName = profile?.displayName || fallbackName;
   const email = profile?.user?.email || localStorage.getItem("email") || "—";
+  const currentAvatar = profile?.avatarUrl || profile?.user?.avatarUrl;
   const addressLine = [
     profile?.address,
     profile?.city,
@@ -75,13 +125,20 @@ export default function PharmacyViewProfile() {
     <DashboardLayout role={role} user={{ id: userId, name: displayName }}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-[#FFFFFF]">Pharmacy Profile</h1>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-6">
+          <div>
+            <h2 className="text-[10px] font-black text-[var(--brand-green)] uppercase tracking-[0.4em] mb-1">
+              Store Identity
+            </h2>
+            <h1 className="text-3xl md:text-4xl font-black text-[var(--text-main)] tracking-tighter uppercase">
+              Pharmacy Profile
+            </h1>
+          </div>
           <Link
             to="/pharmacy/profile"
-            className="rounded bg-[#028a07] hover:bg-[#03d70a] px-4 py-2 font-semibold"
+            className="btn btn-primary flex items-center gap-2 px-6 py-4 shadow-lg shadow-emerald-500/20 font-black uppercase text-xs tracking-wider"
           >
-            Edit Profile
+            <FaEdit /> Update Profile
           </Link>
         </div>
 
@@ -99,9 +156,43 @@ export default function PharmacyViewProfile() {
               {/* Header strip */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 border-b border-[var(--border)] pb-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold">
-                    {getInitials(displayName)}
+                  {/* Interactive Avatar Container */}
+                  <div
+                    className="relative w-20 h-20 group cursor-pointer shrink-0"
+                    onClick={() => !uploading && fileInputRef.current?.click()}
+                    title="Click to upload/change pharmacy photo"
+                  >
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-800 flex items-center justify-center text-white text-2xl font-bold overflow-hidden shadow-lg border-2 border-emerald-500/30">
+                      {currentAvatar ? (
+                        <img src={currentAvatar} alt="Pharmacy Logo" className="w-full h-full object-cover" />
+                      ) : (
+                        getInitials(displayName)
+                      )}
+                    </div>
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      {uploading ? (
+                        <FaSpinner className="text-white text-xl animate-spin" />
+                      ) : (
+                        <div className="flex flex-col items-center text-white text-[9px] font-bold">
+                          <FaCamera className="text-base mb-0.5" />
+                          <span>Change</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Camera Badge */}
+                    <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md border border-white">
+                      {uploading ? <FaSpinner className="text-[10px] animate-spin" /> : <FaCamera className="text-[10px]" />}
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                    />
                   </div>
+
                   <div>
                     <div className="text-xl font-semibold">{displayName}</div>
                     <div className="flex flex-wrap items-center gap-2 mt-1.5 mb-1">

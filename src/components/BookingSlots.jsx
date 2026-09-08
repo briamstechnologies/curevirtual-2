@@ -41,7 +41,21 @@ export default function BookingSlots({ doctorId, date, onSlotSelect }) {
   if (loading)
     return <div className="p-4 text-center opacity-60 animate-pulse">Loading slots...</div>;
 
-  if (slots.length === 0) {
+  // Deduplicate slots by formatted start time to ensure no double slots are displayed
+  const uniqueSlots = (slots || []).reduce((acc, current) => {
+    const timeKey = formatLiteralTime(current.startTime);
+    const existingIndex = acc.findIndex(
+      (item) => formatLiteralTime(item.startTime) === timeKey
+    );
+    if (existingIndex === -1) {
+      acc.push(current);
+    } else if (current.status === "AVAILABLE" && acc[existingIndex].status !== "AVAILABLE") {
+      acc[existingIndex] = current;
+    }
+    return acc;
+  }, []);
+
+  if (uniqueSlots.length === 0) {
     return (
       <div className="p-8 text-center border-2 border-dashed border-[var(--border)] rounded-xl opacity-60">
         No slots available for this date.
@@ -51,7 +65,7 @@ export default function BookingSlots({ doctorId, date, onSlotSelect }) {
 
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mt-4">
-      {slots.map((slot) => {
+      {uniqueSlots.map((slot) => {
         const startTime = formatLiteralTime(slot.startTime);
         const isAvailable = slot.status === "AVAILABLE";
         const isSelected = selectedSlotId === slot.id;

@@ -1,5 +1,4 @@
-// FILE: src/pages/pharmacy/PharmacyProfile.jsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
 import { ToastContainer, toast } from "react-toastify";
@@ -10,10 +9,14 @@ export default function PharmacyProfile() {
   const userId = localStorage.getItem("userId") || "";
   const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "Pharmacy";
 
+  const fileInputRef = useRef(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
   const [form, setForm] = useState({
     userId,
     referenceId: "",
     verificationStatus: "PENDING",
+    avatarUrl: "",
     firstName: "",
     lastName: "",
     displayName: "",
@@ -39,6 +42,7 @@ export default function PharmacyProfile() {
       userId,
       referenceId: p.referenceId || p.reference_id || "",
       verificationStatus: p.verificationStatus || p.verification_status || "PENDING",
+      avatarUrl: p.avatarUrl || p.user?.avatarUrl || "",
       firstName: p.user?.firstName ?? "",
       lastName: p.user?.lastName ?? "",
       displayName: p.displayName ?? "",
@@ -78,6 +82,58 @@ export default function PharmacyProfile() {
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be 5MB or smaller.");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      setAvatarUploading(true);
+      const pharmUserId = localStorage.getItem("userId") || userId;
+      const formDataUpload = new FormData();
+      formDataUpload.append("avatar", file);
+      if (pharmUserId) formDataUpload.append("userId", pharmUserId);
+
+      const res = await api.post("/pharmacy/avatar", formDataUpload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data?.success && res.data?.avatarUrl) {
+        const newUrl = res.data.avatarUrl;
+        setForm((f) => ({ ...f, avatarUrl: newUrl }));
+        localStorage.setItem("userAvatar", newUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+        toast.success("Pharmacy logo/photo uploaded and saved successfully!");
+      } else {
+        toast.error("Failed to upload image.");
+      }
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      toast.error(err.response?.data?.error || "Error uploading profile image.");
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeProfileImage = () => {
+    setForm((f) => ({ ...f, avatarUrl: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const save = async (e) => {
     e.preventDefault();
@@ -136,6 +192,81 @@ export default function PharmacyProfile() {
             </div>
           ) : (
             <form onSubmit={save} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              {/* Pharmacy Profile Photo Card */}
+              <div className="md:col-span-2">
+                <div className="rounded-3xl border border-[var(--border)] bg-[var(--bg-main)]/60 p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+                    <div className="relative shrink-0">
+                      <div className="h-28 w-28 rounded-3xl overflow-hidden border-2 border-emerald-500/30 bg-gradient-to-tr from-emerald-600 to-teal-800 flex items-center justify-center shadow-sm">
+                        {form.avatarUrl ? (
+                          <img
+                            src={form.avatarUrl}
+                            alt="Pharmacy Logo"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="material-symbols-outlined text-5xl text-white">
+                            local_pharmacy
+                          </span>
+                        )}
+                      </div>
+
+                      {form.avatarUrl && (
+                        <button
+                          type="button"
+                          onClick={removeProfileImage}
+                          className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition"
+                          title="Remove image"
+                        >
+                          <span className="material-symbols-outlined text-base">close</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex-1">
+                      <p className="text-sm font-black text-[var(--text-main)] uppercase tracking-wide">
+                        Pharmacy Store Photo / Logo
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Upload your official pharmacy branding or storefront photo. Max 5MB.
+                      </p>
+
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+
+                        <button
+                          type="button"
+                          disabled={avatarUploading}
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex items-center gap-2 rounded-2xl bg-[#027906] hover:bg-[#045d07] px-5 py-3 text-white font-bold tracking-wide uppercase text-[10px] shadow-md transition active:scale-95 disabled:opacity-50"
+                        >
+                          <span className={`material-symbols-outlined text-base ${avatarUploading ? "animate-spin" : ""}`}>
+                            {avatarUploading ? "progress_activity" : "upload"}
+                          </span>
+                          {avatarUploading ? "Uploading..." : form.avatarUrl ? "Change Photo" : "Upload Photo"}
+                        </button>
+
+                        {form.avatarUrl && (
+                          <button
+                            type="button"
+                            onClick={removeProfileImage}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-red-300 bg-red-50 px-5 py-3 text-red-600 font-bold tracking-wide uppercase text-[10px] hover:bg-red-100 transition"
+                          >
+                            <span className="material-symbols-outlined text-base">delete</span>
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               {/* Name Row */}
               <div className="md:col-span-2 grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">

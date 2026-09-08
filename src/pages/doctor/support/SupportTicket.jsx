@@ -51,7 +51,7 @@ export default function DoctorSupportTicket() {
 
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-[#027906]">My Support Tickets</h1>
+            <h1 className="text-xl font-bold text-[#027906]">My Support Tickets</h1>
 
             <div className="flex items-center gap-3">
               <input

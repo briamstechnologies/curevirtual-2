@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
 import { ToastContainer, toast } from "react-toastify";
@@ -48,6 +48,7 @@ export default function DoctorProfile() {
     emergencyContact: "",
     emergencyContactName: "",
     emergencyContactEmail: "",
+    profileImage: "",
   });
 
   const loadProfile = useCallback(async () => {
@@ -57,7 +58,7 @@ export default function DoctorProfile() {
       const p = res.data?.data;
       if (p) {
         setProfileData(p);
-        setForm({
+        setForm((prev) => ({
           firstName: p.user?.firstName || "",
           middleName: p.user?.middleName || "",
           lastName: p.user?.lastName || "",
@@ -77,7 +78,9 @@ export default function DoctorProfile() {
           emergencyContact: p.emergencyContact || "",
           emergencyContactName: p.emergencyContactName || "",
           emergencyContactEmail: p.emergencyContactEmail || "",
-        });
+          // If the GET response misses the URL for any reason, do not destroy the existing display URL
+          profileImage: p.avatarUrl || p.profileImage || p.profile_image || p.user?.profileImage || p.user?.profile_image || prev.profileImage || "",
+        }));
       }
     } catch (err) {
       console.error("Failed to load doctor profile:", err);
@@ -95,6 +98,74 @@ export default function DoctorProfile() {
     setForm((f) => ({ ...f, [key]: e.target.value }));
   };
 
+
+  const fileInputRef = useRef(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be 5MB or smaller.");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      setAvatarUploading(true);
+      const doctorUserId = localStorage.getItem("userId") || userId;
+      const formDataUpload = new FormData();
+      formDataUpload.append("avatar", file);
+      if (doctorUserId) formDataUpload.append("userId", doctorUserId);
+
+      const res = await api.post("/doctor/avatar", formDataUpload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data?.success && res.data?.avatarUrl) {
+        const newUrl = res.data.avatarUrl;
+        setForm((f) => ({ ...f, profileImage: newUrl }));
+        localStorage.setItem("userAvatar", newUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+        
+        // Update cached profile
+        const cached = localStorage.getItem("cached_doctor_profile");
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            parsed.avatarUrl = newUrl;
+            if (parsed.user) parsed.user.avatarUrl = newUrl;
+            localStorage.setItem("cached_doctor_profile", JSON.stringify(parsed));
+          } catch {}
+        }
+        toast.success("Profile photo uploaded and saved successfully!");
+      } else {
+        toast.error("Failed to upload image.");
+      }
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      toast.error(err.response?.data?.error || "Error uploading profile image.");
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeProfileImage = async () => {
+    setForm((f) => ({ ...f, profileImage: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.qualifications || !form.licenseNumber) {
@@ -106,18 +177,85 @@ export default function DoctorProfile() {
       return;
     }
     try {
+      const doctorUserId = localStorage.getItem("userId");
+      if (!doctorUserId) {
+        return toast.error("User ID is missing. Please re-login.");
+      }
+
       setSaving(true);
-      await api.put("/doctor/profile", {
-        userId,
-        ...form,
-        yearsOfExperience: form.yearsOfExperience === "" ? null : Number(form.yearsOfExperience),
-        consultationFee: form.consultationFee === "" ? null : Number(form.consultationFee),
+      const formData = new FormData();
+      
+      // Explicitly append as string
+      formData.append("userId", String(doctorUserId));
+      
+      // Enforce skipping profileImage before typeof check
+      Object.keys(form).forEach(key => {
+        if (key === "profileImage") return; // must run before anything else touches this key
+        let value = form[key];
+        if (value === null || value === undefined || value === "") return;
+        
+        if (typeof value === "object") {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, value);
+        }
       });
+      
+      // Immediately after that loop, append the real file explicitly and ONLY here:
+      if (fileInputRef.current?.files?.[0]) {
+        formData.append("profileImage", fileInputRef.current.files[0]);
+        console.log("Appending real File object:", fileInputRef.current.files[0]);
+      } else {
+        console.log("No new file selected — profileImage field omitted from this save.");
+      }
+
+      // Add a hard assertion right before sending the request
+      const imgEntry = [...formData.entries()].find(([k]) => k === "profileImage");
+      if (imgEntry && !(imgEntry[1] instanceof File)) {
+        console.error("BUG: profileImage in FormData is not a File!", imgEntry[1]);
+        toast.error("Internal error: image was not attached as a file. Save cancelled.");
+        setSaving(false);
+        return; // abort the save rather than silently sending broken data
+      }
+
+      // ✅ Log FormData contents before sending (Step 1 Request)
+      console.log("--- Sending FormData ---");
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ": " + pair[1]);
+      }
+      console.log("------------------------");
+
+      // Send the request WITHOUT explicitly setting Content-Type, 
+      // allowing Axios to automatically set the correct boundary.
+      const res = await api.put("/doctor/profile", formData);
+      
+      console.log('Save response:', res.data); // STEP 3: Log the backend response
+      
+      const updatedProfile = res.data?.data;
+      const newAvatarUrl = updatedProfile?.avatarUrl || updatedProfile?.user?.profileImage || updatedProfile?.profileImage || updatedProfile?.profile_image;
+      
+      // STEP 4: Set the URL into the state and clear the file input
+      if (newAvatarUrl) {
+        localStorage.setItem("userAvatar", newAvatarUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+        setForm(f => ({ ...f, profileImage: newAvatarUrl }));
+      }
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      
+      if (updatedProfile) {
+        localStorage.setItem("cached_doctor_profile", JSON.stringify(updatedProfile));
+      }
+
       toast.success("Profile updated successfully!");
+      
+      // Re-fetch to ensure sync, but the local state is already updated above
       await loadProfile();
     } catch (err) {
-      console.error("Failed to save doctor profile:", err);
-      toast.error(err?.response?.data?.error || "Failed to save profile.");
+      console.error("❌ Failed to save doctor profile:", err?.response?.data || err);
+      toast.error(err?.response?.data?.error || err?.response?.data?.message || "Failed to save profile.");
     } finally {
       setSaving(false);
     }
@@ -159,7 +297,89 @@ export default function DoctorProfile() {
             </div>
           ) : (
             <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              {/* Doctor Profile Image */}
+              <div className="md:col-span-2">
+                <div className="rounded-3xl border border-[var(--border)] bg-[var(--bg-main)]/60 p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+                    <div className="relative shrink-0">
+                      <div className="h-28 w-28 rounded-3xl overflow-hidden border-2 border-[var(--brand-green)]/20 bg-[var(--bg-main)] flex items-center justify-center shadow-sm">
+                        {form.profileImage ? (
+                          <img
+                            src={form.profileImage}
+                            alt="Doctor profile"
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              console.error("Profile image failed to load:", e.target.src);
+                              toast.error("Image URL is not accessible — check Supabase bucket permissions.");
+                            }}
+                          />
+                        ) : (
+                          <span className="material-symbols-outlined text-5xl text-[var(--text-muted)]">
+                            account_circle
+                          </span>
+                        )}
+                      </div>
+
+                      {form.profileImage && (
+                        <button
+                          type="button"
+                          onClick={removeProfileImage}
+                          className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition"
+                          title="Remove image"
+                          aria-label="Remove profile image"
+                        >
+                          <span className="material-symbols-outlined text-base">close</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex-1">
+                      <p className="text-sm font-black text-[var(--text-main)] uppercase tracking-wide">
+                        Doctor Profile Photo
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Upload a professional photo. JPG, JPEG, PNG or WEBP up to 5MB.
+                      </p>
+
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+
+                        <button
+                          type="button"
+                          disabled={avatarUploading}
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex items-center gap-2 rounded-2xl bg-[#027906] hover:bg-[#045d07] px-5 py-3 text-white font-bold tracking-wide uppercase text-[10px] shadow-md transition active:scale-95 disabled:opacity-50"
+                        >
+                          <span className={`material-symbols-outlined text-base ${avatarUploading ? "animate-spin" : ""}`}>
+                            {avatarUploading ? "progress_activity" : "upload"}
+                          </span>
+                          {avatarUploading ? "Uploading..." : form.profileImage ? "Change Image" : "Upload Image"}
+                        </button>
+
+                        {form.profileImage && (
+                          <button
+                            type="button"
+                            onClick={removeProfileImage}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-red-300 bg-red-50 px-5 py-3 text-red-600 font-bold tracking-wide uppercase text-[10px] hover:bg-red-100 transition"
+                          >
+                            <span className="material-symbols-outlined text-base">delete</span>
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Name Row */}
+
               <div className="md:col-span-2 grid grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">

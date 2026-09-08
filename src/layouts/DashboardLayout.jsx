@@ -1,7 +1,7 @@
 import IncomingCallModal from "../components/IncomingCallModal";
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
-import PremiumTopAppBar from "../components/PremiumTopAppBar";
+import Topbar from "../components/Topbar";
 import PremiumBottomNavBar from "../components/PremiumBottomNavBar";
 import { useTheme } from "../context/ThemeContext";
 import Chatbot from "../components/Chatbot";
@@ -11,7 +11,15 @@ export default function DashboardLayout({ children, role: propRole, user }) {
   const { theme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const userName = user?.name || localStorage.getItem("userName") || "User";
-  const userAvatar = user?.avatar_url || localStorage.getItem("userAvatar");
+  const [userAvatar, setUserAvatar] = useState(user?.avatar_url || localStorage.getItem("userAvatar"));
+
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      setUserAvatar(localStorage.getItem("userAvatar"));
+    };
+    window.addEventListener("avatarUpdated", handleAvatarUpdate);
+    return () => window.removeEventListener("avatarUpdated", handleAvatarUpdate);
+  }, []);
 
   // Force checking actual role instead of relying solely on propRole which might be hardcoded
   const actualRole = localStorage.getItem("role") || propRole;
@@ -50,16 +58,15 @@ export default function DashboardLayout({ children, role: propRole, user }) {
 
       {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0 w-full relative">
-        {/* New Premium TopBar */}
-        <PremiumTopAppBar 
+        {/* Standard Topbar */}
+        <Topbar 
           userName={userName} 
-          userAvatar={userAvatar} 
-          role={role === "PHARMACY" ? "Licensed Pharmacist" : role === "PHYSICIAN_ASSISTANT" ? "Physician Assistant" : role === "DOCTOR" ? "Verified Provider" : "Premium Member"}
-          onMenuClick={() => setIsMobileMenuOpen(true)}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
         />
 
         {/* Scrollable Content Area */}
-        <main className="flex-1 overflow-y-auto pt-20 pb-24 md:pb-8 px-4 md:px-8 relative">
+        <main className="flex-1 overflow-y-auto pt-6 pb-24 md:pb-8 px-4 md:px-8 relative">
           <div className="max-w-[1400px] mx-auto w-full animate-in fade-in slide-in-from-bottom-6 duration-1000">
             {role === "PHYSICIAN_ASSISTANT" && checkingPa ? (
                <div className="flex justify-center items-center min-h-[60vh]">

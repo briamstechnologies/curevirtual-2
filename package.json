@@ -10,7 +10,7 @@
     "dev:all": "npm run dev",
     "lint": "eslint .",
     "preview": "vite preview",
-   "build": "prisma generate --schema=web/backend/prisma/schema.prisma && vite build",
+    "build": "prisma generate --schema=web/backend/prisma/schema.prisma && vite build",
     "start": "node web/backend/server.js"
   },
   "dependencies": {
@@ -33,8 +33,9 @@
     "express-async-handler": "^1.2.0",
     "express-rate-limit": "^8.2.1",
     "firebase": "^12.9.0",
+    "form-data": "^4.0.6",
     "html2canvas": "^1.4.1",
-    "jsonwebtoken": "^9.0.2",
+    "jsonwebtoken": "^9.0.3",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^1.24.0",

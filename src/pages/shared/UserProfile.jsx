@@ -1,5 +1,5 @@
 // FILE: src/pages/shared/UserProfile.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
 import {
@@ -9,23 +9,42 @@ import {
   FaIdBadge,
   FaGlobe,
   FaShieldAlt,
+  FaCamera,
+  FaSpinner,
 } from "react-icons/fa";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function UserProfile() {
   const userId = localStorage.getItem("userId");
   const role = localStorage.getItem("role") || "USER";
   const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "User";
 
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [userAvatar, setUserAvatar] = useState(
+    localStorage.getItem("userAvatar") ||
+      localStorage.getItem("profile_image") ||
+      localStorage.getItem("profileImage") ||
+      ""
+  );
 
   useEffect(() => {
     async function fetchUserData() {
       try {
         setLoading(true);
-        // Generic endpoint to get user info by ID
         const res = await api.get(`/users/${userId}`);
-        setUserData(res.data?.data || res.data);
+        const data = res.data?.data || res.data;
+        setUserData(data);
+        const fetchedAvatar = data?.avatarUrl || data?.profileImage || data?.profile_image || data?.user?.avatarUrl;
+        if (fetchedAvatar) {
+          setUserAvatar(fetchedAvatar);
+          localStorage.setItem("userAvatar", fetchedAvatar);
+          localStorage.setItem("profile_image", fetchedAvatar);
+          localStorage.setItem("profileImage", fetchedAvatar);
+        }
       } catch (err) {
         console.error("Failed to load user intelligence:", err);
       } finally {
@@ -34,6 +53,45 @@ export default function UserProfile() {
     }
     if (userId) fetchUserData();
   }, [userId]);
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be under 5MB");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("avatar", file);
+      if (userId) formData.append("userId", userId);
+
+      const res = await api.post("/patient/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data?.success && res.data?.avatarUrl) {
+        const newUrl = res.data.avatarUrl;
+        setUserAvatar(newUrl);
+        localStorage.setItem("userAvatar", newUrl);
+        localStorage.setItem("profile_image", newUrl);
+        localStorage.setItem("profileImage", newUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+        toast.success("Profile picture uploaded successfully!");
+      } else {
+        toast.error("Failed to upload profile picture");
+      }
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      toast.error(err.response?.data?.error || "Error uploading profile picture");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const InfoCard = ({ icon: Icon, label, value, color = "var(--brand-blue)" }) => (
     <div className="card glass flex items-center gap-6 group hover:translate-x-1 transition-all">
@@ -71,12 +129,44 @@ export default function UserProfile() {
     <DashboardLayout role={role} user={{ name: userName }}>
       <div className="max-w-5xl space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="flex flex-col md:flex-row items-center gap-8">
-          <div className="relative">
-            <div className="h-32 w-32 rounded-[3rem] bg-gradient-to-tr from-[var(--brand-green)] to-[var(--brand-blue)] flex items-center justify-center text-[var(--text-main)] font-black text-5xl shadow-2xl relative z-10">
-              {userName.charAt(0).toUpperCase()}
+          <div
+            className="relative group cursor-pointer"
+            onClick={() => !uploading && fileInputRef.current?.click()}
+            title="Click to upload profile picture"
+          >
+            <div className="h-32 w-32 rounded-[3rem] bg-gradient-to-tr from-[var(--brand-green)] to-[var(--brand-blue)] flex items-center justify-center text-[var(--text-main)] font-black text-5xl shadow-2xl relative z-10 overflow-hidden border-2 border-[var(--brand-green)]/30">
+              {userAvatar ? (
+                <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                userName.charAt(0).toUpperCase()
+              )}
+
+              <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                {uploading ? (
+                  <FaSpinner className="animate-spin text-2xl" />
+                ) : (
+                  <>
+                    <FaCamera className="text-2xl mb-1" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Upload</span>
+                  </>
+                )}
+              </div>
             </div>
+
+            <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-[var(--brand-green)] text-white flex items-center justify-center shadow-lg border-2 border-white z-30 hover:scale-110 transition-transform">
+              {uploading ? <FaSpinner className="text-sm animate-spin" /> : <FaCamera className="text-sm" />}
+            </div>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+            />
             <div className="absolute -inset-4 bg-[var(--brand-green)]/10 blur-2xl rounded-full"></div>
           </div>
+
           <div className="text-center md:text-left">
             <h2 className="text-[10px] font-black text-[var(--brand-green)] uppercase tracking-[0.4em] mb-2">
               Subject Credentials
@@ -144,6 +234,7 @@ export default function UserProfile() {
           </div>
         </div>
       </div>
+      <ToastContainer position="top-right" autoClose={2200} />
     </DashboardLayout>
   );
 }

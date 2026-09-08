@@ -1,5 +1,5 @@
 // FILE: src/pages/doctor/ViewProfile.jsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
 import { ToastContainer, toast } from "react-toastify";
@@ -13,6 +13,8 @@ import {
   FaEdit,
   FaLanguage,
   FaStethoscope,
+  FaCamera,
+  FaSpinner,
 } from "react-icons/fa";
 
 function formatDate(iso) {
@@ -39,14 +41,28 @@ export default function DoctorViewProfile() {
   const userId = localStorage.getItem("userId") || "";
   const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "Doctor";
 
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState(null);
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [profile, setProfile] = useState(() => {
+    const cached = localStorage.getItem("cached_doctor_profile");
+    return cached ? JSON.parse(cached) : null;
+  });
+  const [loading, setLoading] = useState(!profile);
 
   const loadProfile = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!profile) setLoading(true);
       const res = await api.get("/doctor/profile", { params: { userId } });
-      setProfile(res.data?.data || null);
+      const fetchedData = res.data?.data || null;
+      setProfile(fetchedData);
+      if (fetchedData) {
+        localStorage.setItem("cached_doctor_profile", JSON.stringify(fetchedData));
+        const imgUrl = fetchedData.avatarUrl || fetchedData.user?.avatarUrl;
+        if (imgUrl) {
+          localStorage.setItem("userAvatar", imgUrl);
+          window.dispatchEvent(new Event("avatarUpdated"));
+        }
+      }
     } catch {
       toast.error("Profile Registry Failure: Data not found.");
     } finally {
@@ -57,6 +73,55 @@ export default function DoctorViewProfile() {
   useEffect(() => {
     if (userId) loadProfile();
   }, [loadProfile, userId]);
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be under 5MB");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("avatar", file);
+      formData.append("userId", userId);
+
+      const res = await api.post("/doctor/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data?.success && res.data?.avatarUrl) {
+        const newUrl = res.data.avatarUrl;
+        setProfile((prev) => ({
+          ...prev,
+          avatarUrl: newUrl,
+          user: { ...prev?.user, avatarUrl: newUrl },
+        }));
+        localStorage.setItem("userAvatar", newUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+        toast.success("Profile image updated successfully!");
+      } else {
+        toast.error("Failed to upload image");
+      }
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      toast.error(err.response?.data?.error || "Error uploading image");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const currentAvatar =
+    profile?.avatarUrl ||
+    profile?.user?.avatarUrl ||
+    profile?.profileImage ||
+    profile?.profile_image ||
+    profile?.user?.profileImage ||
+    profile?.user?.profile_image;
 
   return (
     <DashboardLayout role={role} user={{ name: userName }}>
@@ -74,7 +139,7 @@ export default function DoctorViewProfile() {
             href="/doctor/profile"
             className="btn btn-primary flex items-center gap-2 px-6 py-4 shadow-lg shadow-blue-500/20"
           >
-            <FaEdit /> Update Identity
+            <FaEdit /> Update Profile
           </a>
         </div>
 
@@ -97,8 +162,48 @@ export default function DoctorViewProfile() {
               <div className="card glass !p-10 text-center relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[var(--brand-blue)] via-[var(--brand-green)] to-[var(--brand-blue)]"></div>
                 <div className="relative z-10">
-                  <div className="h-28 w-28 rounded-[2.5rem] bg-gradient-to-tr from-[var(--brand-blue)] to-[var(--brand-green)] flex items-center justify-center text-[var(--text-main)] text-3xl font-black mx-auto mb-6 shadow-2xl group-hover:scale-105 transition-transform duration-500">
-                    {getInitials(userName).toUpperCase()}
+                  {/* Doctor Avatar with Upload Overlay */}
+                  <div
+                    className="relative w-28 h-28 mx-auto mb-6 group cursor-pointer"
+                    onClick={() => !uploading && fileInputRef.current?.click()}
+                    title="Click to change profile picture"
+                  >
+                    <div className="h-28 w-28 rounded-[2.5rem] bg-gradient-to-tr from-[var(--brand-blue)] to-[var(--brand-green)] flex items-center justify-center text-[var(--text-main)] text-3xl font-black shadow-2xl group-hover:scale-105 transition-transform duration-500 overflow-hidden border-2 border-emerald-500/30">
+                      {currentAvatar ? (
+                        <img
+                          src={currentAvatar}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        getInitials(userName).toUpperCase()
+                      )}
+                    </div>
+
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 rounded-[2.5rem] bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      {uploading ? (
+                        <FaSpinner className="text-white text-2xl animate-spin" />
+                      ) : (
+                        <div className="flex flex-col items-center text-white text-[10px] font-bold">
+                          <FaCamera className="text-xl mb-0.5" />
+                          <span>Change</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Camera Floating Badge */}
+                    <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg border-2 border-white">
+                      {uploading ? <FaSpinner className="text-xs animate-spin" /> : <FaCamera className="text-xs" />}
+                    </div>
+
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                    />
                   </div>
                   <h3 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-1">
                     {userName}

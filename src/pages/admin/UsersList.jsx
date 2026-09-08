@@ -30,30 +30,47 @@ export default function UsersList() {
     name: localStorage.getItem("userName") || localStorage.getItem("name") || "Admin",
   };
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [localSearch, setLocalSearch] = useState("");
+
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setSearch(localSearch);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(delay);
+  }, [localSearch]);
+
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get("/admins/users");
-      setUsers(res.data || []);
+      const res = await api.get("/admin/users", {
+        params: {
+          page,
+          limit: 10,
+          search: search || undefined,
+          role: roleFilter || undefined,
+        }
+      });
+      if (res.data && Array.isArray(res.data.data)) {
+        setUsers(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+      } else {
+        setUsers(res.data || []);
+      }
     } catch (err) {
       toast.error("Registry Sync Failure: Could not load user base.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, search, roleFilter]);
 
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
 
-  const visibleUsers = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return (users || [])
-      .filter((u) => (roleFilter ? u.role === roleFilter : true))
-      .filter((u) =>
-        q ? u.name?.toLowerCase()?.includes(q) || u.email?.toLowerCase()?.includes(q) : true
-      );
-  }, [users, roleFilter, search]);
+  const visibleUsers = users; // Filtering is now handled on the backend
 
   const handleSuspend = async (id) => {
     if (!window.confirm("Authorize Protocol: Revoke platform access for this subject?")) return;
@@ -95,14 +112,17 @@ export default function UsersList() {
               <input
                 type="text"
                 placeholder="Search Subject..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
                 className="w-full sm:w-64 pl-12 pr-4 py-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl text-xs font-bold text-[var(--text-main)] focus:border-[var(--brand-blue)] outline-none"
               />
             </div>
             <select
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
+              onChange={(e) => {
+                setRoleFilter(e.target.value);
+                setPage(1);
+              }}
               className="px-4 py-3 rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] text-xs font-black text-black outline-none focus:border-[var(--brand-blue)] uppercase tracking-widest"
             >
               <option value="">All Tiers</option>
@@ -220,6 +240,31 @@ export default function UsersList() {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center px-8 py-5 border-t border-[var(--border)] bg-[var(--bg-main)]/30">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-xs font-bold text-[var(--text-main)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--brand-blue)] hover:text-white hover:border-transparent transition-all"
+              >
+                Previous
+              </button>
+              
+              <span className="text-xs font-black text-[var(--text-muted)] tracking-widest uppercase">
+                Page <span className="text-[var(--brand-blue)]">{page}</span> of {totalPages}
+              </span>
+              
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-4 py-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-xs font-bold text-[var(--text-main)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--brand-blue)] hover:text-white hover:border-transparent transition-all"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

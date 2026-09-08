@@ -5,10 +5,14 @@ import api from '../../Lib/api';
 import {
   FaEye,
   FaSearch,
-  FaFilter,
   FaArrowLeft,
   FaArrowRight,
+  FaEdit,
+  FaTrash,
+  FaTimes
 } from 'react-icons/fa';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function SubscribersList({
   title = 'Subscribers',
@@ -35,6 +39,14 @@ export default function SubscribersList({
 
   const [view, setView] = useState(null);
   const [err, setErr] = useState('');
+
+  // Edit Subscription State
+  const [editingSub, setEditingSub] = useState(null);
+  const [editPlanId, setEditPlanId] = useState('');
+  const [editExpiresAt, setEditExpiresAt] = useState('');
+  const [editStatus, setEditStatus] = useState('');
+  const [availablePlans, setAvailablePlans] = useState([]);
+  const [deletingSubId, setDeletingSubId] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -63,18 +75,74 @@ export default function SubscribersList({
   useEffect(() => {
     setPage(1);
   }, [plan, status, q]);
+
   useEffect(() => {
     load();
   }, [load]);
 
+  // Load available plans for editing
+  useEffect(() => {
+    async function fetchPlans() {
+      try {
+        const res = await api.get(`/subscriptions/plans?module=${filterRole.toLowerCase()}`);
+        setAvailablePlans(res.data?.plans || []);
+      } catch (e) {
+        console.error("Error loading plans:", e);
+      }
+    }
+    fetchPlans();
+  }, [filterRole]);
+
   const toggleStatus = async (subscriptionId, next) => {
     try {
-      await api.patch(`/subscribers/subscription/${subscriptionId}/status`, {
+      await api.patch(`/subscribers/${subscriptionId}/status`, {
         status: next,
       });
+      toast.success(`Subscription status updated to ${next}`);
       load();
     } catch (e) {
-      setErr('Failed to update protocol status.');
+      toast.error('Failed to update subscription status.');
+    }
+  };
+
+  const handleEditOpen = (item) => {
+    if (!item.sub) {
+      toast.error("No active subscription to edit.");
+      return;
+    }
+    setEditingSub(item);
+    setEditPlanId(item.sub.planId || '');
+    setEditExpiresAt(item.sub.endDate ? new Date(item.sub.endDate).toISOString().slice(0, 16) : '');
+    setEditStatus(item.sub.status || '');
+  };
+
+  const handleEditSave = async () => {
+    try {
+      await api.put(`/subscribers/${editingSub.sub.id}`, {
+        planId: editPlanId,
+        expiresAt: editExpiresAt ? new Date(editExpiresAt) : null,
+        status: editStatus
+      });
+      toast.success("Subscription updated successfully!");
+      setEditingSub(null);
+      load();
+    } catch (e) {
+      toast.error(e?.response?.data?.error || "Failed to update subscription.");
+    }
+  };
+
+  const handleDeleteSub = (subId) => {
+    setDeletingSubId(subId);
+  };
+
+  const confirmDeleteSub = async () => {
+    try {
+      await api.delete(`/subscribers/${deletingSubId}`);
+      toast.success("Subscription record deleted successfully.");
+      setDeletingSubId(null);
+      load();
+    } catch (e) {
+      toast.error("Failed to delete subscription.");
     }
   };
 
@@ -110,7 +178,7 @@ export default function SubscribersList({
               value={plan}
               onChange={(e) => setPlan(e.target.value)}
             >
-              <option value="">All Tiers</option>
+              <option value="">All Plans</option>
               <option value="MONTHLY">Monthly Billing</option>
               <option value="YEARLY">Yearly Billing</option>
             </select>
@@ -194,7 +262,7 @@ export default function SubscribersList({
                 ) : items.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="5"
+                      colSpan="6"
                       className="px-8 py-12 text-center font-bold text-[var(--text-soft)] uppercase tracking-widest text-xs"
                     >
                       No subscribers found in registry.
@@ -244,11 +312,29 @@ export default function SubscribersList({
                           <div className="flex items-center justify-center gap-3">
                             <button
                               title="Inspect Identity"
-                              className="p-2 rounded-xl bg-[var(--brand-blue)]/10 text-[var(--brand-blue)] hover:bg-[var(--brand-blue)] hover:text-[var(--text-main)] transition-all shadow-sm"
+                              className="p-2 rounded-xl bg-[var(--brand-blue)]/10 text-[var(--brand-blue)] hover:bg-[var(--brand-blue)] hover:text-white transition-all shadow-sm"
                               onClick={() => setView(it)}
                             >
-                              <FaEye size={14} />
+                              <FaEye size={12} />
                             </button>
+                            {sub && (
+                              <>
+                                <button
+                                  title="Edit Dates / Plan"
+                                  className="p-2 rounded-xl bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-white transition-all shadow-sm"
+                                  onClick={() => handleEditOpen(it)}
+                                >
+                                  <FaEdit size={12} />
+                                </button>
+                                <button
+                                  title="Delete Subscription"
+                                  className="p-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                  onClick={() => handleDeleteSub(sub.id)}
+                                >
+                                  <FaTrash size={12} />
+                                </button>
+                              </>
+                            )}
                             {canSuspend && (
                               <button
                                 className="btn !py-1.5 !px-3 !text-[9px] bg-red-600 !rounded-xl"
@@ -301,14 +387,12 @@ export default function SubscribersList({
         </div>
       </div>
 
+      {/* Inspect View Modal */}
       {view && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-           onClick={() => setView(null)}
-          ></div>
-          <div className="relative w-full max-w-lg glass !p-8 animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-lg bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
             <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-6 flex items-center gap-3">
-              Subscriber Identity
+              Subscriber Details
             </h2>
             <div className="space-y-4 mb-8">
               <div className="grid grid-cols-2 gap-4">
@@ -333,14 +417,14 @@ export default function SubscribersList({
                 <p className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest">
                   Email Identity
                 </p>
-                <p className="text-sm font-black text-[var(--text-main)]">
+                <p className="text-sm font-bold text-[var(--text-main)]">
                   {view.email}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4 border-t border-[var(--border)] pt-4">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest">
-                    Service Tier
+                    Service Plan
                   </p>
                   <p className="text-sm font-black text-[var(--brand-blue)]">
                     {view.sub?.plan || 'NONE'}
@@ -348,23 +432,148 @@ export default function SubscribersList({
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest">
-                    Protocol Status
+                    Status
                   </p>
                   <p className="text-sm font-black text-[var(--text-main)]">
                     {view.sub?.status || 'OFFLINE'}
                   </p>
                 </div>
               </div>
+              {view.sub?.startDate && (
+                <div className="grid grid-cols-2 gap-4 border-t border-[var(--border)] pt-4">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest">
+                      Start Date
+                    </p>
+                    <p className="text-xs text-[var(--text-soft)]">
+                      {new Date(view.sub.startDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest">
+                      Expiry Date & Time
+                    </p>
+                    <p className="text-xs text-[var(--text-soft)]">
+                      {new Date(view.sub.endDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
             <button
               onClick={() => setView(null)}
-              className="btn btn-primary w-full shadow-lg"
+              className="w-full py-3 bg-[var(--brand-blue)] hover:bg-blue-600 text-white rounded-xl font-bold shadow-lg"
             >
-              Close Vault
+              Close
             </button>
           </div>
         </div>
       )}
+
+      {/* Edit Subscription Modal */}
+      {editingSub && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-black text-[var(--text-main)] tracking-tight uppercase">
+                Modify Subscription
+              </h2>
+              <button onClick={() => setEditingSub(null)} className="text-[var(--text-muted)] hover:text-red-500">
+                <FaTimes size={16} />
+              </button>
+            </div>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-[var(--text-soft)] mb-2">Subscriber</label>
+                <p className="text-sm font-bold">{editingSub.name} ({editingSub.email})</p>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-[var(--text-soft)] mb-2">Change Plan Tier</label>
+                <select 
+                  className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3 px-4 text-xs font-bold outline-none focus:border-[var(--brand-blue)]"
+                  value={editPlanId}
+                  onChange={(e) => setEditPlanId(e.target.value)}
+                >
+                  {availablePlans.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} (GHS {p.priceGHS})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-[var(--text-soft)] mb-2">Expiry Date & Time</label>
+                <input 
+                  type="datetime-local"
+                  className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3 px-4 text-xs font-bold outline-none focus:border-[var(--brand-blue)]"
+                  value={editExpiresAt}
+                  onChange={(e) => setEditExpiresAt(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-[var(--text-soft)] mb-2">Status</label>
+                <select 
+                  className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3 px-4 text-xs font-bold outline-none focus:border-[var(--brand-blue)]"
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                >
+                  <option value="ACTIVE">ACTIVE (Restore Access)</option>
+                  <option value="DEACTIVATED">DEACTIVATED (Suspend Access)</option>
+                  <option value="EXPIRED">EXPIRED (Terminated)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setEditingSub(null)}
+                className="flex-1 py-3 bg-[var(--border)] hover:bg-[var(--border)]/80 text-[var(--text-soft)] rounded-xl font-bold transition-all text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSave}
+                className="flex-1 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold transition-all text-xs shadow-lg"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Confirm Delete Modal */}
+      {deletingSubId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-[var(--bg-card)] border border-red-500/20 rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-black text-[var(--text-main)] mb-2 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+              Delete Subscription?
+            </h3>
+            <p className="text-xs text-[var(--text-soft)] mb-6 leading-relaxed">
+              This action cannot be undone. The subscriber will immediately lose all plan benefits and features.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingSubId(null)}
+                className="flex-1 py-2.5 bg-[var(--border)] hover:bg-[var(--border)]/80 text-[var(--text-soft)] rounded-xl font-bold transition-all text-xs"
+              >
+                Keep Active
+              </button>
+              <button
+                onClick={confirmDeleteSub}
+                className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-all text-xs shadow-lg"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ToastContainer position="top-right" autoClose={2000} />
     </DashboardLayout>
   );
 }

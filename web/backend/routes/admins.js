@@ -224,7 +224,11 @@ router.get("/users", async (req, res) => {
         role: true,
       },
     });
-    res.json(users);
+    const formatted = users.map(u => ({
+      ...u,
+      name: `${u.firstName} ${u.lastName}`.trim()
+    }));
+    res.json(formatted);
   } catch (err) {
     console.error("❌ Admin /users error:", err);
     res.status(500).json({ error: "Failed to fetch users" });

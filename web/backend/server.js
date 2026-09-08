@@ -389,7 +389,10 @@ app.set("io", io);
 const registrationRequestsRoute = require("./routes/registrationRequests");
 registrationRequestsRoute.setIo(io);
 
+const compression = require("compression");
+
 // ✅ Global Middlewares
+app.use(compression());
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -512,6 +515,10 @@ const subscriptionRoutes = require("./routes/subscription");
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/subscribers", subscriptionRoutes);
 
+// PHASE 4 NEW SUBSCRIPTION ROUTES
+const phase4SubscriptionsRoute = require("./routes/subscriptions");
+app.use("/api/subscriptions", phase4SubscriptionsRoute);
+
 const adminSubscriptionRoutes = require("./routes/adminSubscription");
 app.use("/api/admin/subscription-management", adminSubscriptionRoutes);
 
@@ -528,12 +535,15 @@ const laboratoryRoute = require("./routes/Laboratory");
 app.use("/api/laboratory", laboratoryRoute);
 
 // ----------------------------
-// ✅ CONSULTATION & PA ROUTES
+// 👨‍⚕️ CONSULTATION & PA ROUTES
 // ----------------------------
 const consultationsRoute = require("./routes/consultations");
 const paRoute = require("./routes/pa");
+const paReviewsRoute = require("./routes/paReviews");
+
 app.use("/api/consultations", consultationsRoute);
 app.use("/api/consultations/pa", paRoute);
+app.use("/api/pa-reviews", paReviewsRoute);
 
 
 // ----------------------------
@@ -545,9 +555,30 @@ app.use("/api/support", supportRoutes);
 // ✅ REGISTRATION APPROVAL WORKFLOW (Doctor & Pharmacy)
 app.use("/api/registration-requests", registrationRequestsRoute);
 
-// ✅ NEW PAYMENTS SYSTEM
+// ----------------------------
+// 💰 TRANSACTIONS & PAYMENTS
+// ----------------------------
 const paymentRoutes = require("./routes/payments");
 app.use("/api/payments", paymentRoutes);
+
+// PHASE 5: PAYSTACK / MOMO PAYMENT SYSTEM (Env reloaded)
+const paystackRoutes = require("./routes/paystack.routes");
+app.use("/api/payments/v2", paystackRoutes);
+
+const transactionRoutes = require("./routes/transactions");
+app.use("/api/transactions", transactionRoutes);
+
+// PHASE 9: PA REVENUE SPLITS & ADMIN SUITE
+const paApiRoutes = require("./routes/paApi");
+app.use("/api/pa", paApiRoutes);
+
+// PHASE 6: CORPORATE / EMPLOYER SEATS SYSTEM
+const corporateRoutes = require("./routes/corporate.routes");
+app.use("/api/corporate", corporateRoutes);
+
+// FEES CONFIGURATION ROUTE
+const feesRoutes = require("./routes/fees.routes");
+app.use("/api/fees", feesRoutes);
 
 // ✅ SESSION (APPOINTMENT) PAYMENT SYSTEM (Stripe Elements)
 const sessionRoutes = require("./routes/session");
@@ -663,6 +694,10 @@ function cleanPortSync(port) {
 }
 
 // ✅ Server start
+require("./cronJobs"); // Initialize SLA & Subscription background tasks
+const { initCleanupJob } = require("./services/cleanup.service");
+initCleanupJob(); // Initialize daily 30-day VideoConsultation cleanup job
+
 const PORT = process.env.PORT || 5001;
 const HOST = "0.0.0.0";
 

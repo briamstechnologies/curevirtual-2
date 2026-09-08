@@ -13,6 +13,7 @@ import { FaArrowRight } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import TermsAndConditionsModal from "../components/TermsAndConditionsModal";
+import PrefetchService from "../services/PrefetchService";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export default function Login() {
   const [showTermsModal, setShowTermsModal] = useState(false);
 
   // ✅ Handle Success
-  const handleAuthSuccess = (responseData, fallbackEmail) => {
+  const handleAuthSuccess = async (responseData, fallbackEmail) => {
     const token = responseData.token;
     const user = responseData.user || responseData;
 
@@ -74,45 +75,45 @@ export default function Login() {
     }
 
     // ✅ Dashboard Redirects
-    setTimeout(() => {
-      switch (user.role) {
-        case "SUPERADMIN":
-          navigate("/superadmin/dashboard");
-          break;
+    await PrefetchService.prefetchAll(user.role, user.id);
 
-        case "ADMIN":
-          navigate("/admin/dashboard");
-          break;
+    switch (user.role) {
+      case "SUPERADMIN":
+        navigate("/superadmin/dashboard");
+        break;
 
-        case "SUPPORT":
-          navigate("/support/dashboard");
-          break;
+      case "ADMIN":
+        navigate("/admin/dashboard");
+        break;
 
-        case "DOCTOR":
-          navigate("/doctor/dashboard");
-          break;
+      case "SUPPORT":
+        navigate("/support/dashboard");
+        break;
 
-        case "PATIENT":
-          navigate("/patient/dashboard");
-          break;
+      case "DOCTOR":
+        navigate("/doctor/dashboard");
+        break;
 
-        case "PHARMACY":
-          navigate("/pharmacy/dashboard");
-          break;
+      case "PATIENT":
+        navigate("/patient/dashboard");
+        break;
 
-        // ✅ LABORATORY ADDED
-        case "LABORATORY":
-          navigate("/laboratory/dashboard");
-          break;
+      case "PHARMACY":
+        navigate("/pharmacy/dashboard");
+        break;
 
-        case "PHYSICIAN_ASSISTANT":
-          navigate("/pa/dashboard");
-          break;
+      // ✅ LABORATORY ADDED
+      case "LABORATORY":
+        navigate("/laboratory/dashboard");
+        break;
 
-        default:
-          navigate("/");
-      }
-    }, 1000);
+      case "PHYSICIAN_ASSISTANT":
+        navigate("/pa/dashboard");
+        break;
+
+      default:
+        navigate("/");
+    }
   };
 
   // ✅ Main Login
@@ -155,7 +156,7 @@ export default function Login() {
           supabaseAccessToken: data.session.access_token,
         });
 
-        handleAuthSuccess(res.data, email);
+        await handleAuthSuccess(res.data, email);
       }
 
       // =========================================================
@@ -202,7 +203,7 @@ export default function Login() {
             supabaseAccessToken: data.session.access_token,
           });
 
-          handleAuthSuccess(res.data, email);
+          await handleAuthSuccess(res.data, email);
         }
       }
     } catch (err) {
@@ -306,7 +307,7 @@ export default function Login() {
               Secure Login
             </div>
 
-            <h1 className="text-4xl font-black uppercase tracking-tighter">Login</h1>
+            <h1 className="text-2xl font-black uppercase tracking-tighter">Login</h1>
 
             <p className="text-sm opacity-70 mt-2">
               {loginMode === "password" ? "Login using email and password" : "Login using OTP"}
@@ -406,7 +407,10 @@ export default function Login() {
                 onChange={(e) => setAcceptedTerms(e.target.checked)}
                 className="w-5 h-5 rounded border-[var(--border)] text-[var(--brand-green)] focus:ring-[var(--brand-green)] mt-0.5 cursor-pointer accent-[var(--brand-green)]"
               />
-              <label htmlFor="accept-terms-login" className="text-xs text-[var(--text-soft)] leading-snug cursor-pointer select-none">
+              <label
+                htmlFor="accept-terms-login"
+                className="text-xs text-[var(--text-soft)] leading-snug cursor-pointer select-none"
+              >
                 I acknowledge and agree to the{" "}
                 <button
                   type="button"
@@ -467,10 +471,7 @@ export default function Login() {
 
       <ToastContainer position="top-right" autoClose={3000} />
 
-      <TermsAndConditionsModal
-        isOpen={showTermsModal}
-        onClose={() => setShowTermsModal(false)}
-      />
+      <TermsAndConditionsModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} />
     </div>
   );
 }

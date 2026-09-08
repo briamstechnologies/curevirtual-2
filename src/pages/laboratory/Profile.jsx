@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiEdit2, FiSave, FiMapPin, FiPhone, FiMail, FiAward, FiClock, FiSettings } from "react-icons/fi";
+import { FaCamera, FaSpinner } from "react-icons/fa";
 import { toast } from "react-toastify";
 import api from "../../Lib/api";
 import DashboardLayout from "../../layouts/DashboardLayout";
@@ -8,6 +9,8 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 export default function LaboratoryProfile() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const [profile, setProfile] = useState({
     name: "",
@@ -23,6 +26,9 @@ export default function LaboratoryProfile() {
     licenseNumber: "",
     openingHours: "",
     services: "",
+    avatarUrl: "",
+    referenceId: "",
+    verificationStatus: "PENDING",
   });
 
   // =========================
@@ -40,6 +46,7 @@ export default function LaboratoryProfile() {
 
         if (res.data && res.data.success) {
           const raw = res.data.data;
+          const img = raw.avatarUrl || raw.user?.avatarUrl || "";
           setProfile({
             name: raw.displayName || `${raw.user?.firstName || ""} ${raw.user?.lastName || ""}`.trim() || "",
             firstName: raw.user?.firstName || "",
@@ -54,9 +61,14 @@ export default function LaboratoryProfile() {
             licenseNumber: raw.licenseNumber || "",
             openingHours: raw.openingHours || "",
             services: raw.services || "",
+            avatarUrl: img,
             referenceId: raw.referenceId || "CV-LB-GH-2026-0001",
             verificationStatus: raw.verificationStatus || "PENDING",
           });
+          if (img) {
+            localStorage.setItem("userAvatar", img);
+            window.dispatchEvent(new Event("avatarUpdated"));
+          }
         }
       } catch (error) {
         console.error(error);
@@ -68,6 +80,61 @@ export default function LaboratoryProfile() {
 
     fetchProfile();
   }, []);
+
+  // =========================
+  // HANDLE AVATAR UPLOAD
+  // =========================
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be 5MB or smaller.");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      setAvatarUploading(true);
+      const userId = localStorage.getItem("userId");
+      const formDataUpload = new FormData();
+      formDataUpload.append("avatar", file);
+      if (userId) formDataUpload.append("userId", userId);
+
+      const res = await api.post("/laboratory/avatar", formDataUpload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data?.success && res.data?.avatarUrl) {
+        const newUrl = res.data.avatarUrl;
+        setProfile((prev) => ({ ...prev, avatarUrl: newUrl }));
+        localStorage.setItem("userAvatar", newUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+        toast.success("Laboratory logo/photo uploaded and saved successfully!");
+      } else {
+        toast.error("Failed to upload image.");
+      }
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      toast.error(err.response?.data?.error || "Error uploading profile image.");
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeProfileImage = () => {
+    setProfile((prev) => ({ ...prev, avatarUrl: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   // =========================
   // HANDLE CHANGE
@@ -169,19 +236,71 @@ export default function LaboratoryProfile() {
 
         {/* CARD */}
         <div className="glass-panel p-6 md:p-10 rounded-[2rem]">
-          {/* TOP */}
-          <div className="flex flex-col md:flex-row md:items-center gap-6 mb-10">
-            <div className="w-24 h-24 rounded-3xl bg-gradient-to-r from-[var(--brand-purple)] to-[var(--brand-blue)] flex items-center justify-center text-white text-3xl font-black shadow-xl">
-              {profile.name?.charAt(0) || "L"}
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-[var(--text-main)] uppercase tracking-tight">
-                {profile.name || "Laboratory Name"}
-              </h2>
-              <p className="text-sm text-[var(--text-soft)] mt-1 flex items-center gap-2">
-                <FiMail />
-                {profile.email || "Email address"}
-              </p>
+          {/* TOP PHOTO UPLOAD CARD */}
+          <div className="rounded-3xl border border-[var(--border)] bg-[var(--bg-main)]/60 p-5 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+              <div className="relative shrink-0">
+                <div className="w-24 h-24 rounded-3xl bg-gradient-to-r from-[var(--brand-purple)] to-[var(--brand-blue)] flex items-center justify-center text-white text-3xl font-black shadow-xl overflow-hidden border-2 border-purple-500/30">
+                  {profile.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt="Laboratory Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    profile.name?.charAt(0) || "L"
+                  )}
+                </div>
+
+                {profile.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={removeProfileImage}
+                    className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition"
+                    title="Remove image"
+                  >
+                    <span className="material-symbols-outlined text-base">close</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex-1">
+                <p className="text-sm font-black text-[var(--text-main)] uppercase tracking-wide">
+                  Laboratory Photo / Logo
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Upload your laboratory branding or facility photo. Max 5MB.
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    disabled={avatarUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-[#027906] hover:bg-[#045d07] px-5 py-3 text-white font-bold tracking-wide uppercase text-[10px] shadow-md transition active:scale-95 disabled:opacity-50"
+                  >
+                    <span className={`material-symbols-outlined text-base ${avatarUploading ? "animate-spin" : ""}`}>
+                      {avatarUploading ? "progress_activity" : "upload"}
+                    </span>
+                    {avatarUploading ? "Uploading..." : profile.avatarUrl ? "Change Photo" : "Upload Photo"}
+                  </button>
+
+                  {profile.avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={removeProfileImage}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-red-300 bg-red-50 px-5 py-3 text-red-600 font-bold tracking-wide uppercase text-[10px] hover:bg-red-100 transition"
+                    >
+                      <span className="material-symbols-outlined text-base">delete</span>
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 

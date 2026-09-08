@@ -602,6 +602,26 @@ async function main() {
     }
   }
 
+  // 13) Volume Commission Tiers
+  const commissionModules = ['laboratory', 'pharmacy'];
+  for (const mod of commissionModules) {
+    await safeUpsert('volumeCommissionTier', {
+      where: { id: `tier1-${mod}` },
+      update: { minMonthlyOrders: 0, maxMonthlyOrders: 49, commissionPct: 15 },
+      create: { id: `tier1-${mod}`, module: mod, tierName: 'Tier 1', minMonthlyOrders: 0, maxMonthlyOrders: 49, commissionPct: 15 }
+    });
+    await safeUpsert('volumeCommissionTier', {
+      where: { id: `tier2-${mod}` },
+      update: { minMonthlyOrders: 50, maxMonthlyOrders: 199, commissionPct: 12 },
+      create: { id: `tier2-${mod}`, module: mod, tierName: 'Tier 2', minMonthlyOrders: 50, maxMonthlyOrders: 199, commissionPct: 12 }
+    });
+    await safeUpsert('volumeCommissionTier', {
+      where: { id: `tier3-${mod}` },
+      update: { minMonthlyOrders: 200, maxMonthlyOrders: null, commissionPct: 10 },
+      create: { id: `tier3-${mod}`, module: mod, tierName: 'Tier 3', minMonthlyOrders: 200, maxMonthlyOrders: null, commissionPct: 10 }
+    });
+  }
+
   console.log('✅ Seed complete (models missing were safely skipped).');
 }
 

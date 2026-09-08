@@ -78,10 +78,11 @@ export default function VideoConsultation() {
   const navigate = useNavigate();
   const { socket } = useSocket();
 
-  const [consultations, setConsultations] = useState([]);
+  const [consultations, setConsultations] = useState(() => {
+    const cached = localStorage.getItem("cached_doctor_video_consultations");
+    return cached ? JSON.parse(cached) : [];
+  });
   const [patients, setPatients] = useState([]);
-
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -131,18 +132,17 @@ export default function VideoConsultation() {
   /* ---------------------- Load my consultations -------------------------- */
   const fetchConsultations = useCallback(async () => {
     try {
-      setLoading(true);
       const res = await api.get(`/videocall/list`, {
         params: { userId: doctorUserId, role: "DOCTOR" },
       });
       const data = res.data?.data || res.data || [];
-      setConsultations(Array.isArray(data) ? data : []);
+      const parsedData = Array.isArray(data) ? data : [];
+      setConsultations(parsedData);
+      localStorage.setItem("cached_doctor_video_consultations", JSON.stringify(parsedData));
       setError("");
     } catch (err) {
       console.error("❌ Error fetching consultations:", err);
       setError("Failed to load consultations. Please try again.");
-    } finally {
-      setLoading(false);
     }
   }, [doctorUserId]);
 
@@ -316,11 +316,7 @@ export default function VideoConsultation() {
           </div>
         )}
 
-        {loading ? (
-          <div className="py-16 text-center text-[var(--text-soft)] font-bold animate-pulse uppercase tracking-widest text-xs">
-            Loading consultations...
-          </div>
-        ) : consultations.length === 0 ? (
+        {consultations.length === 0 ? (
           <div className="py-16 px-6 text-center border border-dashed border-[var(--border)] rounded-3xl bg-[var(--bg-card)]/50 flex flex-col items-center justify-center gap-4">
             <div className="w-16 h-16 rounded-3xl bg-[var(--brand-green)]/10 flex items-center justify-center text-[var(--brand-green)] text-2xl shadow-inner">
               <FaVideo />

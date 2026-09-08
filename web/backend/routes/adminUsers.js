@@ -2,7 +2,7 @@
 
 const express = require("express");
 const xss = require("xss");
-const { verifyToken, requireRole } = require("../middleware/rbac.js");
+const { verifyToken, requireRole, requireHierarchy } = require("../middleware/rbac.js");
 const prisma = require("../prisma/prismaClient");
 const { supabaseAdmin } = require("../lib/supabaseAdmin");
 const router = express.Router();
@@ -25,40 +25,60 @@ router.get(
   requireRole(["SUPERADMIN", "ADMIN"]),
   async (req, res) => {
     try {
-      const { role } = req.query;
-      const whereClause = role
-        ? { role }
-        : { role: { in: ["ADMIN", "SUPPORT", "PHYSICIAN_ASSISTANT", "DOCTOR"] } };
+      const { role, search, page = 1, limit = 10 } = req.query;
+      
+      const pageNum = parseInt(page);
+      const limitNum = parseInt(limit);
+      const skip = (pageNum - 1) * limitNum;
 
-      const users = await prisma.user.findMany({
-        where: whereClause,
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          role: true,
-          createdAt: true,
-          updatedAt: true,
-          physicianAssistant: {
-            select: {
-              assignments: {
-                where: { assignmentStatus: "ACTIVE" },
-                select: {
-                  doctor: {
-                    select: {
-                      user: {
-                        select: { id: true, firstName: true, lastName: true }
+      const whereClause = {};
+      
+      if (role) {
+        whereClause.role = role;
+      }
+      
+      if (search) {
+        whereClause.OR = [
+          { firstName: { contains: search, mode: "insensitive" } },
+          { lastName: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } }
+        ];
+      }
+
+      const [users, total] = await Promise.all([
+        prisma.user.findMany({
+          where: whereClause,
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            createdAt: true,
+            updatedAt: true,
+            physicianAssistant: {
+              select: {
+                assignments: {
+                  where: { assignmentStatus: "ACTIVE" },
+                  select: {
+                    doctor: {
+                      select: {
+                        user: {
+                          select: { id: true, firstName: true, lastName: true }
+                        }
                       }
                     }
                   }
                 }
               }
             }
-          }
-        },
-        orderBy: { createdAt: "desc" },
-      });
+          },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limitNum,
+        }),
+        prisma.user.count({ where: whereClause })
+      ]);
 
       const formattedUsers = users.map((u) => {
         let assignedDoctors = [];
@@ -76,7 +96,12 @@ router.get(
         };
       });
 
-      res.json(formattedUsers);
+      res.json({
+        data: formattedUsers,
+        total,
+        page: pageNum,
+        totalPages: Math.ceil(total / limitNum) || 1
+      });
     } catch (err) {
       console.error("Error fetching admin users:", err);
       res.status(500).json({ error: "Failed to fetch users" });
@@ -220,7 +245,7 @@ router.patch(
 router.delete(
   "/:id",
   verifyToken,
-  requireRole(["SUPERADMIN", "ADMIN"]),
+  requireHierarchy("ADMIN"),
   async (req, res) => {
     try {
       const id = req.params.id;

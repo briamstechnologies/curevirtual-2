@@ -12,20 +12,28 @@ export default function PatientSelectLaboratory() {
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
   const [radiusKm, setRadiusKm] = useState(25);
-  const [list, setList] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [list, setList] = useState(() => {
+    const cached = localStorage.getItem("cached_laboratory_list");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(!list.length);
   const [msg, setMsg] = useState("");
 
   const load = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!list.length) setLoading(true);
       const params = { q: q || undefined };
       if (lat && lng && radiusKm) {
         params.lat = lat; params.lng = lng; params.radiusKm = radiusKm;
       }
       const r = await api.get("/laboratory/list", { params });
       const items = r.data?.data?.items || r.data?.data || [];
-      setList(Array.isArray(items) ? items : []);
+      const parsedItems = Array.isArray(items) ? items : [];
+      setList(parsedItems);
+      // only cache the default view
+      if (!q && !lat && !lng) {
+        localStorage.setItem("cached_laboratory_list", JSON.stringify(parsedItems));
+      }
     } catch {
       setList([]);
     } finally {

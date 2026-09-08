@@ -1,9 +1,14 @@
-// FILE: backend/routes/pharmacy.js
 const express = require("express");
 const router = express.Router();
 const prisma = require('../prisma/prismaClient');
 const { verifyToken, requireRole } = require("../middleware/rbac.js");
 const jwt = require("jsonwebtoken");
+const multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const { createClient } = require("@supabase/supabase-js");
+const supabase = process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
+  : null;
 
 const authenticatePharmacy = [verifyToken, requireRole(["PHARMACY", "SUPERADMIN", "ADMIN"])];
 
@@ -62,11 +67,17 @@ router.get("/stats", ...authenticatePharmacy, async (req, res) => {
     console.log("DEBUG: Fetching pharmacy stats for profile:", pharmacyProfile.id);
 
     try {
+        const trailing30Days = new Date();
+        trailing30Days.setDate(trailing30Days.getDate() - 30);
+
         const [
           totalPrescriptions,
           pendingPrescriptions,
           dispensedPrescriptions,
-          totalCustomers
+          totalCustomers,
+          trailing30Orders,
+          activeSub,
+          recentPrescriptions
         ] = await Promise.all([
           prisma.prescription.count({
             where: { pharmacyId: pharmacyProfile.id }
@@ -74,7 +85,7 @@ router.get("/stats", ...authenticatePharmacy, async (req, res) => {
           prisma.prescription.count({
             where: {
               pharmacyId: pharmacyProfile.id,
-              dispatchStatus: { in: ["SENT", "READY"] }
+              dispatchStatus: { in: ["SENT", "READY", "NONE"] }
             }
           }),
           prisma.prescription.count({
@@ -85,16 +96,107 @@ router.get("/stats", ...authenticatePharmacy, async (req, res) => {
           }),
           prisma.selectedPharmacy.count({
             where: { pharmacyId: pharmacyProfile.id }
+          }),
+          prisma.prescription.count({
+            where: {
+              pharmacyId: pharmacyProfile.id,
+              createdAt: { gte: trailing30Days }
+            }
+          }),
+          prisma.userSubscription.findFirst({
+            where: {
+              userId: pharmacyUserId,
+              status: "active",
+              expiresAt: { gt: new Date() }
+            },
+            include: { plan: true }
+          }),
+          prisma.prescription.findMany({
+            where: { pharmacyId: pharmacyProfile.id },
+            take: 10,
+            orderBy: { createdAt: "desc" },
+            include: {
+              patient: {
+                include: { user: { select: { firstName: true, lastName: true } } }
+              }
+            }
           })
         ]);
 
-        console.log("DEBUG: Pharmacy stats fetched successfully:", { totalPrescriptions, pendingPrescriptions, dispensedPrescriptions, totalCustomers });
+        // Spec Section 5 Volume Tier Calculations for Pharmacy
+        const isSubscribed = !!activeSub;
+        let tierName = "Tier 1 (0–49 Orders)";
+        let commissionPct = 15;
+        let nextTierMin = 50;
+        let ordersToNextTier = Math.max(0, 50 - trailing30Orders);
+        let progressPct = Math.min(100, Math.round((trailing30Orders / 50) * 100));
+
+        if (isSubscribed) {
+          tierName = "Pharmacy Partner Plan (Pro Subscribed)";
+          commissionPct = activeSub.plan?.commissionRateOverride || 8;
+          nextTierMin = null;
+          ordersToNextTier = 0;
+          progressPct = 100;
+        } else if (trailing30Orders >= 200) {
+          tierName = "Tier 3 (200+ Orders)";
+          commissionPct = 10;
+          nextTierMin = null;
+          ordersToNextTier = 0;
+          progressPct = 100;
+        } else if (trailing30Orders >= 50) {
+          tierName = "Tier 2 (50–199 Orders)";
+          commissionPct = 12;
+          nextTierMin = 200;
+          ordersToNextTier = Math.max(0, 200 - trailing30Orders);
+          progressPct = Math.min(100, Math.round(((trailing30Orders - 50) / 150) * 100));
+        }
+
+        // Financial Earnings Calculation
+        let grossEarningsGHS = 0;
+        let platformFeesGHS = 0;
+
+        const formattedOrders = recentPrescriptions.map((rx) => {
+          const amountGHS = rx.totalCost || rx.priceGHS || 120;
+          const feeGHS = amountGHS * (commissionPct / 100);
+          const netPayoutGHS = amountGHS - feeGHS;
+
+          grossEarningsGHS += amountGHS;
+          platformFeesGHS += feeGHS;
+
+          return {
+            id: rx.id,
+            medicationName: rx.medicationName || rx.medicines || "Prescription Fulfillment",
+            patientName: rx.patient?.user ? `${rx.patient.user.firstName} ${rx.patient.user.lastName}`.trim() : "Patient",
+            dispatchStatus: rx.dispatchStatus,
+            createdAt: rx.createdAt,
+            amountGHS,
+            commissionPct,
+            platformFeeGHS: feeGHS,
+            netPayoutGHS
+          };
+        });
+
+        const netEarningsGHS = grossEarningsGHS - platformFeesGHS;
 
         res.json({
+          success: true,
           totalPrescriptions,
           pendingPrescriptions,
           dispensedPrescriptions,
-          totalCustomers
+          totalCustomers,
+          trailing30Orders,
+          grossEarningsGHS,
+          platformFeesGHS,
+          netEarningsGHS,
+          volumeTier: {
+            tierName,
+            commissionPct,
+            isSubscribed,
+            nextTierMin,
+            ordersToNextTier,
+            progressPct
+          },
+          recentOrders: formattedOrders
         });
     } catch (innerErr) {
         console.error("DEBUG: Inner error in pharmacy stats queries:", innerErr);
@@ -103,6 +205,67 @@ router.get("/stats", ...authenticatePharmacy, async (req, res) => {
   } catch (err) {
     console.error("Failed to fetch pharmacy stats:", err);
     res.status(500).json({ error: "Failed to fetch stats" });
+  }
+});
+
+/**
+ * POST /api/pharmacy/avatar (Upload/Replace Pharmacy Avatar/Logo)
+ */
+router.post("/avatar", upload.single("avatar"), async (req, res) => {
+  try {
+    const userId = req.user?.id || req.body?.userId;
+    if (!userId) return res.status(400).json({ error: "User identity missing" });
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file provided" });
+    }
+
+    let publicUrl;
+    if (supabase) {
+      const ext = req.file.originalname.split(".").pop() || "png";
+      const fileName = `pharmacy-${userId}-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true,
+        });
+
+      if (!uploadError) {
+        const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+        publicUrl = data.publicUrl;
+      } else {
+        console.warn("Supabase pharmacy avatar upload warning:", uploadError.message);
+      }
+    }
+    if (!publicUrl) {
+      publicUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+    }
+
+    // Save in DB
+    try {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "User" SET "avatarUrl" = $1 WHERE id = $2`,
+        publicUrl,
+        String(userId)
+      ).catch(() => {});
+      await prisma.$executeRawUnsafe(
+        `UPDATE "PharmacyProfile" SET "avatarUrl" = $1 WHERE "userId" = $2`,
+        publicUrl,
+        String(userId)
+      ).catch(() => {});
+    } catch (dbErr) {
+      console.warn("Could not update pharmacy avatar in db:", dbErr.message);
+    }
+
+    return res.json({
+      success: true,
+      avatarUrl: publicUrl,
+      message: "Pharmacy photo uploaded and saved successfully",
+    });
+  } catch (err) {
+    console.error("Pharmacy avatar upload error:", err);
+    return res.status(500).json({ error: "Internal server error during avatar upload" });
   }
 });
 
@@ -131,11 +294,6 @@ router.get("/profile", ...authenticatePharmacy, async (req, res) => {
     });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // (Optional) enforce role === PHARMACY
-    // if (user.role !== "PHARMACY") {
-    //   return res.status(400).json({ error: "User is not a PHARMACY role" });
-    // }
-
     // Get or create profile
     let profile = await prisma.pharmacyProfile.findUnique({
       where: { userId: String(userId) },
@@ -160,13 +318,31 @@ router.get("/profile", ...authenticatePharmacy, async (req, res) => {
       }).catch(() => {});
     }
 
+    const avatarRows = await prisma.$queryRawUnsafe(
+      `SELECT "avatarUrl" FROM "User" WHERE id = $1 LIMIT 1`,
+      String(userId)
+    ).catch(() => []);
+    const userAvatarUrl = avatarRows && avatarRows.length > 0 ? avatarRows[0].avatarUrl : null;
+
+    const pharmAvatarRows = await prisma.$queryRawUnsafe(
+      `SELECT "avatarUrl" FROM "PharmacyProfile" WHERE "userId" = $1 LIMIT 1`,
+      String(userId)
+    ).catch(() => []);
+    const pharmAvatarUrl = pharmAvatarRows && pharmAvatarRows.length > 0 ? pharmAvatarRows[0].avatarUrl : null;
+
+    const finalAvatar = pharmAvatarUrl || userAvatarUrl || profile?.avatarUrl || null;
     const statusVal = isApproved ? "VERIFIED" : (profile?.verificationStatus || "PENDING");
     const enrichedProfile = profile ? {
       ...profile,
+      avatarUrl: finalAvatar,
       referenceId: profile.referenceId,
       reference_id: profile.referenceId,
       verificationStatus: statusVal,
       verification_status: statusVal,
+      user: {
+        ...profile.user,
+        avatarUrl: finalAvatar,
+      }
     } : null;
 
     return res.json({ success: true, data: enrichedProfile });

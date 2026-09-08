@@ -5,6 +5,17 @@ const prisma = require("../prisma/prismaClient");
 const emailService = require("../services/emailService");
 const { parseAsLocal } = require("../utils/timeUtils");
 const { ensureDefaultProfile } = require("../lib/provisionProfile.js");
+const multer = require("multer");
+const { createClient } = require("@supabase/supabase-js");
+
+// Setup Supabase Client
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Setup Multer with Memory Storage
+const upload = multer({ storage: multer.memoryStorage() });
+
 const router = express.Router();
 
 // Apply RBAC to all doctor routes
@@ -177,6 +188,7 @@ router.get("/profile", async (req, res) => {
             dateOfBirth: true,
             gender: true,
             maritalStatus: true,
+            profileImage: true,
           },
         },
       },
@@ -195,15 +207,18 @@ router.get("/profile", async (req, res) => {
 });
 
 // PUT /api/doctor/profile (upsert)
-
-router.put("/profile", async (req, res) => {
+router.put("/profile", upload.single("profileImage"), async (req, res) => {
+  console.log("--- MULTIPART REQUEST ARRIVED ---");
+  console.log("req.file:", req.file);
+  console.log("req.body:", req.body);
+  
   try {
     const {
       userId,
-      firstName, // ✅ Extract Name
+      firstName, 
       middleName,
-      lastName, // ✅ Extract Name
-      phone, // ✅ Extract Phone
+      lastName, 
+      phone, 
       specialization,
       customProfession,
       qualifications,
@@ -211,78 +226,128 @@ router.put("/profile", async (req, res) => {
       hospitalAffiliation,
       yearsOfExperience,
       consultationFee,
-      availability, // JSON string or object
-      timezone, // String
+      availability, 
+      timezone, 
       bio,
-      languages, // JSON string or array
+      languages, 
       emergencyContact,
       emergencyContactName,
       emergencyContactEmail,
+      maritalStatus
     } = req.body || {};
 
     if (!userId) return res.status(400).json({ error: "userId is required" });
 
-    console.log(`[ProfileUpdate] Request received for userId: ${userId}, role: DOCTOR, timezone: ${timezone}`);
+    // ✅ Helper to securely parse fields from FormData string values
+    function parseField(value, type) {
+      if (value === undefined || value === "" || value === "null" || value === "undefined") return undefined;
+      if (type === "int") return parseInt(value, 10);
+      if (type === "float") return parseFloat(value);
+      if (type === "json") { try { return JSON.parse(value); } catch { return value; } }
+      if (type === "bool") return value === "true" || value === true;
+      return value;
+    }
 
-    // ✅ Update User fields (Name, Phone, MaritalStatus)
-    const userData = {
-      ...(firstName !== undefined && { firstName }),
-      ...(middleName !== undefined && { middleName }),
-      ...(lastName !== undefined && { lastName }),
-      ...(phone !== undefined && { phone }),
-      ...(req.body.maritalStatus !== undefined && { maritalStatus: req.body.maritalStatus }),
-    };
+    // ✅ Supabase Image Upload with Try/Catch
+    let profileImageUrl;
+    if (req.file) {
+      try {
+        const fileName = `${Date.now()}-${req.file.originalname}`;
+        const { data, error } = await supabase.storage
+          .from("avatars")
+          .upload(fileName, req.file.buffer, {
+            contentType: req.file.mimetype,
+            upsert: true
+          });
 
-    if (Object.keys(userData).length > 0) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: userData,
+        if (error) throw error;
+
+        const { data: publicUrlData } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(fileName);
+
+        profileImageUrl = publicUrlData.publicUrl;
+      } catch (uploadError) {
+        console.error("Supabase Upload Error:", uploadError);
+        return res.status(500).json({ error: `Supabase Upload Failed: ${uploadError.message || "Unknown error"}` });
+      }
+    }
+
+    // ✅ Prisma Database Update with Try/Catch
+    try {
+      const userData = {
+        ...(parseField(firstName, "string") !== undefined && { firstName: parseField(firstName, "string") }),
+        ...(parseField(middleName, "string") !== undefined && { middleName: parseField(middleName, "string") }),
+        ...(parseField(lastName, "string") !== undefined && { lastName: parseField(lastName, "string") }),
+        ...(parseField(phone, "string") !== undefined && { phone: parseField(phone, "string") }),
+        ...(parseField(maritalStatus, "string") !== undefined && { maritalStatus: parseField(maritalStatus, "string") }),
+        ...(profileImageUrl !== undefined && { profileImage: profileImageUrl }),
+      };
+
+      if (Object.keys(userData).length > 0) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: userData,
+        });
+      }
+
+      // Fields mapped perfectly to Prisma types for DoctorProfile
+      const doctorData = {
+        ...(parseField(specialization, "string") !== undefined && { specialization: parseField(specialization, "string") }),
+        ...(parseField(customProfession, "string") !== undefined && { customProfession: parseField(customProfession, "string") }),
+        ...(parseField(qualifications, "string") !== undefined && { qualifications: parseField(qualifications, "string") }),
+        ...(parseField(licenseNumber, "string") !== undefined && { licenseNumber: parseField(licenseNumber, "string") }),
+        ...(parseField(hospitalAffiliation, "string") !== undefined && { hospitalAffiliation: parseField(hospitalAffiliation, "string") }),
+        ...(parseField(yearsOfExperience, "int") !== undefined && { yearsOfExperience: parseField(yearsOfExperience, "int") }),
+        ...(parseField(consultationFee, "float") !== undefined && { consultationFee: parseField(consultationFee, "float") }),
+        ...(parseField(availability, "string") !== undefined && { availability: parseField(availability, "string") }),
+        ...(parseField(timezone, "string") !== undefined && { timezone: parseField(timezone, "string") }),
+        ...(parseField(bio, "string") !== undefined && { bio: parseField(bio, "string") }),
+        ...(parseField(languages, "string") !== undefined && { languages: parseField(languages, "string") }),
+        ...(parseField(emergencyContact, "string") !== undefined && { emergencyContact: parseField(emergencyContact, "string") }),
+        ...(parseField(emergencyContactName, "string") !== undefined && { emergencyContactName: parseField(emergencyContactName, "string") }),
+        ...(parseField(emergencyContactEmail, "string") !== undefined && { emergencyContactEmail: parseField(emergencyContactEmail, "string") }),
+      };
+
+      await prisma.doctorProfile.upsert({
+        where: { userId },
+        update: doctorData,
+        create: {
+          userId,
+          specialization: doctorData.specialization || "General Medicine",
+          qualifications: doctorData.qualifications || "MBBS",
+          licenseNumber: doctorData.licenseNumber || `LIC-${userId.slice(0, 8).toUpperCase()}`,
+          ...doctorData, 
+        },
       });
+
+      const fullProfile = await prisma.doctorProfile.findUnique({
+        where: { userId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+              dateOfBirth: true,
+              gender: true,
+              maritalStatus: true,
+              profileImage: true,
+            },
+          },
+        },
+      });
+
+      return res.json({ data: fullProfile });
+    } catch (prismaError) {
+      console.error("Prisma Database Error:", prismaError);
+      return res.status(500).json({ error: `Prisma Database Error: ${prismaError.message || "Unknown error"}` });
     }
-
-    const doctorData = {
-      ...(specialization !== undefined && { specialization }),
-      ...(customProfession !== undefined && { customProfession }),
-      ...(qualifications !== undefined && { qualifications }),
-      ...(licenseNumber !== undefined && { licenseNumber }),
-      ...(hospitalAffiliation !== undefined && { hospitalAffiliation }),
-      ...(yearsOfExperience !== undefined && { yearsOfExperience: Number(yearsOfExperience) || 0 }),
-      ...(consultationFee !== undefined && { consultationFee: Number(consultationFee) || 0 }),
-      ...(availability !== undefined && { availability: typeof availability === 'string' ? availability : JSON.stringify(availability) }),
-      ...(timezone !== undefined && { timezone }),
-      ...(bio !== undefined && { bio }),
-      ...(languages !== undefined && { languages: Array.isArray(languages) ? JSON.stringify(languages) : languages }),
-      ...(emergencyContact !== undefined && { emergencyContact }),
-      ...(emergencyContactName !== undefined && { emergencyContactName }),
-      ...(emergencyContactEmail !== undefined && { emergencyContactEmail }),
-    };
-
-    const updated = await prisma.doctorProfile.upsert({
-      where: { userId },
-      update: doctorData,
-      create: {
-        userId,
-        specialization: specialization || "General Medicine",
-        qualifications: qualifications || "MBBS",
-        licenseNumber: licenseNumber || `LIC-${userId.slice(0, 8).toUpperCase()}`,
-        ...doctorData, // Override defaults with provided data
-      },
-    });
-
-    // Fetch updated user to get email for notification
-    const userForEmail = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-    if (userForEmail) {
-      emailService
-        .sendProfileUpdateConfirmation(userForEmail, "Doctor")
-        .catch((err) => console.error("Failed to send profile update email:", err));
-    }
-
-    return res.json({ data: updated });
   } catch (e) {
     console.error("❌ doctor profile PUT error:", e);
-    return res.status(500).json({ error: "Failed to save profile" });
+    return res.status(500).json({ error: `Server Error: ${e.message || "Unknown error"}` });
   }
 });
 

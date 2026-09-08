@@ -20,13 +20,55 @@ function deriveName(user) {
   return `User #${String(user.id).slice(0, 4)}`;
 }
 
+// Helper to fetch actual avatarUrl from User or DoctorProfile tables
+async function getUserAvatars(userIds) {
+  if (!userIds || userIds.length === 0) return {};
+  const uniqueIds = [...new Set(userIds.filter(Boolean).map(String))];
+  if (uniqueIds.length === 0) return {};
+  try {
+    const rows = await prisma.$queryRawUnsafe(
+      `SELECT u.id, u."avatarUrl" as "userAvatar", d."avatarUrl" as "doctorAvatar"
+       FROM "User" u
+       LEFT JOIN "DoctorProfile" d ON d."userId" = u.id
+       WHERE u.id = ANY($1::text[])`,
+      uniqueIds
+    );
+    const map = {};
+    for (const r of rows) {
+      map[r.id] = r.userAvatar || r.doctorAvatar || null;
+    }
+    return map;
+  } catch (err) {
+    console.error("Failed to fetch user avatars:", err);
+    return {};
+  }
+}
+
 // ✅ Get all contacts
 router.get(["/contacts", "/contacts/all"], verifyToken, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, firstName: true, lastName: true, role: true, email: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        email: true,
+        doctor: { select: { avatarUrl: true } },
+      },
     });
-    const data = users.map(u => ({ ...u, name: deriveName(u) }));
+
+    const userIds = users.map((u) => u.id);
+    const avatarMap = await getUserAvatars(userIds);
+
+    const data = users.map((u) => {
+      const realAvatar = avatarMap[u.id] || u.doctor?.avatarUrl || null;
+      return {
+        ...u,
+        name: deriveName(u),
+        avatarUrl: realAvatar,
+      };
+    });
     return res.json({ data });
   } catch (err) {
     console.error("❌ Failed to fetch contacts:", err);
@@ -41,12 +83,12 @@ router.get("/unread-count", verifyToken, async (req, res) => {
     const count = await prisma.message.count({
       where: { receiverId: userId, readAt: null },
     });
-    return res.json({ data: { count } });
+    return res.json({ count, data: { count } });
   } catch (err) {
     // If connection pool is busy/timeout, gracefully return count 0 without noisy crashes
     if (err.code === "P2024" || err.message?.includes("connection pool")) {
       console.warn("⚠️ Unread count connection pool busy, returning 0 fallback");
-      return res.json({ data: { count: 0 } });
+      return res.json({ count: 0, data: { count: 0 } });
     }
     console.error("❌ Unread count error:", err.message || err);
     return res.status(500).json({ error: "Failed to fetch unread count" });
@@ -69,6 +111,34 @@ router.patch("/:id/read", verifyToken, async (req, res) => {
   }
 });
 
+// ✅ Mark all unread messages from a contact as read
+router.patch("/read-all/:contactId", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user?.id || req.query.userId;
+    const { contactId } = req.params;
+
+    if (!userId || !contactId) {
+      return res.status(400).json({ error: "Missing userId or contactId" });
+    }
+
+    await prisma.message.updateMany({
+      where: {
+        receiverId: userId,
+        senderId: contactId,
+        readAt: null,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Failed to mark conversation as read:", err);
+    return res.status(500).json({ error: "Failed to mark conversation read" });
+  }
+});
+
 // ✅ Inbox
 router.get("/inbox", verifyToken, async (req, res) => {
   try {
@@ -78,14 +148,36 @@ router.get("/inbox", verifyToken, async (req, res) => {
       orderBy: [{ conversationId: "asc" }, { createdAt: "desc" }],
       distinct: ["conversationId"],
       include: {
-        sender: { select: { id: true, firstName: true, lastName: true, role: true, email: true } },
-        receiver: { select: { id: true, firstName: true, lastName: true, role: true, email: true } },
+        sender: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            email: true,
+            doctor: { select: { avatarUrl: true } },
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            email: true,
+            doctor: { select: { avatarUrl: true } },
+          },
+        },
       },
     });
 
-    const formatted = messages.map(m => {
+    const userIds = messages.flatMap((m) => [m.senderId, m.receiverId]);
+    const avatarMap = await getUserAvatars(userIds);
+
+    const formatted = messages.map((m) => {
       const isOutgoing = String(m.senderId) === String(userId);
       const otherUser = isOutgoing ? m.receiver : m.sender;
+      const avatar = (otherUser?.id && avatarMap[otherUser.id]) || otherUser?.doctor?.avatarUrl || null;
       return {
         id: m.id,
         conversationId: m.conversationId,
@@ -95,6 +187,8 @@ router.get("/inbox", verifyToken, async (req, res) => {
         contactId: otherUser?.id,
         contactName: deriveName(otherUser),
         contactRole: otherUser?.role,
+        contactAvatar: avatar,
+        avatarUrl: avatar,
         isOutgoing,
       };
     });
@@ -107,7 +201,7 @@ router.get("/inbox", verifyToken, async (req, res) => {
   }
 });
 
-// ✅ Chat History — FIXED (closing brace add ki)
+// ✅ Chat History
 router.get("/history/:targetId", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -118,14 +212,37 @@ router.get("/history/:targetId", verifyToken, async (req, res) => {
       where: { conversationId },
       orderBy: { createdAt: "asc" },
       include: {
-        sender: { select: { id: true, firstName: true, lastName: true, role: true } },
+        sender: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            doctor: { select: { avatarUrl: true } },
+          },
+        },
       },
     });
-    return res.json({ data: messages });
-  } catch (err) {                                          // ✅ Fix
+
+    const userIds = messages.map((m) => m.senderId);
+    const avatarMap = await getUserAvatars(userIds);
+
+    const formatted = messages.map((m) => {
+      const realAvatar = (m.sender?.id && avatarMap[m.sender.id]) || m.sender?.doctor?.avatarUrl || null;
+      return {
+        ...m,
+        sender: {
+          ...m.sender,
+          avatarUrl: realAvatar,
+        },
+      };
+    });
+
+    return res.json({ data: formatted });
+  } catch (err) {
     console.error("❌ Load chat history error:", err);
     return res.status(500).json({ error: "Failed to load chat history" });
-  }                                                        // ✅ Fix
+  }
 });
 
 // ✅ Send Message

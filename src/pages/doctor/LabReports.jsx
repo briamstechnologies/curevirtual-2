@@ -5,22 +5,26 @@ import { FaCheck, FaTimes, FaEye, FaFileMedical } from "react-icons/fa";
 import { toast } from "react-toastify";
 
 export default function LabReports() {
-  const [reports, setReports] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState(() => {
+    const cached = localStorage.getItem("cached_doctor_lab_reports");
+    return cached ? JSON.parse(cached) : [];
+  });
   const [reviewModal, setReviewModal] = useState(null);
   const [reviewNotes, setReviewNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const fetchReports = async () => {
     try {
-      setLoading(true);
       const res = await api.get("/doctor/lab-reports");
-      setReports(res.data?.data || []);
+      if (res.data?.data) {
+        setReports(res.data.data);
+        localStorage.setItem("cached_doctor_lab_reports", JSON.stringify(res.data.data));
+      } else {
+        setReports([]);
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to load lab reports");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -79,13 +83,7 @@ export default function LabReports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
-                {loading ? (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-sm text-[var(--text-soft)] animate-pulse">
-                      Loading reports...
-                    </td>
-                  </tr>
-                ) : reports.length === 0 ? (
+                {reports.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="px-6 py-12 text-center text-sm font-bold text-[var(--text-soft)] uppercase tracking-widest">
                       No reports available.

@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { FiMail, FiPhone, FiMapPin, FiUser, FiAward, FiCheckCircle, FiClock, FiActivity } from "react-icons/fi";
+import { FaCamera, FaSpinner } from "react-icons/fa";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
-import { toast } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function getInitials(name) {
   if (!name) return "L";
@@ -18,6 +20,8 @@ export default function ViewProfile() {
   const userId = localStorage.getItem("userId") || "";
   const fallbackName = localStorage.getItem("userName") || localStorage.getItem("name") || "Laboratory";
 
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
 
@@ -31,6 +35,11 @@ export default function ViewProfile() {
       });
       const data = res?.data?.data ?? null;
       setProfile(data);
+      const imgUrl = data?.avatarUrl || data?.user?.avatarUrl;
+      if (imgUrl) {
+        localStorage.setItem("userAvatar", imgUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+      }
     } catch (err) {
       console.error("Failed to load laboratory profile:", err);
       toast.error("Failed to load profile.");
@@ -43,8 +52,50 @@ export default function ViewProfile() {
     loadProfile();
   }, [loadProfile]);
 
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be under 5MB");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("avatar", file);
+      formData.append("userId", userId);
+
+      const res = await api.post("/laboratory/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data?.success && res.data?.avatarUrl) {
+        const newUrl = res.data.avatarUrl;
+        setProfile((prev) => ({
+          ...prev,
+          avatarUrl: newUrl,
+          user: { ...prev?.user, avatarUrl: newUrl },
+        }));
+        localStorage.setItem("userAvatar", newUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+        toast.success("Laboratory logo/photo updated successfully!");
+      } else {
+        toast.error("Failed to upload image");
+      }
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      toast.error(err.response?.data?.error || "Error uploading image");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const displayName = profile?.displayName || fallbackName;
   const email = profile?.user?.email || localStorage.getItem("email") || "—";
+  const currentAvatar = profile?.avatarUrl || profile?.user?.avatarUrl;
   const addressLine = [
     profile?.address,
     profile?.city,
@@ -70,9 +121,9 @@ export default function ViewProfile() {
           </div>
           <Link
             to="/laboratory/profile"
-            className="btn btn-primary bg-gradient-to-r from-[var(--brand-purple)] to-[var(--brand-blue)] border-none rounded-2xl px-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+            className="btn btn-primary flex items-center gap-2 px-6 py-4 shadow-lg shadow-purple-500/20 font-black uppercase text-xs tracking-wider"
           >
-            Edit Profile
+            <FaEdit /> Update Profile
           </Link>
         </div>
 
@@ -88,9 +139,41 @@ export default function ViewProfile() {
             <>
               {/* TOP */}
               <div className="flex flex-col md:flex-row md:items-center gap-6 mb-10">
-                {/* AVATAR */}
-                <div className="w-24 h-24 rounded-3xl bg-gradient-to-r from-[var(--brand-purple)] to-[var(--brand-blue)] flex items-center justify-center text-white text-3xl font-black shadow-xl">
-                  {getInitials(displayName)}
+                {/* AVATAR WITH UPLOAD */}
+                <div
+                  className="relative w-24 h-24 group cursor-pointer shrink-0"
+                  onClick={() => !uploading && fileInputRef.current?.click()}
+                  title="Click to upload/change laboratory photo"
+                >
+                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-r from-[var(--brand-purple)] to-[var(--brand-blue)] flex items-center justify-center text-white text-3xl font-black shadow-xl overflow-hidden border-2 border-purple-500/30">
+                    {currentAvatar ? (
+                      <img src={currentAvatar} alt="Lab Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      getInitials(displayName)
+                    )}
+                  </div>
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 rounded-3xl bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    {uploading ? (
+                      <FaSpinner className="text-white text-xl animate-spin" />
+                    ) : (
+                      <div className="flex flex-col items-center text-white text-[9px] font-bold">
+                        <FaCamera className="text-base mb-0.5" />
+                        <span>Change</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Camera Badge */}
+                  <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-md border border-white">
+                    {uploading ? <FaSpinner className="text-[10px] animate-spin" /> : <FaCamera className="text-xs" />}
+                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                  />
                 </div>
 
                 {/* INFO */}

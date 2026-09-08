@@ -64,8 +64,8 @@ api.interceptors.response.use(
 
     // Handle expired tokens globally
     if (error.response.status === 401) {
-      // Check if it's an actual expiration error
-      const isExpired = error.response.data?.isExpired || error.response.data?.message?.includes("expired");
+      // Check if it's an actual expiration error signal from backend
+      const isExpired = error.response.data?.isExpired === true || error.response.data?.message === "jwt expired";
 
       if (isExpired) {
         console.warn("🔒 Token expired — clearing auth data and redirecting");

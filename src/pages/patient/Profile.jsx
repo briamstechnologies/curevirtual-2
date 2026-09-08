@@ -58,36 +58,70 @@ export default function PatientProfile() {
   const { updateUser } = useUser();
   const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "Patient";
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    referenceId: "",
-    firstName: "",
-    middleName: "",
-    lastName: "",
-    phone: "",
-    dateOfBirth: "",
-    gender: "OTHER",
-    bloodGroup: "UNKNOWN",
-    height: "",
-    heightUnit: "cm", // Default
-    weight: "",
-    weightUnit: "kg", // Default
-    allergies: "",
-    medications: "",
-    medicalHistory: "",
-    address: "",
-    emergencyContact: "",
-    emergencyContactName: "",
-    emergencyContactEmail: "",
-    medicalRecordNumber: "",
-    insuranceProvider: "",
-    insuranceMemberId: "",
+  const [form, setForm] = useState(() => {
+    const cached = localStorage.getItem("cached_patient_profile");
+    if (cached) {
+      try {
+        const p = JSON.parse(cached);
+        return {
+          referenceId: p.referenceId || "",
+          firstName: p.user?.firstName || "",
+          middleName: p.user?.middleName || "",
+          lastName: p.user?.lastName || "",
+          phone: p.user?.phone || "",
+          dateOfBirth: p.dateOfBirth ? new Date(p.dateOfBirth).toISOString().slice(0, 10) : "",
+          gender: p.gender || "OTHER",
+          bloodGroup: normalizeIncomingBloodGroup(p.bloodGroup),
+          height: p.height ?? "",
+          heightUnit: p.heightUnit || "cm",
+          weight: p.weight ?? "",
+          weightUnit: p.weightUnit || "kg",
+          allergies: p.allergies || "",
+          medications: p.medications || "",
+          medicalHistory: p.medicalHistory || "",
+          address: p.address || "",
+          emergencyContact: p.emergencyContact || "",
+          emergencyContactName: p.emergencyContactName || "",
+          emergencyContactEmail: p.emergencyContactEmail || "",
+          medicalRecordNumber: p.medicalRecordNumber || "",
+          insuranceProvider: p.insuranceProvider || "",
+          insuranceMemberId: p.insuranceMemberId || "",
+        };
+      } catch (e) {
+        // Fallback below
+      }
+    }
+    return {
+      referenceId: "",
+      firstName: "",
+      middleName: "",
+      lastName: "",
+      phone: "",
+      dateOfBirth: "",
+      gender: "OTHER",
+      bloodGroup: "UNKNOWN",
+      height: "",
+      heightUnit: "cm",
+      weight: "",
+      weightUnit: "kg",
+      allergies: "",
+      medications: "",
+      medicalHistory: "",
+      address: "",
+      emergencyContact: "",
+      emergencyContactName: "",
+      emergencyContactEmail: "",
+      medicalRecordNumber: "",
+      insuranceProvider: "",
+      insuranceMemberId: "",
+    };
   });
+  const [loading, setLoading] = useState(() => !localStorage.getItem("cached_patient_profile"));
+  const [saving, setSaving] = useState(false);
 
   const loadProfile = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!localStorage.getItem("cached_patient_profile")) setLoading(true);
       const res = await api.get("/patient/profile", { params: { userId } });
       const p = res.data?.data;
       if (p) {
@@ -115,9 +149,10 @@ export default function PatientProfile() {
           insuranceProvider: p.insuranceProvider || "",
           insuranceMemberId: p.insuranceMemberId || "",
         });
+        localStorage.setItem("cached_patient_profile", JSON.stringify(p));
       }
     } catch {
-      toast.error("Complete your profile configuration.");
+      toast.error("Profile Registry Failure: Data not found.");
     } finally {
       setLoading(false);
     }

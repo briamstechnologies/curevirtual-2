@@ -361,22 +361,28 @@ export default function PharmacyPrescriptions() {
   }, [urlStatus]);
 
   const filteredList = useMemo(() => {
-    return list.filter((item) => {
-      if (status && status !== "") {
-        const itemStatus = (item.dispatchStatus || "").toUpperCase();
-        const targetStatus = status.toUpperCase();
-        if (targetStatus === "INCOMING") {
-          if (itemStatus !== "SENT" && itemStatus !== "PENDING") return false;
-        } else if (itemStatus !== targetStatus) {
-          return false;
-        }
-      }
+    const arr = Array.isArray(list) ? list : [];
+    return arr.filter((item) => {
+      if (!item) return false;
+      const st = item.dispatchStatus || "NONE";
+      const matchStatus = !status
+        ? true
+        : status === "INCOMING"
+          ? ["NONE", "SENT"].includes(st)
+          : st === status;
+      if (!matchStatus) return false;
 
-      if (searchQuery.trim() !== "") {
-        const q = searchQuery.toLowerCase().trim();
-        const patientName = `${item.patient?.user?.firstName || ""} ${item.patient?.user?.lastName || ""}`.toLowerCase();
-        const doctorName = `${item.doctor?.user?.firstName || ""} ${item.doctor?.user?.lastName || ""}`.toLowerCase();
-        const med = (item.medication || "").toLowerCase();
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const patientName = [item.patient?.user?.firstName, item.patient?.user?.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        const doctorName = [item.doctor?.user?.firstName, item.doctor?.user?.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        const med = String(item.medication || "").toLowerCase();
         return patientName.includes(q) || doctorName.includes(q) || med.includes(q);
       }
 
@@ -392,7 +398,8 @@ export default function PharmacyPrescriptions() {
       const res = await api.get("/pharmacy/prescriptions", {
         params: { userId, status: backendStatus || undefined },
       });
-      setList(res.data?.data || []);
+      const rawData = res.data?.data ?? res.data;
+      setList(Array.isArray(rawData) ? rawData : []);
     } catch (e) {
       toast.error("Failed to load prescriptions.");
     } finally {

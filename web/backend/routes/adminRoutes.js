@@ -115,28 +115,42 @@ router.get("/dashboard", async (req, res) => {
     };
 
     const [
-      totalUsers,
-      totalDoctors,
-      totalPatients,
-      totalSupport,
-      totalAdmins,
+      userRoleSummary,
       totalSubscriptions,
       totalMessages,
       totalTickets,
       totalConsultations,
       totalPrescriptions,
     ] = await Promise.all([
-      safeCount(() => prisma.user.count()),
-      safeCount(() => prisma.user.count({ where: { role: "DOCTOR" } })),
-      safeCount(() => prisma.user.count({ where: { role: "PATIENT" } })),
-      safeCount(() => prisma.user.count({ where: { role: "SUPPORT" } })),
-      safeCount(() => prisma.user.count({ where: { role: "ADMIN" } })),
+      safeCount(() =>
+        prisma.user.groupBy({
+          by: ["role"],
+          _count: { _all: true },
+        })
+      ),
       safeCount(() => prisma.subscription.count({ where: { status: "ACTIVE" } })),
       safeCount(() => prisma.message.count()),
       safeCount(() => prisma.supportTicket.count()),
       safeCount(() => prisma.videoConsultation.count()),
       safeCount(() => prisma.prescription.count()),
     ]);
+
+    let totalUsers = 0;
+    let totalDoctors = 0;
+    let totalPatients = 0;
+    let totalSupport = 0;
+    let totalAdmins = 0;
+
+    if (Array.isArray(userRoleSummary)) {
+      userRoleSummary.forEach((group) => {
+        const count = group._count?._all || 0;
+        totalUsers += count;
+        if (group.role === "DOCTOR") totalDoctors = count;
+        else if (group.role === "PATIENT") totalPatients = count;
+        else if (group.role === "SUPPORT") totalSupport = count;
+        else if (group.role === "ADMIN") totalAdmins = count;
+      });
+    }
 
     res.json({
       totalUsers,

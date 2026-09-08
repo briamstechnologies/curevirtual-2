@@ -4,15 +4,20 @@ import api from "../../Lib/api";
 import { toast } from "react-toastify";
 
 export default function MedicationTracker() {
-  const [medications, setMedications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [medications, setMedications] = useState(() => {
+    const cached = localStorage.getItem("cached_patient_medications_today");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(!medications.length);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newMed, setNewMed] = useState({ name: "", dose: "", time: "08:00 AM", days: "Mon, Tue, Wed, Thu, Fri, Sat, Sun" });
 
   const fetchMeds = async () => {
     try {
+      if (!medications.length) setLoading(true);
       const res = await api.get("/patient/medications/today");
       setMedications(res.data.data || []);
+      localStorage.setItem("cached_patient_medications_today", JSON.stringify(res.data.data || []));
     } catch (e) {
       console.error("Failed to fetch meds", e);
     } finally {

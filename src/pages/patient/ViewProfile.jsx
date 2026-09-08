@@ -1,10 +1,11 @@
 // FILE: src/pages/patient/ViewProfile.jsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
 import { ToastContainer, toast } from "react-toastify";
 import EditProfileModal from "./EditProfileModal";
 import "react-toastify/dist/ReactToastify.css";
+import { FaCamera, FaSpinner } from "react-icons/fa";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -49,7 +50,10 @@ export default function PatientViewProfile() {
   const userId = localStorage.getItem("userId") || "";
   const userName = localStorage.getItem("userName") || localStorage.getItem("name") || "Patient";
 
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(localStorage.getItem("userAvatar") || null);
   const [profile, setProfile] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof window !== "undefined" ? navigator.onLine : true);
@@ -77,7 +81,14 @@ export default function PatientViewProfile() {
     try {
       setLoading(true);
       const res = await api.get("/patient/profile", { params: { userId } });
-      setProfile(res.data?.data || null);
+      const data = res.data?.data || null;
+      setProfile(data);
+      if (data?.avatarUrl || data?.user?.avatarUrl) {
+        const url = data.avatarUrl || data.user.avatarUrl;
+        setAvatarUrl(url);
+        localStorage.setItem("userAvatar", url);
+        window.dispatchEvent(new Event("avatarUpdated"));
+      }
     } catch {
       toast.error("Failed to load profile.");
     } finally {
@@ -91,6 +102,43 @@ export default function PatientViewProfile() {
 
   const handleProfileUpdate = (updatedProfile) => {
     setProfile(updatedProfile);
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be under 5MB");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("avatar", file);
+      formData.append("userId", userId);
+
+      const res = await api.post("/patient/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data?.success && res.data?.avatarUrl) {
+        const newUrl = res.data.avatarUrl;
+        setAvatarUrl(newUrl);
+        localStorage.setItem("userAvatar", newUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
+        toast.success("Profile photo updated successfully!");
+      } else {
+        toast.error("Failed to update profile photo");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || "Error uploading image");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -125,16 +173,69 @@ export default function PatientViewProfile() {
               {/* Header strip with avatar + basic info */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 border-b border-[var(--border)] pb-8 mb-8">
                 <div className="flex items-center gap-6">
-                  <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-tr from-[var(--brand-green)] to-[var(--brand-blue)] flex items-center justify-center text-3xl font-black text-[var(--text-main)] shadow-xl">
-                    {getInitials(displayName)}
+                  {/* Avatar with Upload Capability */}
+                  <div
+                    className="relative group cursor-pointer flex-shrink-0"
+                    onClick={() => !uploading && fileInputRef.current?.click()}
+                    title="Click to upload/change photo"
+                  >
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={displayName}
+                        className="w-24 h-24 rounded-[2rem] object-cover shadow-xl border-2 border-[var(--brand-green)]"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-tr from-[var(--brand-green)] to-[var(--brand-blue)] flex items-center justify-center text-3xl font-black text-[var(--text-main)] shadow-xl">
+                        {getInitials(displayName)}
+                      </div>
+                    )}
+
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 rounded-[2rem] bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      {uploading ? (
+                        <FaSpinner className="text-white text-xl animate-spin" />
+                      ) : (
+                        <div className="flex flex-col items-center text-white text-[10px] font-bold">
+                          <FaCamera className="text-lg mb-0.5" />
+                          <span>Change</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Floating badge */}
+                    <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[var(--brand-green)] text-white flex items-center justify-center shadow-lg border-2 border-white">
+                      {uploading ? (
+                        <FaSpinner className="text-xs animate-spin" />
+                      ) : (
+                        <FaCamera className="text-xs" />
+                      )}
+                    </div>
+
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                    />
                   </div>
+
                   <div>
                     <div className="text-2xl font-black text-[var(--text-main)] tracking-tight">
                       {displayName}
                     </div>
                     <div className="text-[10px] font-black uppercase tracking-widest text-[var(--brand-blue)] mt-1 flex items-center gap-1.5">
-                      <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500"} inline-block`}></span>
-                      MRN Protocol: {profile.referenceId || profile.medicalRecordNumber || `PAK-PT-${String(profile.id || "").slice(0, 6).toUpperCase()}`} • {isOnline ? "ONLINE (ACTIVE)" : "OFFLINE (DISCONNECTED)"}
+                      <span
+                        className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500"} inline-block`}
+                      ></span>
+                      MRN Protocol:{" "}
+                      {profile.referenceId ||
+                        profile.medicalRecordNumber ||
+                        `PAK-PT-${String(profile.id || "")
+                          .slice(0, 6)
+                          .toUpperCase()}`}{" "}
+                      • {isOnline ? "ONLINE (ACTIVE)" : "OFFLINE (DISCONNECTED)"}
                     </div>
                   </div>
                 </div>
@@ -217,7 +318,12 @@ export default function PatientViewProfile() {
                     {[
                       {
                         label: "Medical Record Number",
-                        value: profile.referenceId || profile.medicalRecordNumber || `PAK-PT-${String(profile.id || "").slice(0, 6).toUpperCase()}`,
+                        value:
+                          profile.referenceId ||
+                          profile.medicalRecordNumber ||
+                          `PAK-PT-${String(profile.id || "")
+                            .slice(0, 6)
+                            .toUpperCase()}`,
                       },
                       {
                         label: "Insurance Provider",

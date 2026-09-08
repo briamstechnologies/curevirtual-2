@@ -1,21 +1,76 @@
 // FILE: src/pages/patient/MyAppointments.jsx
 import { useCallback, useEffect, useState, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import api from "../../Lib/api";
-import { FaPlusCircle, FaTrash, FaVideo, FaEdit, FaPhoneAlt, FaSpinner } from "react-icons/fa";
+import {
+  FaPlusCircle,
+  FaTrash,
+  FaVideo,
+  FaCalendarAlt,
+  FaClock,
+  FaEllipsisH,
+  FaCheckCircle,
+  FaPhoneAlt,
+  FaSpinner,
+  FaInfoCircle,
+  FaTimes,
+  FaSync,
+} from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { formatLiteralDateTime } from "../../Lib/timeUtils";
-
-// Use the same component as BookAppointment for consistent slot logic
 import BookingSlots from "../../components/BookingSlots";
-
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import CheckoutForm from "../../components/CheckoutForm";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+
+function getInitials(name) {
+  if (!name) return "DR";
+  const parts = String(name).trim().split(/\s+/);
+  const first = parts[0]?.[0] || "";
+  const last = parts[1]?.[0] || "";
+  return (first + last).toUpperCase() || "DR";
+}
+
+function formatDateFormatted(dateStr) {
+  if (!dateStr) return "Scheduled";
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const isToday =
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear();
+
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const isTomorrow =
+      d.getDate() === tomorrow.getDate() &&
+      d.getMonth() === tomorrow.getMonth() &&
+      d.getFullYear() === tomorrow.getFullYear();
+
+    const monthDay = d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+
+    if (isToday) return `Today, ${monthDay}`;
+    if (isTomorrow) return `Tomorrow, ${monthDay}`;
+    return monthDay;
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatTimeFormatted(dateStr) {
+  if (!dateStr) return "TBD";
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
+  } catch {
+    return dateStr;
+  }
+}
 
 export default function MyAppointments() {
   const role = "PATIENT";
@@ -33,15 +88,17 @@ export default function MyAppointments() {
   const [rescheduleId, setRescheduleId] = useState(null);
   const [joiningCallId, setJoiningCallId] = useState(null);
   const [paymentClientSecret, setPaymentClientSecret] = useState(null);
+  const [activeTab, setActiveTab] = useState("UPCOMING"); // UPCOMING | PAST | CANCELLED
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [selectedApptDetail, setSelectedApptDetail] = useState(null);
 
-  // Track previous callStatus to detect transitions
   const prevCallStatuses = useRef({});
+  const todayStr = new Date().toISOString().split("T")[0];
 
-  // Updated state for slot-based booking
   const [form, setForm] = useState({
     doctorId: "",
-    appointmentDate: "", // Selected Date (YYYY-MM-DD)
-    selectedSlotId: "", // ID of the chosen slot
+    appointmentDate: todayStr,
+    selectedSlotId: "",
     reason: "",
   });
 
@@ -54,7 +111,7 @@ export default function MyAppointments() {
       const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
       setAppointments(data);
     } catch (err) {
-      console.error("❌ Error loading appointments:", err);
+      console.error("Error loading appointments:", err);
       toast.error("Failed to load appointments");
     } finally {
       setLoading(false);
@@ -63,37 +120,65 @@ export default function MyAppointments() {
 
   const loadDoctors = useCallback(async () => {
     try {
-      const res = await api.get("/patient/doctors/all");
+      const res = await api.get("/patient/doctors", { params: { patientUserId } });
       const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
-      setDoctors(
-        list.map((d) => ({
-          id: d.id,
-          name: d.user
-            ? `${d.user.firstName} ${d.user.lastName}`.trim() || "Unnamed Doctor"
-            : "Unnamed Doctor",
-          specialization: d.specialization || "General",
-        }))
-      );
+      if (list.length > 0) {
+        setDoctors(
+          list.map((d) => ({
+            id: d.id,
+            name: d.user
+              ? `Dr. ${d.user.firstName} ${d.user.lastName}`.trim()
+              : "Doctor",
+            specialization: d.specialization || "General Physician",
+          }))
+        );
+      } else {
+        const allRes = await api.get("/patient/doctors/all");
+        const allList = Array.isArray(allRes.data) ? allRes.data : allRes.data?.data || [];
+        setDoctors(
+          allList.map((d) => ({
+            id: d.id,
+            name: d.user
+              ? `Dr. ${d.user.firstName} ${d.user.lastName}`.trim()
+              : "Doctor",
+            specialization: d.specialization || "General Physician",
+          }))
+        );
+      }
     } catch (err) {
       console.error("Error loading doctors:", err);
-      toast.error("Failed to load doctors");
     }
-  }, []);
+  }, [patientUserId]);
 
   useEffect(() => {
-    if (patientUserId) fetchAppointments();
-  }, [fetchAppointments, patientUserId]);
+    if (patientUserId && !location.state?.prefillDoctorId) {
+      fetchAppointments();
+      loadDoctors();
+    } else if (patientUserId) {
+      fetchAppointments();
+    }
+  }, [fetchAppointments, loadDoctors, location.state, patientUserId]);
 
   useEffect(() => {
     if (location.state?.prefillDoctorId) {
+      const prefillId = location.state.prefillDoctorId;
+      const prefillName = location.state.prefillDoctorName || "Doctor";
+      const prefillSpec = location.state.prefillDoctorSpec || "General Physician";
+
+      // Set ONLY the selected doctor so NO OTHER doctor appears in the dropdown!
+      setDoctors([{ id: prefillId, name: prefillName, specialization: prefillSpec }]);
+      setForm((prev) => ({
+        ...prev,
+        doctorId: prefillId,
+        appointmentDate: todayStr,
+        selectedSlotId: "",
+      }));
       setBookOpen(true);
-      setForm((prev) => ({ ...prev, doctorId: location.state.prefillDoctorId }));
-      // Clear the state so refreshing doesn't reopen it
       window.history.replaceState({}, document.title);
     }
-  }, [location.state]);
+  }, [location.state, todayStr]);
 
-  // ========== POLLING: Check callStatus every 5 seconds ==========
+  // Polling: Check callStatus every 5 seconds
   useEffect(() => {
     const approvedIds = appointments
       .filter((a) => a.status === "APPROVED" && (a.callStatus || "idle") !== "ended")
@@ -116,7 +201,6 @@ export default function MyAppointments() {
               const newStatus = match.value.data.callStatus;
               const oldStatus = prevCallStatuses.current[a.id] || a.callStatus || "idle";
 
-              // Detect transition to "requested" — show notification
               if (oldStatus !== "requested" && newStatus === "requested") {
                 toast.info("📞 Doctor is calling you! Click Join to connect.", {
                   autoClose: false,
@@ -130,47 +214,49 @@ export default function MyAppointments() {
             return a;
           })
         );
-      } catch (err) {
+      } catch {
         // Silent polling failure
       }
     };
 
-    // Run once immediately
     pollStatuses();
-
     const interval = setInterval(pollStatuses, 5000);
     return () => clearInterval(interval);
   }, [appointments.length]);
 
-  // Handle slot selection from BookingSlots component
   const handleSlotSelect = (slot) => {
-    setForm((prev) => ({ ...prev, selectedSlotId: slot.id }));
+    const slotId = slot?.id || slot?.startTime || slot;
+    setForm((prev) => ({ ...prev, selectedSlotId: slotId }));
   };
 
   const handleUpdate = (appt) => {
+    const docObj = appt.doctor;
+    const docName = docObj?.user
+      ? `Dr. ${docObj.user.firstName} ${docObj.user.lastName}`.trim()
+      : appt.doctorName || "Doctor";
+    const docSpec = docObj?.specialization || "General Physician";
+
     setRescheduleId(appt.id);
-    setForm((prev) => ({
-      ...prev,
+    setDoctors([{ id: appt.doctorId, name: docName, specialization: docSpec }]);
+    setForm({
       doctorId: appt.doctorId,
-      appointmentDate: "",
+      appointmentDate: todayStr,
       selectedSlotId: "",
       reason: appt.reason || "",
-    }));
-    loadDoctors().then(() => setBookOpen(true));
+    });
+    setBookOpen(true);
   };
 
   const handleInitializeBooking = async (e) => {
     e.preventDefault();
-
     if (!form.selectedSlotId) {
       toast.error("Please select an available time slot");
       return;
     }
 
     try {
-      // Use the robust slot booking endpoint that handles locking and validation
       await api.post("/schedule/book", {
-        startTime: form.selectedSlotId, // ID is now ISO time
+        startTime: form.selectedSlotId,
         doctorId: form.doctorId,
         patientId: patientUserId,
         reason: form.reason || "Patient Booking",
@@ -185,7 +271,7 @@ export default function MyAppointments() {
 
       setBookOpen(false);
       setRescheduleId(null);
-      setForm({ doctorId: "", appointmentDate: "", selectedSlotId: "", reason: "" });
+      setForm({ doctorId: "", appointmentDate: todayStr, selectedSlotId: "", reason: "" });
       await fetchAppointments();
     } catch (err) {
       console.error("Booking error:", err);
@@ -193,17 +279,10 @@ export default function MyAppointments() {
     }
   };
 
-
-
-  const handlePaymentSuccess = () => {
-    toast.success("Payment completed successfully!");
-    setPaymentClientSecret(null);
-    fetchAppointments(); // Refresh statuses
-  };
-
   const askCancel = (id) => {
     setToCancelId(id);
     setConfirmOpen(true);
+    setOpenDropdownId(null);
   };
 
   const confirmCancel = async () => {
@@ -220,425 +299,407 @@ export default function MyAppointments() {
     }
   };
 
-  // ========== NEW: Join Video Call via API ==========
-  const handleJoinCall = async (appt) => {
-    try {
-      setJoiningCallId(appt.id);
-
-      const res = await api.post(`/appointments/${appt.id}/join-call`);
-
-      if (res.data.success) {
-        toast.success("Joining video session...");
-        // Dismiss the call notification toast
-        toast.dismiss(`call-${appt.id}`);
-        navigate(`/call/${appt.id}`);
-      }
-    } catch (err) {
-      const msg = err.response?.data?.error || "Failed to join call";
-      toast.error(msg);
-    } finally {
-      setJoiningCallId(null);
+  // Filter appointments by active tab
+  const filteredAppointments = appointments.filter((a) => {
+    if (activeTab === "UPCOMING") {
+      return a.status !== "CANCELLED" && a.status !== "COMPLETED";
     }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "APPROVED":
-        return "bg-green-500/20 text-green-500 border border-green-500/30";
-      case "PENDING":
-        return "bg-orange-500/20 text-orange-500 border border-orange-500/30";
-      case "COMPLETED":
-        return "bg-blue-500/20 text-blue-500 border border-blue-500/30";
-      case "CANCELLED":
-        return "bg-red-500/20 text-red-500 border border-red-500/30";
-      default:
-        return "bg-gray-500/20 text-gray-500 border border-gray-500/30";
+    if (activeTab === "PAST") {
+      return a.status === "COMPLETED";
     }
-  };
-
-  // Render video/call button based on callStatus
-  const renderCallButton = (appt) => {
-    // Allow joining for all active statuses during testing
-    if (["CANCELLED", "COMPLETED"].includes(appt.status)) return null;
-
-    const cs = (appt.callStatus || "idle").toLowerCase();
-    const isJoining = joiningCallId === appt.id;
-
-    switch (cs) {
-      case "idle":
-        return (
-          <button
-            disabled
-            className="p-2 rounded-xl bg-gray-500/10 text-gray-500 cursor-not-allowed opacity-50"
-            title="Waiting for doctor to start the session"
-          >
-            <FaVideo size={14} />
-          </button>
-        );
-      case "requested":
-        return (
-          <button
-            onClick={() => handleJoinCall(appt)}
-            disabled={isJoining}
-            className="p-2 rounded-xl bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white transition-all animate-pulse ring-2 ring-green-500/30"
-            title="Doctor is calling — Join Video Call"
-          >
-            {isJoining ? (
-              <FaSpinner size={14} className="animate-spin" />
-            ) : (
-              <FaPhoneAlt size={14} />
-            )}
-          </button>
-        );
-      case "active":
-        return (
-          <button
-            onClick={() => navigate(`/call/${appt.id}`)}
-            className="p-2 rounded-xl bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white transition-all"
-            title="Rejoin Active Session"
-          >
-            <FaVideo size={14} />
-          </button>
-        );
-      case "ended":
-        return (
-          <button
-            disabled
-            className="p-2 rounded-xl bg-gray-500/10 text-gray-500 cursor-not-allowed opacity-50"
-            title="Session ended"
-          >
-            <FaVideo size={14} />
-          </button>
-        );
-      default:
-        return null;
+    if (activeTab === "CANCELLED") {
+      return a.status === "CANCELLED";
     }
-  };
-
-  // Render inline call notification banner
-  const renderCallBanner = (appt) => {
-    const cs = (appt.callStatus || "idle").toLowerCase();
-    if (["CANCELLED", "COMPLETED"].includes(appt.status)) return null;
-
-    switch (cs) {
-      case "idle":
-        return (
-          <div className="text-[9px] font-black uppercase tracking-widest text-gray-500 mt-1">
-            Awaiting doctor
-          </div>
-        );
-      case "requested":
-        return (
-          <div className="text-[9px] font-black uppercase tracking-widest text-green-400 mt-1 animate-pulse flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
-            Doctor is calling...
-          </div>
-        );
-      case "active":
-        return (
-          <div className="text-[9px] font-black uppercase tracking-widest text-green-400 mt-1 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            In session
-          </div>
-        );
-      case "ended":
-        return (
-          <div className="text-[9px] font-black uppercase tracking-widest text-gray-500 mt-1">
-            Session ended
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
+    return true;
+  });
 
   return (
     <DashboardLayout role={role} user={{ name: userName }}>
-      <div className="space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <ToastContainer position="top-right" autoClose={3000} />
+      <div className="w-full space-y-6 pb-12 font-body px-1 sm:px-2 md:px-4">
+        {/* HEADER SECTION */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
           <div>
-            <h2 className="text-[10px] font-black text-[var(--brand-orange)] uppercase tracking-[0.3em] mb-1">
-              Clinical Schedule
-            </h2>
-            <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tighter">
+            <h1
+              className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight"
+              style={{ background: "none", WebkitTextFillColor: "#0f172a", textTransform: "none" }}
+            >
               My Appointments
             </h1>
+            <p className="text-xs sm:text-sm font-semibold text-[var(--text-soft)] mt-1">
+              View and manage your upcoming and past consultations.
+            </p>
           </div>
           <button
             onClick={async () => {
               await loadDoctors();
+              setForm((prev) => ({ ...prev, appointmentDate: todayStr }));
               setBookOpen(true);
             }}
-            className="btn btn-primary"
+            className="btn btn-primary !px-5 !py-3 !rounded-2xl !text-xs !normal-case flex items-center gap-2 shadow-lg shadow-emerald-500/20 shrink-0 self-start sm:self-auto"
           >
-            <FaPlusCircle /> Book New
+            <span className="material-symbols-outlined text-base">calendar_month</span>
+            <span>Book Appointment</span>
           </button>
         </div>
 
-        {/* Incoming Call Banner — shown at top when any appointment has a call request */}
+        {/* TAB FILTERS */}
+        <div className="flex items-center gap-2 border-b border-slate-200/80 pb-1">
+          {[
+            { id: "UPCOMING", label: "Upcoming" },
+            { id: "PAST", label: "Past" },
+            { id: "CANCELLED", label: "Cancelled" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2.5 font-bold text-xs sm:text-sm transition-all relative ${
+                activeTab === tab.id
+                  ? "text-[var(--brand-green)] border-b-2 border-[var(--brand-green)]"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* INFO BANNER */}
+        <div className="bg-sky-50/80 border border-sky-200/70 rounded-2xl p-4 flex items-center gap-3 text-sky-900 text-xs sm:text-sm font-semibold shadow-xs">
+          <FaInfoCircle className="text-sky-600 text-lg shrink-0" />
+          <span>Join becomes available 15 minutes before your visit.</span>
+        </div>
+
+        {/* INCOMING CALL BANNER */}
         {appointments.some((a) => a.status === "APPROVED" && a.callStatus === "requested") && (
-          <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-2xl animate-pulse">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <FaPhoneAlt className="text-green-400 animate-bounce" />
-                </div>
-                <div>
-                  <p className="text-sm font-black text-green-400 uppercase tracking-widest">
-                    Incoming Call
-                  </p>
-                  <p className="text-xs font-bold text-[var(--text-soft)]">
-                    Your doctor is waiting — click the phone icon below to join
-                  </p>
-                </div>
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl animate-pulse flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                <FaPhoneAlt className="text-emerald-600 animate-bounce" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-black text-emerald-800 uppercase tracking-wider">
+                  Incoming Doctor Call
+                </p>
+                <p className="text-xs font-medium text-emerald-700">
+                  Your doctor is waiting on video. Click Join to connect now!
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        <div className="card !p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[var(--bg-main)]/50 border-b border-[var(--border)]">
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Doctor
-                  </th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Specialization
-                  </th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Date
-                  </th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] text-center">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border)]">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan="5"
-                      className="px-6 py-12 text-center text-sm font-bold text-[var(--text-soft)]"
-                    >
-                      Loading appointments...
-                    </td>
-                  </tr>
-                ) : appointments.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan="5"
-                      className="px-6 py-12 text-center text-sm font-bold text-[var(--text-soft)]"
-                    >
-                      No appointments found.
-                    </td>
-                  </tr>
-                ) : (
-                  appointments.map((a) => (
-                    <tr
-                      key={a.id}
-                      className={`hover:bg-[var(--bg-main)]/30 transition-colors ${
-                        a.callStatus === "requested" ? "bg-green-500/5" : ""
-                      }`}
-                    >
-                      <td className="px-6 py-4 text-sm font-black text-[var(--text-main)]">
-                        {a.doctor?.user
-                          ? `${a.doctor.user.firstName} ${a.doctor.user.lastName}`.trim()
-                          : "Unknown"}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-bold text-[var(--text-soft)]">
-                        {a.doctor?.specialization || "General"}
-                      </td>
-                      <td className="px-6 py-4">
-                        {a.appointmentDate ? (
-                          <div className="space-y-0.5">
-                            <div className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                              {new Date(a.appointmentDate).getUTCDay() === 0
-                                ? "Sunday"
-                                : new Date(a.appointmentDate).getUTCDay() === 1
-                                  ? "Monday"
-                                  : new Date(a.appointmentDate).getUTCDay() === 2
-                                    ? "Tuesday"
-                                    : new Date(a.appointmentDate).getUTCDay() === 3
-                                      ? "Wednesday"
-                                      : new Date(a.appointmentDate).getUTCDay() === 4
-                                        ? "Thursday"
-                                        : new Date(a.appointmentDate).getUTCDay() === 5
-                                          ? "Friday"
-                                          : "Saturday"}
-                            </div>
-                            <div className="text-xs font-mono font-bold text-[var(--brand-blue)]">
-                              {formatLiteralDateTime(a.appointmentDate)}
-                            </div>
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${getStatusColor(
-                            a.status
-                          )}`}
-                        >
-                          {a.status}
-                        </span>
-                        {renderCallBanner(a)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-center gap-3">
+        {/* APPOINTMENT CARDS LIST */}
+        <div className="space-y-4">
+          {loading ? (
+            <div className="card !p-12 flex flex-col items-center justify-center gap-3 text-center">
+              <div className="h-8 w-8 border-4 border-[var(--brand-green)]/20 border-t-[var(--brand-green)] rounded-full animate-spin" />
+              <p className="text-xs font-bold text-slate-500">Loading appointments...</p>
+            </div>
+          ) : filteredAppointments.length === 0 ? (
+            <div className="card !p-12 flex flex-col items-center justify-center gap-3 text-center bg-white rounded-3xl border border-slate-200/80">
+              <span className="material-symbols-outlined text-4xl text-slate-400">event_busy</span>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">No {activeTab.toLowerCase()} appointments</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  You don't have any appointments in this category right now.
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  await loadDoctors();
+                  setBookOpen(true);
+                }}
+                className="btn btn-primary !px-4 !py-2 !rounded-xl !text-xs !normal-case mt-2"
+              >
+                <span>Book an Appointment</span>
+              </button>
+            </div>
+          ) : (
+            filteredAppointments.map((appt) => {
+              const doc = appt.doctor;
+              const docUser = doc?.user;
+              const docName = docUser
+                ? `Dr. ${docUser.firstName} ${docUser.lastName}`
+                : appt.doctorName || "Dr. Medical Specialist";
+              const specialty = doc?.specialization || "General Physician";
+              const avatar = doc?.avatarUrl || docUser?.avatarUrl || null;
+              const isCalling = appt.callStatus === "requested";
 
-                          {/* Allow actions for all active statuses */}
-                          {!["CANCELLED", "COMPLETED"].includes(a.status) && (
-                            <>
-                              <button
-                                onClick={() => handleUpdate(a)}
-                                className="p-2 rounded-xl bg-[var(--brand-blue)]/10 text-[var(--brand-blue)] hover:bg-[var(--brand-blue)] hover:text-white transition-all"
-                                title="Reschedule / Update"
-                              >
-                                <FaEdit size={14} />
-                              </button>
-                              <button
-                                onClick={() => askCancel(a.id)}
-                                className="p-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"
-                                title="Cancel Appointment"
-                              >
-                                <FaTrash size={14} />
-                              </button>
-                            </>
-                          )}
-                          {/* Call-Status Aware Video Button */}
-                          {renderCallButton(a)}
+              return (
+                <div
+                  key={appt.id}
+                  className={`bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.04)] relative transition-all ${
+                    isCalling ? "ring-2 ring-emerald-500 bg-emerald-50/20" : ""
+                  }`}
+                >
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-5">
+                    {/* Doctor Info */}
+                    <div className="flex items-start gap-4">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center shadow-xs">
+                        {avatar ? (
+                          <img src={avatar} alt={docName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-tr from-[var(--brand-green)] to-[var(--brand-blue)] text-white font-black text-xl flex items-center justify-center">
+                            {getInitials(docName)}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                            {docName}
+                          </h2>
+                          <span
+                            className="material-symbols-outlined text-[var(--brand-green)] text-base"
+                            style={{ fontVariationSettings: "'FILL' 1" }}
+                            title="Verified Doctor"
+                          >
+                            verified
+                          </span>
                         </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                        <p className="text-xs font-semibold text-slate-500">{specialty}</p>
+
+                        <div className="pt-1 space-y-1">
+                          <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                            <span className="material-symbols-outlined text-sm text-slate-400">calendar_today</span>
+                            <span>{formatDateFormatted(appt.appointmentDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                            <span className="material-symbols-outlined text-sm text-slate-400">schedule</span>
+                            <span>{formatTimeFormatted(appt.appointmentDate)} (GMT)</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                            <span className="material-symbols-outlined text-sm text-slate-400">videocam</span>
+                            <span>Video Consultation</span>
+                          </div>
+                        </div>
+
+                        {/* Status Badges */}
+                        <div className="pt-2 flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-[#e6f4ea] text-[#137333] border border-emerald-200/60">
+                            {appt.status === "PENDING"
+                              ? "Pending Approval"
+                              : appt.status === "APPROVED" || appt.status === "CONFIRMED"
+                              ? "Confirmed"
+                              : appt.status}
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-[#e6f4ea] text-[#137333] border border-emerald-200/60">
+                            Payment Paid
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Top Right Options Menu (...) */}
+                    <div className="absolute top-5 right-5">
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenDropdownId(openDropdownId === appt.id ? null : appt.id)}
+                          className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                        >
+                          <FaEllipsisH className="text-base" />
+                        </button>
+
+                        {openDropdownId === appt.id && (
+                          <div className="absolute right-0 mt-1 w-40 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-20 animate-in fade-in duration-200">
+                            {appt.status !== "CANCELLED" && appt.status !== "COMPLETED" && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    handleUpdate(appt);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                >
+                                  <FaCalendarAlt className="text-slate-400" />
+                                  <span>Reschedule</span>
+                                </button>
+                                <button
+                                  onClick={() => askCancel(appt.id)}
+                                  className="w-full px-4 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                >
+                                  <FaTrash className="text-red-400" />
+                                  <span>Cancel</span>
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Action Buttons */}
+                  <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3">
+                    <button
+                      onClick={() =>
+                        navigate(
+                          `/patient/video-consultation?room=${appt.roomName || appt.id}`
+                        )
+                      }
+                      className="w-full sm:w-auto flex-1 btn btn-primary !px-5 !py-2.5 !rounded-xl !text-xs !normal-case flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20"
+                    >
+                      <span className="material-symbols-outlined text-base">videocam</span>
+                      <span>Join Video Visit</span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedApptDetail(appt)}
+                      className="w-full sm:w-auto flex-1 btn btn-secondary !px-5 !py-2.5 !rounded-xl !text-xs !normal-case flex items-center justify-center font-bold"
+                    >
+                      <span>View Details</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
+      {/* VIEW DETAILS MODAL */}
+      {selectedApptDetail && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full border border-slate-100 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Appointment Details</h3>
+              <button
+                onClick={() => setSelectedApptDetail(null)}
+                className="p-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <div className="space-y-3 text-xs text-slate-700">
+              <div>
+                <span className="font-bold text-slate-500 block">Doctor:</span>
+                <span className="font-bold text-sm text-slate-900">
+                  {selectedApptDetail.doctor?.user
+                    ? `Dr. ${selectedApptDetail.doctor.user.firstName} ${selectedApptDetail.doctor.user.lastName}`
+                    : selectedApptDetail.doctorName || "Doctor"}
+                </span>
+              </div>
+              <div>
+                <span className="font-bold text-slate-500 block">Specialization:</span>
+                <span>{selectedApptDetail.doctor?.specialization || "General Physician"}</span>
+              </div>
+              <div>
+                <span className="font-bold text-slate-500 block">Date & Time:</span>
+                <span>
+                  {formatDateFormatted(selectedApptDetail.appointmentDate)} at{" "}
+                  {formatTimeFormatted(selectedApptDetail.appointmentDate)}
+                </span>
+              </div>
+              <div>
+                <span className="font-bold text-slate-500 block">Reason for Visit:</span>
+                <span>{selectedApptDetail.reason || "General Consultation"}</span>
+              </div>
+              <div>
+                <span className="font-bold text-slate-500 block">Status:</span>
+                <span className="font-bold text-emerald-700">{selectedApptDetail.status}</span>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setSelectedApptDetail(null)}
+                className="btn btn-secondary !px-4 !py-2 !rounded-xl !text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BOOK / RESCHEDULE MODAL */}
       {bookOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div onClick={() => setBookOpen(false)}></div>
-          <div className="relative w-full max-w-lg glass !p-8 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-6">
-              {rescheduleId ? "Reschedule Appointment" : "Book Appointment"}
-            </h2>
-            <form onSubmit={handleInitializeBooking} className="space-y-4">
-              {/* Doctor Selection */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                  Select Doctor
-                </label>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-lg w-full max-h-[90vh] overflow-y-auto border border-slate-100 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">
+                {rescheduleId ? "Reschedule Appointment" : "Book New Appointment"}
+              </h3>
+              <button
+                onClick={() => {
+                  setBookOpen(false);
+                  setRescheduleId(null);
+                }}
+                className="p-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <form onSubmit={handleInitializeBooking} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Select Doctor</label>
                 <select
-                  className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none text-[var(--text-main)]"
                   value={form.doctorId}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      doctorId: e.target.value,
-                      appointmentDate: "",
-                      selectedSlotId: "",
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, doctorId: e.target.value, selectedSlotId: "" })}
+                  className="w-full p-3 rounded-xl border border-slate-200 font-medium text-slate-800"
                   required
                 >
-                  <option value="">-- Choose Specialist --</option>
-                  {doctors.map((doc) => (
-                    <option key={doc.id} value={doc.id}>
-                      {doc.name} — {doc.specialization}
+                  {doctors.length > 1 && <option value="">Choose a doctor...</option>}
+                  {doctors.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.specialization})
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Reason for Consultation */}
-              {form.doctorId && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                    Reason for consultation
-                  </label>
-                  <textarea
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none h-24 text-[var(--text-main)]"
-                    value={form.reason}
-                    onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                    placeholder="Describe your symptoms..."
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Select Date</label>
+                <input
+                  type="date"
+                  value={form.appointmentDate}
+                  min={todayStr}
+                  onChange={(e) =>
+                    setForm({ ...form, appointmentDate: e.target.value, selectedSlotId: "" })
+                  }
+                  className="w-full p-3 rounded-xl border border-slate-200 font-medium text-slate-800"
+                  required
+                />
+              </div>
 
-              {/* Date Selection */}
-              {form.doctorId && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                    Select Date
-                  </label>
-                  <input
-                    type="date"
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl py-3.5 px-4 text-xs font-bold focus:border-[var(--brand-green)] outline-none text-[var(--text-main)]"
-                    value={form.appointmentDate}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        appointmentDate: e.target.value,
-                        selectedSlotId: "",
-                      })
-                    }
-                    min={new Date().toISOString().split("T")[0]}
-                    required
-                  />
-                </div>
-              )}
-
-              {/* Available Slots */}
               {form.doctorId && form.appointmentDate && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">
-                    Select Time Slot
-                  </label>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Available Time Slots</label>
                   <BookingSlots
                     doctorId={form.doctorId}
-                    date={new Date(form.appointmentDate)}
+                    date={form.appointmentDate}
                     onSlotSelect={handleSlotSelect}
                   />
-                  {/* Visual feedback for selected slot */}
-                  {form.selectedSlotId && (
-                    <p className="text-xs text-[var(--brand-green)] mt-2 font-bold px-1">
-                      ✓ Slot selected
-                    </p>
-                  )}
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Reason for Visit</label>
+                <textarea
+                  value={form.reason}
+                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                  placeholder="Describe your symptoms or reason for visit..."
+                  className="w-full p-3 rounded-xl border border-slate-200 font-medium text-slate-800 h-20 resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => {
                     setBookOpen(false);
                     setRescheduleId(null);
-                    setForm({ doctorId: "", appointmentDate: "", selectedSlotId: "", reason: "" });
                   }}
-                  className="btn flex-1 bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-soft)]"
+                  className="btn btn-secondary !px-4 !py-2 !rounded-xl !text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={!form.selectedSlotId}
-                  className={`btn flex-[2] ${
-                    !form.selectedSlotId
-                      ? "bg-gray-600 cursor-not-allowed opacity-50"
-                      : "btn-primary"
-                  }`}
+                  className="btn btn-primary !px-5 !py-2 !rounded-xl !text-xs"
                 >
-                  {rescheduleId ? "Confirm Helper" : "Confirm"}
+                  {rescheduleId ? "Confirm Reschedule" : "Book Appointment"}
                 </button>
               </div>
             </form>
@@ -646,34 +707,34 @@ export default function MyAppointments() {
         </div>
       )}
 
+      {/* CANCEL CONFIRMATION MODAL */}
       {confirmOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md glass !p-8 animate-in zoom-in-95 duration-300">
-            <h3 className="text-xl font-black text-[var(--text-main)] tracking-tighter uppercase mb-2">
-              Cancel Appointment?
-            </h3>
-            <p className="text-sm font-bold text-[var(--text-soft)] mb-8 uppercase tracking-widest opacity-70 italic">
-              This operation cannot be reversed.
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-100 shadow-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto text-xl">
+              <FaTrash />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">Cancel Appointment?</h3>
+            <p className="text-xs text-slate-500 font-medium">
+              Are you sure you want to cancel this appointment? This action cannot be undone.
             </p>
-            <div className="flex gap-3">
+            <div className="flex justify-center gap-3 pt-2">
               <button
                 onClick={() => setConfirmOpen(false)}
-                className="btn flex-1 bg-[var(--bg-main)] border border-[var(--border)] text-[var(--text-soft)]"
+                className="btn btn-secondary !px-4 !py-2 !rounded-xl !text-xs flex-1"
               >
-                Retain
+                No, Keep
               </button>
               <button
                 onClick={confirmCancel}
-                className="btn bg-red-500 text-[var(--text-main)] flex-[2] hover:bg-red-600"
+                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-xl flex-1 transition-colors"
               >
-                Terminate Visit
+                Yes, Cancel
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <ToastContainer position="top-right" autoClose={2200} />
     </DashboardLayout>
   );
 }
