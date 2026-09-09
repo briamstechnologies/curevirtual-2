@@ -8,13 +8,17 @@ const multer = require("multer");
 const upload = multer({ storage: multer.memoryStorage() });
 const { createClient } = require("@supabase/supabase-js");
 
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
 const supabase =
-  process.env.SUPABASE_URL &&
-  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
-    ? createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-      )
+  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+// Dedicated admin client for syncing auth credentials
+const supabaseAdmin =
+  supabaseUrl && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY)
     : null;
 
 // GET /api/users/:id
@@ -208,6 +212,42 @@ async function updateUserProfile(targetUserId, req, res) {
         }
       } catch (dbErr) {
         // silent fallback
+      }
+    }
+
+    // Sync with Supabase Auth Service so login works with new credentials
+    if (supabaseAdmin) {
+      try {
+        const authAttrs = {};
+        if (email && email.trim()) {
+          authAttrs.email = email.trim().toLowerCase();
+          authAttrs.email_confirm = true;
+        }
+        if (password && password.trim().length >= 6) {
+          authAttrs.password = password.trim();
+        }
+        if (firstName || lastName) {
+          authAttrs.user_metadata = {
+            first_name: firstName ? firstName.trim() : updated.firstName,
+            last_name: lastName ? lastName.trim() : updated.lastName,
+            full_name: `${firstName ? firstName.trim() : updated.firstName} ${lastName ? lastName.trim() : updated.lastName}`.trim(),
+            display_name: `${firstName ? firstName.trim() : updated.firstName} ${lastName ? lastName.trim() : updated.lastName}`.trim(),
+          };
+        }
+
+        if (Object.keys(authAttrs).length > 0) {
+          const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(
+            targetUserId,
+            authAttrs
+          );
+          if (authErr) {
+            console.warn("Supabase Auth sync error:", authErr.message);
+          } else {
+            console.log("✅ Successfully synced credentials to Supabase Auth for user:", targetUserId);
+          }
+        }
+      } catch (authErr) {
+        console.warn("Could not sync with Supabase Auth:", authErr.message);
       }
     }
 
