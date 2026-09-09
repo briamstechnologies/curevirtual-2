@@ -219,13 +219,14 @@ export default function UserProfile() {
       uploadData.append("avatar", file);
       if (userId) uploadData.append("userId", userId);
 
-      const res = await api.post("/patient/avatar", uploadData, {
+      const res = await api.post("/users/avatar", uploadData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (res.data?.success && res.data?.avatarUrl) {
         const newUrl = res.data.avatarUrl;
         setUserAvatar(newUrl);
+        setUserData((prev) => ({ ...prev, avatarUrl: newUrl }));
         localStorage.setItem("userAvatar", newUrl);
         localStorage.setItem("profile_image", newUrl);
         localStorage.setItem("profileImage", newUrl);

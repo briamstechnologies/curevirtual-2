@@ -54,6 +54,10 @@ export default function Topbar({ userName: propUserName, isMobileMenuOpen, setIs
           const res = await api.get(`/patient/profile/${userId}`);
           const data = res.data?.data || res.data;
           fetchedAvatar = data?.avatarUrl || data?.profileImage || data?.profile_image;
+        } else if (role === "ADMIN" || role === "SUPERADMIN") {
+          const res = await api.get(`/users/${userId}`);
+          const data = res.data?.data || res.data;
+          fetchedAvatar = data?.avatarUrl || data?.profileImage || data?.profile_image;
         }
         if (fetchedAvatar && isMounted) {
           setUserAvatar(fetchedAvatar);
