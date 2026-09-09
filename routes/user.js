@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const prisma = require("../prisma/prismaClient");
 const { verifyToken } = require("../middleware/rbac");
+const bcrypt = require("bcryptjs");
 
 // GET /api/users/:id
 router.get("/:id", verifyToken, async (req, res) => {
@@ -15,12 +16,13 @@ router.get("/:id", verifyToken, async (req, res) => {
       select: {
         id: true,
         firstName: true,
+        middleName: true,
         lastName: true,
         role: true,
         email: true,
         phone: true,
-        dateOfBirth: true,
         gender: true,
+        dateOfBirth: true,
         maritalStatus: true,
         createdAt: true,
       },
@@ -32,11 +34,11 @@ router.get("/:id", verifyToken, async (req, res) => {
     return res.json({ data: user });
   } catch (e) {
     console.error("❌ user profile error:", e);
-    return res.status(500).json({ error: "Failed to load user" });
+    return res.status(500).json({ error: "Failed to load user intelligence" });
   }
 });
 
-// GET /api/users (List)
+// GET /api/users (Keep existing list functionality)
 router.get("/", verifyToken, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || "200", 10), 1000);
@@ -59,6 +61,7 @@ router.get("/", verifyToken, async (req, res) => {
       select: {
         id: true,
         firstName: true,
+        middleName: true,
         lastName: true,
         role: true,
         email: true,
@@ -72,33 +75,118 @@ router.get("/", verifyToken, async (req, res) => {
   }
 });
 
-// PATCH /api/users/profile
-router.patch("/profile", verifyToken, async (req, res) => {
+// Helper function to update user profile
+async function updateUserProfile(targetUserId, req, res) {
   try {
-    const userId = req.user.id;
-    const { firstName, lastName, phone, dateOfBirth, gender, maritalStatus } = req.body;
+    // Only allow updating own profile, unless caller is ADMIN or SUPERADMIN
+    if (req.user.id !== targetUserId && !["ADMIN", "SUPERADMIN"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized to update this user profile" });
+    }
+
+    const {
+      firstName,
+      middleName,
+      lastName,
+      email,
+      phone,
+      gender,
+      dateOfBirth,
+      maritalStatus,
+      password,
+    } = req.body;
 
     const data = {};
-    if (firstName !== undefined) data.firstName = firstName;
-    if (lastName !== undefined) data.lastName = lastName;
-    if (phone !== undefined) data.phone = phone;
-    if (gender !== undefined) data.gender = gender;
-    if (maritalStatus !== undefined) data.maritalStatus = maritalStatus;
-    if (dateOfBirth !== undefined) {
-      const d = new Date(dateOfBirth);
-      if (!isNaN(d.getTime())) data.dateOfBirth = d;
+    if (firstName !== undefined) data.firstName = firstName.trim();
+    if (middleName !== undefined) data.middleName = middleName ? middleName.trim() : null;
+    if (lastName !== undefined) data.lastName = lastName.trim();
+    if (phone !== undefined) data.phone = phone ? phone.trim() : null;
+
+    if (gender !== undefined && ["MALE", "FEMALE", "OTHER"].includes(gender)) {
+      data.gender = gender;
+    }
+
+    if (maritalStatus !== undefined && ["SINGLE", "MARRIED"].includes(maritalStatus)) {
+      data.maritalStatus = maritalStatus;
+    }
+
+    if (dateOfBirth) {
+      const parsedDate = new Date(dateOfBirth);
+      if (!isNaN(parsedDate.getTime())) {
+        data.dateOfBirth = parsedDate;
+      }
+    }
+
+    // Email validation & unique check
+    if (email && email.trim()) {
+      const normalizedEmail = email.trim().toLowerCase();
+      const existing = await prisma.user.findFirst({
+        where: {
+          email: normalizedEmail,
+          NOT: { id: targetUserId },
+        },
+      });
+
+      if (existing) {
+        return res.status(400).json({ error: "Email is already taken by another account" });
+      }
+      data.email = normalizedEmail;
+    }
+
+    // Optional password change
+    if (password && password.trim().length > 0) {
+      if (password.trim().length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters long" });
+      }
+      data.password = await bcrypt.hash(password.trim(), 10);
     }
 
     const updated = await prisma.user.update({
-      where: { id: userId },
+      where: { id: targetUserId },
       data,
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        role: true,
+        email: true,
+        phone: true,
+        gender: true,
+        dateOfBirth: true,
+        maritalStatus: true,
+        createdAt: true,
+      },
     });
 
-    return res.json({ success: true, data: updated });
+    return res.json({
+      success: true,
+      message: "Profile updated successfully",
+      data: updated,
+    });
   } catch (e) {
-    console.error("❌ profile update error:", e);
-    return res.status(500).json({ error: "Failed to update profile" });
+    console.error("❌ Profile update error:", e);
+    return res.status(500).json({ error: e.message || "Failed to update profile" });
   }
+}
+
+// PUT /api/users/profile
+router.put("/profile", verifyToken, async (req, res) => {
+  return updateUserProfile(req.user.id, req, res);
+});
+
+// PATCH /api/users/profile
+router.patch("/profile", verifyToken, async (req, res) => {
+  return updateUserProfile(req.user.id, req, res);
+});
+
+// PUT /api/users/:id
+router.put("/:id", verifyToken, async (req, res) => {
+  return updateUserProfile(req.params.id, req, res);
+});
+
+// PATCH /api/users/:id
+router.patch("/:id", verifyToken, async (req, res) => {
+  return updateUserProfile(req.params.id, req, res);
 });
 
 module.exports = router;

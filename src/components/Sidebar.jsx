@@ -283,6 +283,7 @@ export default function Sidebar({ role: propRole, isMobileMenuOpen, setIsMobileM
                 <SubItem to="/admin/subscribers/pharmacy" label="Pharmacies" />
                 <SubItem to="/admin/subscribers/laboratory" label="Laboratories" />
               </DropdownItem>
+              <NavItem to="/admin/profile" icon="badge" label="My Profile" />
             </>
           )}
 
